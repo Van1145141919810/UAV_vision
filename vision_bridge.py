@@ -1021,9 +1021,10 @@ def read_cfg():
         #   pitch_down 5.23±0.25° (原 1.3° 是右目 ArUco 标的, 少了 ~4° → 环越远估得越高)
         #   roll 3.40±0.31° (环都在画面中间, 不太可信, 影响 ≤2cm)  yaw -0.73±0.36°
         #   杠杆臂卷尺: 左目在飞控前 8cm / 左 3cm / 低 11.5cm (飞控离地 16cm, 识别相机离地 4.5cm)
-        "cam_pitch_deg": float(g("~cam_pitch_deg", 5.23)),  # 正 = 镜头往下低
-        "cam_roll_deg": float(g("~cam_roll_deg", 3.40)),
-        "cam_yaw_deg": float(g("~cam_yaw_deg", -0.73)),
+        #   ★2026-11-05 相机重装, 上面那组作废; 现用值见 run_vision.CAM 注释 (pitch/roll ±0.3°, yaw ±1.5°)
+        "cam_pitch_deg": float(g("~cam_pitch_deg", -1.1)),  # 正 = 镜头往下低
+        "cam_roll_deg": float(g("~cam_roll_deg", 0.9)),
+        "cam_yaw_deg": float(g("~cam_yaw_deg", 0.5)),
         "cam_x": float(g("~cam_x", 0.080)), "cam_y": float(g("~cam_y", 0.030)), "cam_z": float(g("~cam_z", -0.115)),
         "max_pose_gap": float(g("~max_pose_gap", 0.1)),
         # ★2026-10-19 (穿环首飞问题 §2): 环估计这么久没被新检测更新 → 丢弃, 从下一帧重新初始化。

@@ -32,7 +32,7 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_GCS = "192.168.2.179"
+DEFAULT_GCS = "192.168.2.67"
 ROS_SETUP = ["/opt/ros/noetic/setup.bash", "~/ros_ws/devel/setup.bash"]   # 和 run_vision.sh 一样
 
 # 识别相机外参 (左目相对机体中心 = 飞控, FLU: x 前 y 左 z 上; pitch 正 = 镜头往下低)
@@ -41,7 +41,11 @@ ROS_SETUP = ["/opt/ros/noetic/setup.bash", "~/ros_ws/devel/setup.bash"]   # 和 
 #   杠杆臂卷尺: 飞控离地 16cm, 识别相机离地 4.5cm → z = -0.115; 镜头在飞控前 8cm;
 #     左目在中轴线左边半个基线 3cm。(旧 z=-0.07 是按 VINS 相机/机身半高估的, 不对)
 #   这里的值会以 _cam_*:= 传给桥, 覆盖 vision_bridge.py 里的默认值 —— 两边保持一致。
-CAM = {"cam_pitch_deg": 5.23, "cam_roll_deg": 3.40, "cam_yaw_deg": -0.73,
+#   ★2026-11-05 相机重装 (基本不下垂了) → 上面 5.23/3.40/-0.73 作废。现用值 (工作参数, 待飞行核对):
+#     pitch -1.1 (±0.3)  roll 0.9 (±0.3): 红点截图 + 两次 ArUco 手眼 (tools/ext_calib.py, 码 160mm) 一致
+#     yaw 0.5 (±1.5): ArUco 站立组 -1.0 / 红点组 +2.0 取中 —— 室内距离不够定不准;
+#       第一次真飞时看"飞近目标时横向估计随距离线性漂"的斜率修正。杠杆臂没变。
+CAM = {"cam_pitch_deg": -1.1, "cam_roll_deg": 0.9, "cam_yaw_deg": 0.5,
        "cam_x": 0.080, "cam_y": 0.030, "cam_z": -0.115}
 
 # 2026-10-30: 检测库搬进 vb09/ 包 (gate_detector.py / ring_detector.py 只剩兼容壳, 桥不再用它们)
