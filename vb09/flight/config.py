@@ -90,7 +90,10 @@ GATE_ACQ_SCAN_AFTER  = 8.0     # s，这么久没看到环 → ±30° 慢扫一�
 GATE_ACQ_TIMEOUT     = 25.0    # s，ACQUIRE 总超时 → 放弃 (降落)
 GATE_SCAN_DEG        = 30.0    # °
 # 两道 sim 保险 (同 stage11 的思路)
-GATE_SHADOW          = False   # True = 识别/锁定/规划照做, 不摆位不冲刺 (网页上看计划)
+GATE_SHADOW          = False   # True = 识别/锁定/规划照做, 不摆位不冲刺 (网页上看计划)。= 档案 mode = 影子
+# 任务模式 (2026-10-30, 档案 mode): "dash" 冲刺 / "shadow" 影子 —— 选 vb09/flight/modes.py 的步骤列表。
+#   字符串, 只能由档案的 mode 旋钮设 (--set 只认数字/开关)。旧写法 GATE_SHADOW = True 仍然有效 (= 影子)
+MISSION_MODE         = "dash"
 GATE_ALLOW_SIM_DRIVE = False   # False = /gate/status 里 sim=true 的帧不许用来冲刺 (影子模式可以用)
 
 # =============================================================================
@@ -245,7 +248,10 @@ CONFIG_TOPIC         = "/%s/config" % NODE_NAME
 
 def derive():
     """派生量 (不要手改)。必须在 flight_profile.setup() 之后调用 (否则拿的是旧值)。"""
-    global GATE_PRE_VEL_LIM, TELEOP_XY_MAX, TELEOP_DZ_MAX, PHASE_ENVELOPE
+    global GATE_PRE_VEL_LIM, TELEOP_XY_MAX, TELEOP_DZ_MAX, PHASE_ENVELOPE, MISSION_MODE
+    # 旧写法 GATE_SHADOW = True (档案 set. / 命令行 --set) → 影子 (flight_profile 会打印提示)
+    if GATE_SHADOW:
+        MISSION_MODE = "shadow"
     # =============================================================================
     # ##########################   派生量 (不要手改)   ###########################
     # =============================================================================

@@ -572,9 +572,9 @@ def run_mission(z_hold, steps):
 
 
 def phase_gate(z_hold):
-    """穿环 (老入口名)。影子开关 GATE_SHADOW → MODES["shadow"], 否则 MODES["dash"]。"""
+    """穿环: 按 C.MISSION_MODE (档案 mode; 旧写法 GATE_SHADOW = True → shadow) 选步骤列表。"""
     from vb09.flight.modes import MODES
-    return run_mission(z_hold, MODES["shadow" if C.GATE_SHADOW else "dash"])
+    return run_mission(z_hold, MODES[C.MISSION_MODE])
 
 
 GateRun = MissionCtx          # 老名字

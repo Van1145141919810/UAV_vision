@@ -29,6 +29,12 @@ EXPECT_CHANGED = {
     "typo": ("未知键报错里的'允许的键'列表少了戳点 / 跟踪旋钮", 1, "未知键 'z_hig'"),
     # 第 1b 步 (删停靠跟踪)
     "track": ("跟踪档案照样拒绝, 原因从'任务不符'变成'未知键' (跟踪旋钮已删除)", 1, "未知键 'standoff'"),
+    # 第 4.5 步 (mode 旋钮)
+    "shadow": ("旧写法 set.GATE_SHADOW = True: 多一条'等同于 mode = 影子'的提示, 其余不变", 0, "旧写法, 现在等同于 mode = 影子"),
+    "set_shadow_cli": ("命令行 --set GATE_SHADOW=True: 同上", 0, "旧写法, 现在等同于 mode = 影子"),
+    "mode_shadow": ("新档案: mode = 影子", 0, "任务模式: 影子"),
+    "mode_dash": ("新档案: mode = 冲刺", 0, "任务模式: 冲刺"),
+    "mode_conflict": ("mode = 冲刺 + set.GATE_SHADOW = True → 警告, 按影子飞", 0, "两个说法矛盾, 按 影子 飞"),
 }
 
 

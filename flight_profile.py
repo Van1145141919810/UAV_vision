@@ -167,6 +167,10 @@ KNOBS = [
          min=0.05, max=1.0, help="机体中心 → 机尾最后端 (含护桨), 实测"),
     dict(key="w_half", tasks=["gate"], type="float", unit="m", label="半宽", group="机体",
          min=0.05, max=0.55, help="机体中心 → 最外侧 (含护桨), 实测。决定瞄点能偏离环心多远"),
+    dict(key="mode", tasks=["gate"], type="choice", unit="", label="任务模式", group="穿环",
+         choices=["冲刺", "影子"],
+         help="冲刺 = 锁定后摆位冲刺穿环; 影子 = 识别 / 锁定 / 规划照做, 不摆位不冲刺, 计划发网页 "
+              "(不填 = 冲刺; 旧写法 set.GATE_SHADOW = True 等同于 影子)"),
     dict(key="allow_slow", tasks=["gate"], type="choice", unit="", label="场地不够时降速", group="穿环",
          choices=["否", "确认", "是"],
          help="场地放不下设定的冲刺速度时: 否 = 规划失败回手动段 (说明卡在哪、最高能冲多快); "
@@ -237,6 +241,9 @@ def _removed_set(path, ln, pk, v, errs, notes):
             notes.append("%s:%d set.%s 是已删除的戳点参数, 忽略这一行" % (path, ln, pk))
         return True
     return False
+
+# 任务模式旋钮 → C.MISSION_MODE (vb09/flight/modes.py 的键)
+MODE_NAMES = {"冲刺": "dash", "影子": "shadow"}
 
 # 穿环旋钮 → 参数 (一对一)
 GATE_KNOB_PARAM = {
@@ -369,6 +376,8 @@ def _coerce(name, value, current):
         if not math.isfinite(f):
             return None, "%s 需要有限数字，得到 %r" % (name, value)
         return f, None
+    if isinstance(current, str) and not isinstance(value, bool):
+        return str(value), None          # 只有旋钮推导能写字符串参数 (MISSION_MODE); --set 本来就只认数字/开关
     return None, "%s 的类型不支持覆盖" % name
 
 
@@ -606,6 +615,18 @@ def _build_gate_overrides(knobs, view):
     if knobs.get("allow_slow") is not None:
         ov["GATE_SLOW_POLICY"] = {"否": 0, "确认": 1, "是": 2}[knobs["allow_slow"]]
         rep.append("场地不够时降速: %s" % knobs["allow_slow"])
+    # ★2026-10-30 任务模式。影子同时置 GATE_SHADOW (识别接受 sim 帧 / 摘要 / 网页开关都按它)
+    md = knobs.get("mode")
+    if md is not None:
+        ov["MISSION_MODE"] = MODE_NAMES[md]
+        if md == "影子":
+            ov["GATE_SHADOW"] = True
+        rep.append("任务模式: %s" % md)
+        if md == "冲刺" and view.get("GATE_SHADOW"):
+            warns.append("mode = 冲刺, 但 set.GATE_SHADOW = True —— 两个说法矛盾, 按 影子 飞 (不冲刺)。"
+                         "要冲刺就删掉 GATE_SHADOW 那一行")
+    elif view.get("GATE_SHADOW"):
+        warns.append("GATE_SHADOW = True 是旧写法, 现在等同于 mode = 影子 (档案里建议改写成 mode = 影子)")
     if "DASH_V" in ov and ov["DASH_V"] < cur("DASH_V_MIN"):
         ov["DASH_V_MIN"] = ov["DASH_V"]          # 冲刺速度本身比降速下限还低: 不降速
     miss = [k for k in ("d_back", "d_rear", "d_side", "l_f", "l_r", "w_half")
