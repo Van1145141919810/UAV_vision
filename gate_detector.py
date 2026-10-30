@@ -1493,13 +1493,6 @@ class GateDetector:
         fr.t_ms["total"] = (time.perf_counter() - t0) * 1e3
         return fr
 
-    # 兼容旧调用
-    def _update_estimator(self, fr, R_WR, t_WR, t):
-        return self.fuser._update_estimator(fr, R_WR, t_WR, t)
-
-    def _stage(self, fr):
-        return self.fuser.stage(fr)
-
 
 # =============================================================================
 # 网络序列化（地面检测 → 飞机融合）

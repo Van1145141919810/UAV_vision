@@ -19,12 +19,16 @@ import _compat  # noqa: E402
 import _util  # noqa: E402
 
 SITES = os.path.join(_compat.HERE, "sites")
-# 有意改变行为的用例 → {用例名: 原因}。只在 golden 里留旧输出供对照, 不参与比较。
+# 有意改变行为的用例 → {用例名: (原因, 期望 rc, 输出里必须出现的文字)}。
+#   输出不和 golden 逐字比 (golden 里留旧输出供对照), 只查 rc 和关键文字。
 EXPECT_CHANGED = {
-    # 第 1a 步 (删戳点): 有意改变
-    "poke": "gate_mode = 戳点 → 报错拒绝 (不能悄悄当冲刺飞)",
-    "dash_mode": "gate_mode = 冲刺 → 警告并忽略; 其余输出应和 sim 类档案一致",
-    "typo": "未知键报错里的'允许的键'列表少了戳点旋钮",
+    # 第 1a 步 (删戳点)
+    "poke": ("gate_mode = 戳点 → 报错拒绝 (不能悄悄当冲刺飞)", 1, "戳点模式已删除"),
+    "dash_mode": ("gate_mode = 冲刺 → 警告并忽略 (已另行核对: 去掉这条警告后和不写 gate_mode 的档案逐字相同)",
+                  0, "gate_mode (穿环模式) 已删除, 忽略"),
+    "typo": ("未知键报错里的'允许的键'列表少了戳点 / 跟踪旋钮", 1, "未知键 'z_hig'"),
+    # 第 1b 步 (删停靠跟踪)
+    "track": ("跟踪档案照样拒绝, 原因从'任务不符'变成'未知键' (跟踪旋钮已删除)", 1, "未知键 'standoff'"),
 }
 
 
@@ -89,7 +93,16 @@ def _drop_txt(s):
     return "\n".join(ln for ln in s.splitlines() if "戳" not in ln and "POKE" not in ln)
 
 
+CHANGE_FAIL = []
+
+
 def drop(g, n):
+    for k, (_why, rc, must) in EXPECT_CHANGED.items():
+        for suf in (".json", ".txt"):
+            r = n.get(k + suf) or {}
+            text = json.dumps(r, ensure_ascii=False)
+            if r.get("rc") != rc or must not in text:
+                CHANGE_FAIL.append("%s%s: rc=%s (要 %s), 含 %r: %s" % (k, suf, r.get("rc"), rc, must, must in text))
     for k in list(EXPECT_CHANGED):
         for suf in (".json", ".txt"):
             g.pop(k + suf, None)
@@ -108,9 +121,12 @@ def main():
     ok = _util.report("dryrun", *_util.save_or_compare("dryrun.json", r, write,
                                                        drop=None if write else drop))
     if not write and EXPECT_CHANGED:
-        for k, why in EXPECT_CHANGED.items():
+        for k, (why, _rc, _m) in EXPECT_CHANGED.items():
             j = r.get(k + ".json", {})
-            print("   (expected change) %-12s rc=%s  %s" % (k, j.get("rc"), why))
+            print("   (expected change) %-10s rc=%s  %s" % (k, j.get("rc"), why))
+        for x in CHANGE_FAIL:
+            print("   ✗ expected-change check failed: " + x)
+        ok = ok and not CHANGE_FAIL
     return 0 if ok else 1
 
 

@@ -4,38 +4,26 @@ flight_profile.py —— 现场档案（site profile）：把「现场环境」�
 ===============================================================================
 它解决的问题
 -------------------------------------------------------------------------------
-换一个现场（目标贴在一楼 / 二楼 / 三楼、场地大 / 小、室内 / 室外），要动的
-参数有 20 多个，散在 stage11_real.py 的 8 个组里。**现场手改代码 = 必错**
-（2026-09-16 就出过一次：只改了 TRACK_Z_MAX，而真正那道门是
-TARGET_Z_NOMINAL ± TARGET_Z_TOLERANCE，结果飞机整场不听使唤）。
+换一个现场（室内 / 室外、场地大小、环后空间），要动的参数有二十多个，散在飞行脚本
+CONFIG 区的各组里。**现场手改代码 = 必错**（2026-09-16 就出过一次：只改了一个上限，
+真正起作用的那道门却没动，飞机整场不听使唤）。
 
-所以这里只暴露 **11 个「人能感知」的旋钮**，其余全部由规则推导。
+所以这里只暴露「人能感知 / 能用卷尺量」的旋钮，其余全部由规则推导。
 旋钮的完整定义（类型/单位/范围/说明）在下面的 KNOBS 表里 —— 它是**唯一来源**:
 档案解析、范围校验、网页表单、写回 .conf 全部从这张表生成。
 
-    site_name   名字（只用于打印）
-    z_low       目标最低高度 m          ← z 门限带下边界
-    z_high      目标最高高度 m          ← 上边界（同时决定高度钳位/安全硬顶）
-    takeoff_h   起飞后先升到多高 m
-    xy_radius   允许离起飞点多远 m      ← 水平软限（硬围栏 = 软限 + 余量）
-    entry_dist  离目标多近才交给视觉 m  ← 进场门（比这远就停在 MANUAL）
-    standoff    停在离目标多远 m        ← ★2026-10-09 新增
-    detect_far  空中最远能检测到多远 m  ← ★2026-10-09 新增（换相机/换标记必改）
-    mission_s   一次作业时长 s
-    speed       慢 / 中 / 快            ← 速度档
-    scene       地面 / 低空 / 高空 / 室内 ← 决定缓降类安全项 + 起降漂移限制
-
-★ 2026-10-19 穿环 (stage12_gate.py; 文件名后缀 = 任务: _gate 穿环, _track / _real 停靠跟踪)
--------------------------------------------------------------------------------
-任务由飞行脚本决定 (脚本全局 TASK; 没有 = 停靠跟踪)。档案加 `task = 穿环` 声明用途,
-和脚本对不上 → 拒绝起飞; 给了本任务不用的旋钮 (旋钮表的 tasks 字段) → 也报错。
-穿环用到的旋钮:
-    共用        site_name scene takeoff_h xy_radius(= 起跑点/制动终点的水平范围)
+    共用        site_name task scene takeoff_h xy_radius(= 起跑点/制动终点的水平范围)
                 z_low z_high (= 瞄点允许的高度带)
-    穿环        dash_v run_max  d_back d_rear d_side (场地, 卷尺量)  l_f l_r w_half (机体, 实测)
-    高级 (adv)  dash_acc brake_acc t_lag e_along v_tear_min entry_ang_max d_straight
+    穿环        dash_v run_max pass_run allow_slow  d_back back_margin d_rear d_side (场地, 卷尺量)
+                l_f l_r w_half (机体, 实测)
+    高级 (adv)  dash_acc brake_acc t_lag e_along v_tear_min entry_ang_max d_straight brake_over
+
 检查 (_check_gate) 和派生量 (derived.gate / speed_chain) 用同目录 gate_plan.py 算,
-和飞行时的规划是同一份代码。停靠跟踪 (stage11) 的检查和输出没有改 (_check_track)。
+和飞行时的规划是同一份代码。
+
+★ 2026-10-30 清理: 戳点模式和停靠跟踪 (stage11) 已删除。
+  老档案里的戳点旋钮 (REMOVED_KNOBS) → 警告并忽略; gate_mode = 戳点 / set.GATE_POKE = True → 报错。
+  task 旋钮只剩 穿环 (task = 跟踪 → 报错)。
 
 设计原则（每条都有理由）
 -------------------------------------------------------------------------------
@@ -56,25 +44,28 @@ TARGET_Z_NOMINAL ± TARGET_Z_TOLERANCE，结果飞机整场不听使唤）。
 档案文件格式（`~/flight_sites/<名字>.conf`）
 -------------------------------------------------------------------------------
     # 注释随便写
-    site_name  = 二楼玻璃破窗
-    z_low      = 0.7
-    z_high     = 9.0
+    site_name  = 一楼大厅
+    task       = 穿环
+    scene      = 室内
     takeoff_h  = 1.5
-    xy_radius  = 8.0
-    entry_dist = 3.0
-    standoff   = 1.2
-    detect_far = 4.0
-    mission_s  = 150
-    speed      = 中
-    scene      = 高空
+    z_low      = 0.8
+    z_high     = 2.2
+    xy_radius  = 10
+    dash_v     = 2.5
+    d_back     = 4.0
+    d_rear     = 2.0
+    d_side     = 2.0
+    l_f        = 0.30
+    l_r        = 0.30
+    w_half     = 0.25
 
     # ★ 2026-10-09(2): 原始参数覆盖也可以写进档案, 和命令行 --set 完全等价,
     #   照样过全部校验。这样"档案 = 完整配置", 启动命令永远只有 --site 名字,
     #   不会因为少复制一段 --set 而悄悄变成另一套配置(比如影子模式丢了)。
-    set.TRACK_SHADOW    = True
-    set.TRACK_LEASH_MAX = 0.8
+    set.GATE_SHADOW         = True
+    set.GATE_VIRTUAL_OFFSET = 2.0
 
-命令行（跟在 stage11_real.py 后面）
+命令行（跟在飞行脚本后面）
 -------------------------------------------------------------------------------
     --site 二楼            用 ~/flight_sites/二楼.conf
     --set KEY=VALUE        单次临时覆盖参数（不落盘; 只允许大写的数值/开关参数;
@@ -92,7 +83,7 @@ TARGET_Z_NOMINAL ± TARGET_Z_TOLERANCE，结果飞机整场不听使唤）。
 -------------------------------------------------------------------------------
     python3 flight_profile.py               列出现有档案
     python3 flight_profile.py 二楼          只做旋钮级检查（完整检查请用
-                                            stage11_real.py --site 二楼 --dry-run）
+                                            <飞行脚本> --site 二楼 --dry-run）
     python3 flight_profile.py --schema      输出旋钮表 JSON（网页表单用）
 ===============================================================================
 """
@@ -118,20 +109,18 @@ DEFAULT_SITES_DIR = os.path.expanduser("~/flight_sites")
 #   warn_lo / warn_hi   (阈值, 理由) —— 越过只警告
 #   choices   choice 类型的可选值
 #   group     表单分组
-#   tasks     ★2026-10-19 适用的任务 ("track" 停靠跟踪 / "gate" 穿环)。没有 = 两种都用。
+#   tasks     ★2026-10-19 适用的任务。2026-10-30 起只有 "gate" (穿环); 网页按它过滤旋钮。
 #             档案里给了本任务不用的旋钮 → 报错 (不静默忽略)。网页可按它隐藏无关旋钮。
 #   adv       ★2026-10-19 细调项, 网页放进「高级」折叠区
 #
-# 任务由**飞行脚本**决定 (脚本全局 TASK: stage11 没有 = "track", stage12 = "gate")。
-# 档案里的 task 旋钮只是声明"这份档案是给哪种任务写的", 和脚本对不上 → 拒绝起飞
-# (防止拿停靠跟踪的档案去飞穿环, 或反过来)。
-TASK_NAMES = {"跟踪": "track", "穿环": "gate"}
+# 档案里的 task 旋钮只是声明"这份档案是给哪种任务写的", 和脚本对不上 → 拒绝起飞。
+TASK_NAMES = {"穿环": "gate"}
 KNOBS = [
     dict(key="site_name", type="str", unit="", label="现场名称", group="现场",
          help="只用于打印和日志"),
     dict(key="task", type="choice", unit="", label="任务", group="现场",
-         choices=["跟踪", "穿环"],
-         help="这份档案给哪种任务用; 必须和飞行脚本一致 (stage11=跟踪, stage12=穿环)"),
+         choices=["穿环"],
+         help="这份档案给哪种任务用 (2026-10-30 起只剩 穿环; 停靠跟踪 stage11 已删除)"),
     dict(key="scene", type="choice", unit="", label="场景", group="现场",
          choices=["室内", "地面", "低空", "高空"],
          help="决定缓降类安全项和起降阶段的水平漂移限制"),
@@ -139,11 +128,11 @@ KNOBS = [
     dict(key="z_low", type="float", unit="m", label="目标最低高度", group="高度",
          min=0.5, min_why="低于 0.5m 会进地效 + 桨风吹目标板，PX4 落地检测也可能误判",
          warn_lo=(0.7, "偏低(建议 ≥0.7)：桨风会吹到手/板，测量会变毛"),
-         help="z 门限带下边界(相对起飞点)，低于此的目标整帧丢弃; 穿环: 瞄点允许的最低高度"),
+         help="瞄点允许的最低高度 (相对起飞点)"),
     dict(key="z_high", type="float", unit="m", label="目标最高高度", group="高度",
          min=0.8, max=20.0,
          warn_hi=(10.0, "超过 10m：要重新评估 VIO 高度表现 / 电池 / 法规"),
-         help="z 门限带上边界，同时决定高度钳位顶和安全硬顶(+1m); 穿环: 瞄点允许的最高高度"),
+         help="瞄点允许的最高高度 (相对起飞点), 同时决定安全硬顶 (+1m)"),
     dict(key="takeoff_h", type="float", unit="m", label="起飞高度", group="高度",
          min=0.5, min_why="0.5 以下起飞判定/离地检测不可靠", max=5.0,
          warn_hi=(2.0, "起飞段是位置阶跃(没改成斜坡)，PX4 会以最大爬升率去追。"
@@ -153,25 +142,6 @@ KNOBS = [
     dict(key="xy_radius", type="float", unit="m", label="水平范围", group="水平",
          min=0.5, max=50.0,
          help="允许离起飞点多远(软限)；硬围栏 = 软限 + 自动余量"),
-
-    dict(key="standoff", tasks=["track"], type="float", unit="m", label="停靠距离", group="目标距离",
-         min=0.3, max=10.0,
-         help="飞机停在离目标多远(水平)；实际停靠 ≈ 停靠距离 + 死区"),
-    dict(key="detect_far", tasks=["track"], type="float", unit="m", label="检测远端", group="目标距离",
-         min=0.5, max=30.0,
-         help="空中实测最远能检测到多远；换相机/换标记后必须重测"),
-    dict(key="entry_dist", tasks=["track"], type="float", unit="m", label="进场门", group="目标距离",
-         min=0.5,
-         warn_hi=(15.0, "很大：远距离 PnP 更毛，跳变门会频繁拒帧(看 n_rej_jump)"),
-         help="目标比这远就不交给视觉，停在 MANUAL；应 ≤ 检测远端"),
-
-    dict(key="speed", tasks=["track"], type="choice", unit="", label="速度档", group="任务",
-         choices=["慢", "中", "快"],
-         help="水平/垂直跟踪速度和手动速度"),
-    dict(key="mission_s", tasks=["track"], type="float", unit="s", label="作业时长", group="任务",
-         min=30.0, min_why="接近 + 作业根本不够", max=1800.0,
-         warn_hi=(600.0, "超过 10 分钟：一块电池撑不住，请核对续航"),
-         help="跟踪段时长；手动段时长按它推导"),
 
     # ---------------- 穿环 (stage12) ----------------
     dict(key="dash_v", tasks=["gate"], type="float", unit="m/s", label="冲刺速度", group="穿环",
@@ -280,16 +250,8 @@ GATE_KNOB_PARAM = {
 
 
 def script_task(g):
-    """飞行脚本的任务。stage11 没有 TASK 全局 = 停靠跟踪。"""
-    t = (g or {}).get("TASK") if isinstance(g, dict) else None
-    return t if t in ("track", "gate") else "track"
-
-# 速度档 → (TRACK_V_MAX, TRACK_VZ_MAX, TELEOP_XY_SPEED, TELEOP_Z_SPEED)
-SPEED_TABLE = {
-    "慢": (0.30, 0.15, 0.30, 0.30),
-    "中": (0.45, 0.20, 0.50, 0.50),
-    "快": (0.60, 0.35, 0.80, 0.70),
-}
+    """飞行脚本的任务。2026-10-30 起只有穿环 (停靠跟踪 stage11 已删除)。"""
+    return "gate"
 
 # 场景 → 只动两类东西:
 #   VISION_LOST_LAND_S  缓降类(LAND)判据, 收紧 = 更早缓降 = 更保守
@@ -333,30 +295,25 @@ GATE_SAFETY_RULES = [
     ("GATE_DASH_TILT_CONFIRM_S", "range", (0.15, 0.50), "FATAL", "冲刺段停桨去抖时间"),
 ]
 
-# 单独运行 flight_profile.py 时没有 stage11 的全局可参考, 用这组保底值推导
+# 单独运行 flight_profile.py 时没有飞行脚本的全局可参考, 用这组保底值推导
 _STANDALONE_DEFAULTS = {
-    "DESCEND_SPEED": 0.50, "RETURN_SPEED": 0.60, "TAKEOFF_HEIGHT": 1.5,
-    "TRACK_Z_MAX": 10.0, "TELEOP_DZ_MAX": 10.0, "MAX_HEIGHT": 11.0,
+    "DESCEND_SPEED": 0.50, "TAKEOFF_HEIGHT": 1.5, "MAX_HEIGHT": 11.0,
     # 穿环 (和 stage12_gate.py 的代码默认值一致)
     "DASH_V_MIN": 1.2, "D_BACK": 2.0, "D_REAR": 2.0, "D_SIDE": 2.0,
     "L_F": 0.28, "L_R": 0.28, "W_HALF": 0.28, "PASS_RUN": 1.0, "M_BACK": 0.3,
     "BRAKE_OVER_T": 0.3, "GATE_SLOW_POLICY": 1,
 }
 
-# ★ 2026-10-09(2): 必须为正数的参数。--set 能把它们改成 0 或负数, 而 stage11 的
-#   派生量区会拿它们做除数(TRACK_AGE_FULL = .../F_DETECT, TRACK_LOG_DECIM = CTRL_HZ/
-#   TRACK_LOG_HZ …) —— 不先拦就会在派生量区抛 ZeroDivisionError, 网页只能看到
+# ★ 2026-10-09(2): 必须为正数的参数。--set 能把它们改成 0 或负数, 而飞行脚本的
+#   派生量区会拿它们做除数 —— 不先拦就会在派生量区抛 ZeroDivisionError, 网页只能看到
 #   "dry-run 没有输出 JSON"。所以这一组在 setup() 里、派生量之前就检查。
-#   只检查 stage11 里真实存在的那些(g.get)。
+#   只检查飞行脚本里真实存在的那些(g.get)。
 POSITIVE_PARAMS = (
-    "F_DETECT", "SP_PUB_HZ", "CTRL_HZ", "MONITOR_HZ", "LOG_HZ", "TIMING_LOG_HZ",
-    "EKF_LOG_HZ", "TRACK_LOG_HZ", "PHASE_LOOP_HZ", "STATUS_HZ", "TELEMETRY_HZ",
-    "TRACK_V_MAX", "TRACK_VZ_MAX", "TELEOP_XY_SPEED", "TELEOP_Z_SPEED",
-    "RETURN_SPEED", "DESCEND_SPEED", "TRACK_KP", "TRACK_Z_KP",
-    "TRACK_LEASH_MAX", "TRACK_Z_LEASH", "POS_LOOP_TAU",
-    "TRACK_STANDOFF", "DETECT_RANGE_MAX", "TRACK_XY_MAX", "TELEOP_XY_MAX",
-    "MAX_HEIGHT", "TRACK_DURATION", "TELEOP_DURATION", "TAKEOFF_TIMEOUT",
-    "RETURN_TIMEOUT", "DESCEND_TIMEOUT", "AUTO_LAND_TIMEOUT", "AUTO_LAND_SPEED_EST",
+    "SP_PUB_HZ", "MONITOR_HZ", "LOG_HZ", "TIMING_LOG_HZ",
+    "EKF_LOG_HZ", "PHASE_LOOP_HZ", "STATUS_HZ", "TELEMETRY_HZ",
+    "TELEOP_XY_SPEED", "TELEOP_Z_SPEED", "DESCEND_SPEED", "TELEOP_XY_MAX",
+    "MAX_HEIGHT", "TAKEOFF_TIMEOUT",
+    "DESCEND_TIMEOUT", "AUTO_LAND_TIMEOUT", "AUTO_LAND_SPEED_EST",
     # ★ 2026-10-19 穿环 (stage12)
     "DASH_V", "DASH_V_MIN", "DASH_V_STEP", "DASH_ACC", "BRAKE_ACC", "D_ALIGN_MIN",
     "L_F", "L_R", "W_HALF", "R_IN", "D_BACK", "D_REAR", "D_SIDE", "GATE_XY_MAX",
@@ -542,13 +499,13 @@ def list_sites(sites_dir=DEFAULT_SITES_DIR):
 
 def schema_json():
     """旋钮表 + 档位表，给网页表单用。"""
-    return {"knobs": KNOBS, "speed_table": SPEED_TABLE, "scene_table": SCENE_TABLE,
+    return {"knobs": KNOBS, "scene_table": SCENE_TABLE,
             "safety_rules": [dict(param=p, rule=r, limit=l, kind=k, why=w)
                              for p, r, l, k, w in SAFETY_RULES]}
 
 
 # =============================================================================
-# 旋钮级检查（只看旋钮本身，不需要 stage11 的全局）
+# 旋钮级检查（只看旋钮本身，不需要飞行脚本的全局）
 # =============================================================================
 def validate_knobs(knobs):
     """返回 (errors, warnings)。范围来自 KNOBS 表。"""
@@ -581,8 +538,6 @@ def validate_knobs(knobs):
         elif zhi - zlo < 0.30:
             errs.append("高度带只有 %.2fm，太窄：tag 稍一移动就出带被整帧丢弃" % (zhi - zlo))
 
-    if knobs.get("scene") == "室内" and knobs.get("speed") == "快":
-        errs.append("scene=室内 不允许 speed=快")
     return errs, warns
 
 
@@ -607,7 +562,7 @@ def check_knob_task(knobs, task, script="飞行脚本"):
 # 旋钮 → 参数覆盖
 # =============================================================================
 def _build_gate_overrides(knobs, view):
-    """穿环 (stage12) 的旋钮 → 参数。和停靠跟踪共用的只有 起飞高度 / 高度带 / 水平范围 / 场景。"""
+    """穿环的旋钮 → 参数。"""
     ov, rep, warns = {}, [], []
 
     def cur(k):
@@ -670,133 +625,16 @@ def _build_gate_overrides(knobs, view):
     return ov, rep, warns
 
 
-def build_overrides(knobs, view, task="track"):
+def build_overrides(knobs, view, task="gate"):
     """
     把旋钮翻译成**具体参数覆盖**。返回 (overrides, report_lines, warnings)。
     没给的旋钮 = 用代码里的默认值（不改）。
-
-    view = 当前参数视图(代码默认值 + --set)。推导里用到的速度/现有上限都从
-    这里取，不再写死 0.50 / 0.60 / 0.98 —— 否则 --set DESCEND_SPEED 之后
-    超时不会跟着变。
-    task = 飞行脚本的任务 (见 script_task)。穿环走 _build_gate_overrides。
+    view = 当前参数视图(代码默认值 + --set)。推导里用到的速度/现有上限都从这里取。
+    task 只剩 "gate" (参数保留给调用方兼容)。
     """
-    if task == "gate":
-        return _build_gate_overrides(knobs, view)
-    ov, rep, warns = {}, [], []
-
-    def cur(k):
-        if k in ov:
-            return ov[k]
-        if k in view:
-            return view[k]
-        return _STANDALONE_DEFAULTS.get(k)
-
-    zlo, zhi = knobs.get("z_low"), knobs.get("z_high")
-    tk = knobs.get("takeoff_h")
-    z_given = zlo is not None and zhi is not None
-
-    # ---- 起飞高度
-    if tk is not None:
-        ov["TAKEOFF_HEIGHT"] = tk
-        # 台阶式爬升: 按 0.5m/s 保守估
-        ov["TAKEOFF_TIMEOUT"] = max(10.0, math.ceil(tk / 0.5) + 5.0)
-        rep.append("起飞高度 %.2f m (超时 %.0f s)" % (tk, ov["TAKEOFF_TIMEOUT"]))
-
-    # ---- 高度带 + 高度三件套（钳位顶 / 手动顶 / 安全硬顶）
-    if z_given:
-        ov["TARGET_Z_NOMINAL"] = (zlo + zhi) / 2.0
-        ov["TARGET_Z_TOLERANCE"] = (zhi - zlo) / 2.0
-        rep.append("目标高度带 [%.2f, %.2f] m  →  门限 = %.2f ± %.2f"
-                   % (zlo, zhi, ov["TARGET_Z_NOMINAL"], ov["TARGET_Z_TOLERANCE"]))
-        # top 取"目标最高"和"起飞高度"里大的 —— 起飞高度不能比手动顶还高
-        top = max(zhi, cur("TAKEOFF_HEIGHT"))
-        ov["TRACK_Z_MAX"] = top
-        ov["TELEOP_DZ_MAX"] = top
-        ov["MAX_HEIGHT"] = top + 1.0
-        rep.append("高度钳位顶 %.2f m / 安全硬顶 %.2f m" % (top, top + 1.0))
-    elif tk is not None:
-        # ★ 2026-10-09 修: 旧版只给 takeoff_h 时 top=takeoff_h，会把
-        #   MAX_HEIGHT 从 11 压到 2.5、TRACK_Z_MAX 压到 1.5，而门限带还是默认的
-        #   [0.5,10] → 5m 的目标被接受却够不着 = 09-16 那种"看得见不动"。
-        #   现在没给高度带时**只抬不压**。
-        raised = []
-        for k in ("TRACK_Z_MAX", "TELEOP_DZ_MAX"):
-            if tk > cur(k):
-                ov[k] = tk
-                raised.append(k)
-        if cur("TRACK_Z_MAX") + 1.0 > cur("MAX_HEIGHT"):
-            ov["MAX_HEIGHT"] = cur("TRACK_Z_MAX") + 1.0
-            raised.append("MAX_HEIGHT")
-        if raised:
-            rep.append("起飞高度高于原上限 → 抬高 %s" % ", ".join(raised))
-
-    # ---- 降落超时: 按实际降落速度反算
-    if "MAX_HEIGHT" in ov:
-        top = ov["MAX_HEIGHT"]
-        dsp = cur("DESCEND_SPEED")
-        ov["DESCEND_TIMEOUT"] = max(45.0, math.ceil(top / dsp * 2) + 5.0)
-        rep.append("降落超时 %.0f s (按 %.2fm/s 降 %.1fm 的两倍留量)"
-                   % (ov["DESCEND_TIMEOUT"], dsp, top))
-
-    # ---- 水平范围
-    r = knobs.get("xy_radius")
-    if r is not None:
-        ov["TRACK_XY_MAX"] = r
-        ov["TELEOP_XY_MAX"] = r
-        margin = min(2.0, max(0.5, 0.15 * r))     # 小场地别用 1m 余量
-        ov["ENVELOPE_MARGIN"] = margin
-        rsp = cur("RETURN_SPEED")
-        # 圆形围栏: 最远 = 半径 + 余量
-        ov["RETURN_TIMEOUT"] = max(40.0, math.ceil((r + margin) / rsp * 1.5) + 5.0)
-        rep.append("水平范围 软限 %.2f m / 硬围栏 %.2f m (返航超时 %.0f s)"
-                   % (r, r + margin, ov["RETURN_TIMEOUT"]))
-
-    # ---- 目标距离
-    sd = knobs.get("standoff")
-    if sd is not None:
-        ov["TRACK_STANDOFF"] = sd
-        rep.append("停靠距离 %.2f m" % sd)
-    far = knobs.get("detect_far")
-    if far is not None:
-        ov["DETECT_RANGE_MAX"] = far
-        rep.append("检测远端 %.2f m" % far)
-    ed = knobs.get("entry_dist")
-    if ed is not None:
-        ov["TRACK_ENTRY_MAX_D"] = ed
-        rep.append("进场门 目标比 %.2f m 远就不进闭环" % ed)
-
-    # ---- 作业时长
-    # ★ 2026-10-09: 不再推 TRACK_NOINPUT_MAX。那是 SSH 假死检测(链路活性),
-    #   和任务长短无关 —— 旧版任务 600s 时要 10 分钟无输入才判死。
-    ms = knobs.get("mission_s")
-    if ms is not None:
-        ov["TRACK_DURATION"] = ms
-        ov["TELEOP_DURATION"] = min(60.0, max(10.0, 0.2 * ms))
-        rep.append("作业 %g s (手动段 %g s)" % (ms, ov["TELEOP_DURATION"]))
-
-    # ---- 速度档
-    sp = knobs.get("speed")
-    if sp in SPEED_TABLE:
-        v, vz, txy, tz = SPEED_TABLE[sp]
-        ov["TRACK_V_MAX"], ov["TRACK_VZ_MAX"] = v, vz
-        ov["TELEOP_XY_SPEED"], ov["TELEOP_Z_SPEED"] = txy, tz
-        rep.append("速度档 %s (水平 %.2f / 垂直 %.2f m/s, 手动 %.2f/%.2f)"
-                   % (sp, v, vz, txy, tz))
-
-    # ---- 场景
-    sc = knobs.get("scene")
-    if sc in SCENE_TABLE:
-        for k, v in SCENE_TABLE[sc].items():
-            ov[k] = v
-        rep.append("场景 %s (%s)" % (sc, ", ".join(
-            "%s=%g" % kv for kv in sorted(SCENE_TABLE[sc].items()))))
-
-    return ov, rep, warns
+    return _build_gate_overrides(knobs, view)
 
 
-# =============================================================================
-# 命令行
-# =============================================================================
 def pop_our_args(argv):
     """
     从 argv 里挑出本模块的参数, **其余原样留给 ROS**
@@ -984,146 +822,8 @@ def _check_safety(g, E, rules=None):
 
 
 def check_effective(g):
-    """返回 (errors, warnings)。g = 飞行脚本的全局（含派生量）。按脚本任务分派。"""
-    if script_task(g) == "gate":
-        return _check_gate(g)
-    return _check_track(g)
-
-
-def _check_track(g):
-    """停靠跟踪 (stage11)。2026-10-19 之前的 check_effective, 内容未改。"""
-    E, W = [], []
-    get = g.get
-
-    # ---------------- 安全规则 ----------------
-    _check_safety(g, E)
-    if get("TRACK_ALLOW_SIM_DRIVE"):
-        W.append("TRACK_ALLOW_SIM_DRIVE=True —— 假数据也能驱动飞机！只在台架测试时用")
-
-    # ---------------- 高度 ----------------
-    nom, tol = g["TARGET_Z_NOMINAL"], g["TARGET_Z_TOLERANCE"]
-    b_lo, b_hi = nom - tol, nom + tol
-    if tol <= 0 or b_hi - b_lo < 0.30:
-        E.append("z 门限带 [%.2f, %.2f] 太窄或为空" % (b_lo, b_hi))
-    if b_lo < 0.50 - 1e-9:
-        E.append("z 门限带下边界 %.2f < 0.50：地效 + 桨风吹板 + 落地误判" % b_lo)
-    if g["TRACK_Z_MIN"] >= b_lo:
-        W.append("高度钳位下限 TRACK_Z_MIN=%.2f 不低于门限带下边界 %.2f："
-                 "目标在带底时飞机够不着(err_z 恒有余差)" % (g["TRACK_Z_MIN"], b_lo))
-    if b_hi > g["TRACK_Z_MAX"] + 1e-6:
-        msg = ("门限带上边界 %.2f > 高度钳位顶 TRACK_Z_MAX=%.2f：高处目标会被接受却够不着"
-               "（09-16「看得见但不动」同类）" % (b_hi, g["TRACK_Z_MAX"]))
-        (E if get("TRACK_Z_ENABLE") else W).append(msg)
-    if g["TRACK_Z_MAX"] > g["MAX_HEIGHT"] - 0.5 + 1e-9:
-        E.append("高度钳位顶 %.2f 离安全硬顶 %.2f 太近(<0.5m)：飞到上限就触发缓降"
-                 % (g["TRACK_Z_MAX"], g["MAX_HEIGHT"]))
-    if g["TELEOP_DZ_MAX"] > g["MAX_HEIGHT"] - 0.5 + 1e-9:
-        E.append("手动高度顶 %.2f 离安全硬顶 %.2f 太近(<0.5m)"
-                 % (g["TELEOP_DZ_MAX"], g["MAX_HEIGHT"]))
-    tk = g["TAKEOFF_HEIGHT"]
-    if not (g["TELEOP_DZ_MIN"] <= tk <= g["TELEOP_DZ_MAX"]):
-        E.append("起飞高度 %.2f 不在手动高度带 [%.2f, %.2f] 内"
-                 % (tk, g["TELEOP_DZ_MIN"], g["TELEOP_DZ_MAX"]))
-    if tk < 0.5:
-        E.append("起飞高度 %.2f < 0.5：离地判定不可靠" % tk)
-    if tk > 2.0:
-        W.append("起飞高度 %.1f m > 2.0：起飞段是位置阶跃，PX4 会以最大爬升率去追" % tk)
-    if g["TAKEOFF_TIMEOUT"] < tk / 0.5 + 3.0:
-        W.append("起飞超时 %.0fs 偏短(升 %.1fm 按 0.5m/s 估要 %.0fs)"
-                 % (g["TAKEOFF_TIMEOUT"], tk, tk / 0.5))
-    if g["TRACK_Z_DEADBAND_EXIT"] >= g["TRACK_Z_DEADBAND"]:
-        E.append("TRACK_Z_DEADBAND_EXIT 必须 < TRACK_Z_DEADBAND，否则滞回不起作用")
-
-    # ---------------- 水平 ----------------
-    xy_min = min(g["TRACK_XY_MAX"], g["TELEOP_XY_MAX"])
-    hard = xy_min + g["ENVELOPE_MARGIN"]
-    base = g["BASE_DRIFT_LIM"]
-    if base < 0.30:
-        E.append("BASE_DRIFT_LIM=%.2f < 0.30：正常悬停漂移就会触发缓降" % base)
-    if base + 0.40 > hard + 1e-9:
-        E.append("起降阶段水平限制(最大 %.2f m)比水平硬围栏 %.2f m 还大 —— "
-                 "xy_radius 太小或 scene 选错" % (base + 0.40, hard))
-    stop = g.get("TRACK_STOP_DIST", g["TRACK_STANDOFF"] + g["TRACK_DEADBAND"])
-    if g["TRACK_XY_MAX"] < stop:
-        W.append("水平软限 %.2f m 小于停靠距离 %.2f m：目标靠近时飞机没有后退空间"
-                 % (g["TRACK_XY_MAX"], stop))
-    if g["TRACK_DEADBAND_EXIT"] >= g["TRACK_DEADBAND"]:
-        E.append("TRACK_DEADBAND_EXIT 必须 < TRACK_DEADBAND，否则滞回不起作用")
-
-    # ---------------- 目标距离 ----------------
-    far = g["DETECT_RANGE_MAX"]
-    if stop >= far:
-        E.append("停靠距离 %.2f m ≥ 检测远端 %.2f m：飞机停下的位置已经看不见目标"
-                 % (stop, far))
-    elif far - stop < 0.30:
-        W.append("靠近方向可用带只有 %.2f m：目标稍一远离就丢" % (far - stop))
-    ed = g["TRACK_ENTRY_MAX_D"]
-    if ed <= stop:
-        E.append("进场门 %.2f m ≤ 停靠距离 %.2f m：永远进不了闭环" % (ed, stop))
-    if ed > far + 1e-6:
-        W.append("进场门 %.2f m > 检测远端 %.2f m：进场门实际不起作用"
-                 "（想关掉它请明说；否则把 entry_dist 设到 ≤ detect_far）" % (ed, far))
-    inner = g["TRACK_STANDOFF"] - g["TRACK_DEADBAND"]
-    if inner <= g["DETECT_RANGE_MIN"]:
-        W.append("死区内边界 %.2f m ≤ 近端检测距离 %.2f m：后退前读数可能已不可信"
-                 % (inner, g["DETECT_RANGE_MIN"]))
-
-    # ---------------- 速度 ----------------
-    ratio = get("VEL_ENVELOPE_RATIO", 2.0)
-    pe = get("PHASE_ENVELOPE")
-    if isinstance(pe, dict):
-        need_tr = 1.7 * max(g["TRACK_V_MAX"], g["TELEOP_XY_SPEED"])
-        if pe["track"][1] < need_tr:
-            E.append("track 速度包络 %.2f m/s < 1.7×指令速度 %.2f m/s：一跟踪就会触发缓降"
-                     "（09-15 实测实际速度≈1.73×指令）" % (pe["track"][1], need_tr))
-        need_te = 1.7 * g["TELEOP_XY_SPEED"]
-        if pe["teleop"][1] < need_te:
-            E.append("teleop 速度包络 %.2f m/s < 1.7×手动速度 %.2f m/s"
-                     % (pe["teleop"][1], need_te))
-    if ratio < 1.7:
-        E.append("VEL_ENVELOPE_RATIO=%.2f < 1.7：低于实测超调比例" % ratio)
-    tau = get("POS_LOOP_TAU", 1.0)
-    if g["TRACK_V_MAX"] * tau > g["TRACK_LEASH_MAX"] + 1e-9:
-        W.append("牵引绳 %.2f m < 速度 %.2f × 位置环时间常数 %.1fs：正常跟踪时牵引绳会"
-                 "一直饱和，飞机达不到 V_MAX。牵引绳没有自动放大(09-15 记录它影响振荡)，"
-                 "需要更快就 --set TRACK_LEASH_MAX=%.2f 并观察是否摆动"
-                 % (g["TRACK_LEASH_MAX"], g["TRACK_V_MAX"], tau,
-                    g["TRACK_V_MAX"] * tau * 1.2))
-    # ★ 2026-10-09(2): z 同理。前馈关闭时 z 通道是纯位置控制,
-    #   能达到的垂直速度 ≈ TRACK_Z_LEASH / 位置环时间常数。
-    ff = bool(get("TRACK_VZ_FEEDFORWARD", False))
-    if g.get("TRACK_Z_ENABLE") and not ff and \
-            g["TRACK_VZ_MAX"] * tau > g["TRACK_Z_LEASH"] + 1e-9:
-        W.append("垂直牵引绳 %.2f m < 垂直速度 %.2f × %.1fs：z 通道是纯位置控制，"
-                 "实际垂直速度到不了 TRACK_VZ_MAX（约 %.2f m/s 封顶）。"
-                 "要真正达到 VZ_MAX 需要 set.TRACK_VZ_FEEDFORWARD = True（单独飞一次验证）"
-                 % (g["TRACK_Z_LEASH"], g["TRACK_VZ_MAX"], tau,
-                    g["TRACK_Z_LEASH"] / tau))
-    if ff:
-        W.append("TRACK_VZ_FEEDFORWARD=True：垂直速度前馈生效，z 动态和以往所有飞行都不同"
-                 "（以往数据全是纯位置 z 环）。这一次别同时改别的参数")
-
-    # ---------------- 时间 ----------------
-    need_d = (g["MAX_HEIGHT"] - g["DESCEND_Z_TARGET_DZ"]) / g["DESCEND_SPEED"] * 1.2 + 3
-    if g["DESCEND_TIMEOUT"] < need_d:
-        W.append("降落超时 %.0fs < 从硬顶降下来约需 %.0fs：超时会直接切 AUTO.LAND"
-                 % (g["DESCEND_TIMEOUT"], need_d))
-    xy_max = max(g["TRACK_XY_MAX"], g["TELEOP_XY_MAX"]) + g["ENVELOPE_MARGIN"]
-    need_r = xy_max / g["RETURN_SPEED"] * 1.2 + 3
-    if g["RETURN_TIMEOUT"] < need_r:
-        W.append("返航超时 %.0fs < 从围栏边返航约需 %.0fs：超时会就地降落"
-                 % (g["RETURN_TIMEOUT"], need_r))
-    if g["TRACK_NOINPUT_MAX"] > 180:
-        W.append("TRACK_NOINPUT_MAX=%.0fs 太长：SSH 假死要这么久才发现"
-                 % g["TRACK_NOINPUT_MAX"])
-
-    # ---------------- 频率 ----------------
-    if g["SP_PUB_HZ"] <= 2:
-        E.append("SP_PUB_HZ=%s ≤ 2：PX4 会退出 OFFBOARD" % g["SP_PUB_HZ"])
-    if g["CTRL_HZ"] % g["TRACK_LOG_HZ"] != 0:
-        W.append("TRACK_LOG_HZ=%s 不能整除 CTRL_HZ=%s，实际日志频率会打折"
-                 % (g["TRACK_LOG_HZ"], g["CTRL_HZ"]))
-    return E, W
+    """返回 (errors, warnings)。g = 飞行脚本的全局（含派生量）。"""
+    return _check_gate(g)
 
 
 def _gate_preview(g):
@@ -1312,38 +1012,7 @@ def _derived_gate(g):
 
 def derived_snapshot(g):
     """生效包络的关键量（给 dry-run 文本/JSON 和网页预览用）。"""
-    if script_task(g) == "gate":
-        return _round_floats(_derived_gate(g))
-    nom, tol = g["TARGET_Z_NOMINAL"], g["TARGET_Z_TOLERANCE"]
-    pe = g.get("PHASE_ENVELOPE") or {}
-    return _round_floats({
-        "z_band": [nom - tol, nom + tol],
-        "z_clamp": [g["TRACK_Z_MIN"], g["TRACK_Z_MAX"]],
-        "teleop_dz": [g["TELEOP_DZ_MIN"], g["TELEOP_DZ_MAX"]],
-        "max_height": g["MAX_HEIGHT"],
-        "takeoff_height": g["TAKEOFF_HEIGHT"],
-        "xy_soft": g["TRACK_XY_MAX"],
-        "xy_hard": g["TRACK_XY_MAX"] + g["ENVELOPE_MARGIN"],
-        "base_drift": g["BASE_DRIFT_LIM"],
-        "standoff_shell": [g["TRACK_STANDOFF"] - g["TRACK_DEADBAND"],
-                           g["TRACK_STANDOFF"] + g["TRACK_DEADBAND"]],
-        "detect_range": [g["DETECT_RANGE_MIN"], g["DETECT_RANGE_MAX"]],
-        "entry_dist": g["TRACK_ENTRY_MAX_D"],
-        "approach_band": g["DETECT_RANGE_MAX"]
-                         - (g["TRACK_STANDOFF"] + g["TRACK_DEADBAND"]),
-        "leash": [g["TRACK_LEASH_MAX"], g["TRACK_Z_LEASH"]],
-        "phase_envelope": {k: list(v) for k, v in pe.items()},
-        "timeouts": {k: g[k] for k in ("TAKEOFF_TIMEOUT", "TELEOP_DURATION",
-                                       "TRACK_DURATION", "TRACK_NOINPUT_MAX",
-                                       "RETURN_TIMEOUT", "DESCEND_TIMEOUT")},
-        "speeds": {k: g[k] for k in ("TRACK_V_MAX", "TRACK_VZ_MAX",
-                                     "TELEOP_XY_SPEED", "TELEOP_Z_SPEED",
-                                     "RETURN_SPEED", "DESCEND_SPEED")},
-        "safety": {p: g.get(p) for p, _, _, _, _ in SAFETY_RULES},
-        "switches": {k: g.get(k) for k in ("TRACK_SHADOW", "TRACK_ALLOW_SIM_DRIVE",
-                                           "TRACK_Z_ENABLE", "TRACK_VZ_FEEDFORWARD",
-                                           "PREFLIGHT_REQUIRE_VISION")},
-    })
+    return _round_floats(_derived_gate(g))
 
 
 def _round_floats(x, nd=4):
@@ -1361,7 +1030,7 @@ def _round_floats(x, nd=4):
 
 def finalize(report, g):
     """
-    在 stage11_real.py **派生量之后**调用。对最终生效值做全部校验:
+    在飞行脚本**派生量之后**调用。对最终生效值做全部校验:
       错误 → 拒绝起飞 (exit 1)
       dry-run → 打印(文本或 JSON)后 exit 0
     否则把警告并进 report，返回给启动摘要用。
@@ -1439,65 +1108,7 @@ def _die(report, g=None):
 def print_envelope(report, g):
     """打印"这次生效的包络"。现场起飞前核对就看这一块。"""
     d = report.get("derived") or derived_snapshot(g)
-    if script_task(g) == "gate":
-        return _print_envelope_gate(report, g, d)
-    print("=" * 78)
-    print("现场档案: %s" % report["src"])
-    for l in report["lines"]:
-        print("  · " + l)
-    if report["applied"]:
-        print("  · 实际覆盖参数 %d 个:" % len(report["applied"]))
-        for k, v in report["applied"]:
-            print("      %-22s = %s" % (k, _fmt(v)))
-    print("-" * 78)
-    print("生效包络核对表:")
-    print("    高度带        [%.2f, %.2f] m   (门限 %.2f ± %.2f)"
-          % (d["z_band"][0], d["z_band"][1],
-             g["TARGET_Z_NOMINAL"], g["TARGET_Z_TOLERANCE"]))
-    print("    高度钳位      [%.2f, %.2f] m   手动 [%.2f, %.2f] m   安全硬顶 %.2f m"
-          % (d["z_clamp"][0], d["z_clamp"][1], d["teleop_dz"][0], d["teleop_dz"][1],
-             d["max_height"]))
-    print("    起飞高度      %.2f m" % d["takeoff_height"])
-    print("    水平范围      软限 %.2f m / 硬围栏 %.2f m / 起降漂移 %.2f m"
-          % (d["xy_soft"], d["xy_hard"], d["base_drift"]))
-    print("    目标距离      停靠壳 [%.2f, %.2f] m  检测 [%.2f, %.2f] m  "
-          "进场门 %.2f m  可用带 %.2f m"
-          % (d["standoff_shell"][0], d["standoff_shell"][1],
-             d["detect_range"][0], d["detect_range"][1],
-             d["entry_dist"], d["approach_band"]))
-    sp = d["speeds"]
-    print("    速度          跟踪 %.2f / 垂直 %.2f   手动 %.2f / %.2f   "
-          "返航 %.2f  降落 %.2f m/s"
-          % (sp["TRACK_V_MAX"], sp["TRACK_VZ_MAX"], sp["TELEOP_XY_SPEED"],
-             sp["TELEOP_Z_SPEED"], sp["RETURN_SPEED"], sp["DESCEND_SPEED"]))
-    print("    牵引绳        水平 %.2f m / 垂直 %.2f m" % tuple(d["leash"]))
-    t = d["timeouts"]
-    print("    时间          起飞 %.0fs  手动 %.0fs  跟踪 %.0fs  无按键 %.0fs  "
-          "返航 %.0fs  降落 %.0fs"
-          % (t["TAKEOFF_TIMEOUT"], t["TELEOP_DURATION"], t["TRACK_DURATION"],
-             t["TRACK_NOINPUT_MAX"], t["RETURN_TIMEOUT"], t["DESCEND_TIMEOUT"]))
-    if d["phase_envelope"]:
-        print("    阶段包络      (水平硬限 m / 速度硬限 m/s)")
-        for name in ("takeoff", "hover", "teleop", "track", "return_home",
-                     "descend", "auto_land"):
-            if name in d["phase_envelope"]:
-                h, v = d["phase_envelope"][name]
-                print("        %-12s %6.2f / %.2f" % (name, h, v))
-    s = d["safety"]
-    print("    安全          倾角停桨 %.0f°  去抖 %.2fs  视觉断供 %.2fs 后缓降  "
-          "围栏违规缓降 %s"
-          % (s["MAX_TILT_DEG"], s["FATAL_CONFIRM_S"], s["VISION_LOST_LAND_S"],
-             s["FENCE_VIOLATION_LANDS"]))
-    sw = d["switches"]
-    print("    开关          影子 %s  假数据驱动 %s  z环 %s  z前馈 %s  起飞前要视觉 %s"
-          % (sw["TRACK_SHADOW"], sw["TRACK_ALLOW_SIM_DRIVE"], sw["TRACK_Z_ENABLE"],
-             sw.get("TRACK_VZ_FEEDFORWARD"), sw["PREFLIGHT_REQUIRE_VISION"]))
-    if report["warnings"]:
-        print("-" * 78)
-        for w in report["warnings"]:
-            print("  ⚠️ " + w)
-    print("=" * 78)
-    print("校验通过。")
+    return _print_envelope_gate(report, g, d)
 
 
 def _start_line(gt):
@@ -1579,55 +1190,7 @@ def _print_envelope_gate(report, g, d):
 def site_config_text(report, g, extra=None):
     """写进飞行日志目录的 site_config.txt 内容。"""
     d = report.get("derived") or derived_snapshot(g)
-    if script_task(g) == "gate":
-        return _site_config_text_gate(report, g, d, extra)
-    L = ["# 本次飞行生效的现场配置（自动生成，复盘用）",
-         "# 档案来源: %s" % report["src"], ""]
-    if report["knobs"]:
-        L.append("[旋钮]")
-        for k in sorted(report["knobs"]):
-            L.append("  %-12s = %s" % (k, report["knobs"][k]))
-        L.append("")
-    if report.get("sets"):
-        L.append("[原始参数覆盖 (档案 set. + 命令行 --set, 后者优先)]")
-        for s in report["sets"]:
-            L.append("  " + s)
-        L.append("")
-    L.append("[推导出的参数覆盖]")
-    for k, v in report["applied"]:
-        L.append("  %-22s = %s" % (k, _fmt(v)))
-    L.append("")
-    L.append("[生效包络]")
-    L.append("  高度带        [%.2f, %.2f] m" % tuple(d["z_band"]))
-    L.append("  高度钳位      [%.2f, %.2f] m   硬顶 %.2f m"
-             % (d["z_clamp"][0], d["z_clamp"][1], d["max_height"]))
-    L.append("  起飞高度      %.2f m" % d["takeoff_height"])
-    L.append("  水平范围      软限 %.2f / 硬围栏 %.2f / 起降漂移 %.2f m"
-             % (d["xy_soft"], d["xy_hard"], d["base_drift"]))
-    L.append("  目标距离      停靠壳 [%.2f, %.2f]  检测远端 %.2f  进场门 %.2f m"
-             % (d["standoff_shell"][0], d["standoff_shell"][1],
-                d["detect_range"][1], d["entry_dist"]))
-    t = d["timeouts"]
-    L.append("  时间          起飞 %.0f / 手动 %.0f / 跟踪 %.0f / 无按键 %.0f / "
-             "返航 %.0f / 降落 %.0f s"
-             % (t["TAKEOFF_TIMEOUT"], t["TELEOP_DURATION"], t["TRACK_DURATION"],
-                t["TRACK_NOINPUT_MAX"], t["RETURN_TIMEOUT"], t["DESCEND_TIMEOUT"]))
-    if d["phase_envelope"]:
-        L.append("  阶段包络      " + "  ".join(
-            "%s=%.2f/%.2f" % (k, v[0], v[1]) for k, v in d["phase_envelope"].items()))
-    L.append("")
-    L.append("[全部生效参数]")
-    for k, v in _params_dict(g).items():
-        L.append("  %-26s = %s" % (k, _fmt(v)))
-    if report["warnings"]:
-        L.append("")
-        L.append("[警告]")
-        for w in report["warnings"]:
-            L.append("  ⚠️ " + w)
-    if extra:
-        L.append("")
-        L += extra
-    return "\n".join(L) + "\n"
+    return _site_config_text_gate(report, g, d, extra)
 
 
 def _site_config_text_gate(report, g, d, extra=None):
@@ -1689,8 +1252,8 @@ if __name__ == "__main__":
     if errs:
         _die({"src": path, "errors": errs, "warnings": []})
     e, w = validate_knobs(knobs)
-    _task = TASK_NAMES.get(knobs.get("task"), "track")
-    e += check_knob_task(knobs, _task, "任务「%s」" % (knobs.get("task") or "跟踪"))
+    _task = "gate"
+    e += check_knob_task(knobs, _task, "任务「穿环」")
     ov, rep, w2 = build_overrides(knobs, dict(_STANDALONE_DEFAULTS), _task)
     if sets:
         rep.append("档案 set. 覆盖(单独运行时不检查参数是否存在): " + ", ".join(sets))
@@ -1706,4 +1269,4 @@ if __name__ == "__main__":
     print("  (具体参数覆盖 %d 个)" % len(ov))
     print("  ★ 这只是旋钮级检查。完整检查(含代码默认值和派生量)请用:")
     print("      python3 %s --site %s --dry-run"
-          % ("stageNN_gate.py" if _task == "gate" else "stageNN_track.py", name))
+          % ("stageNN_<任务>.py", name))

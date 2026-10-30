@@ -24,7 +24,7 @@ vision_bridge.py — 飞机侧图传/检测桥 (新相机直连版, 2026-10-12)
   ZMQ PUB tcp://*:5555  单帧 msgpack {seq, t_cap, w, h, K, pose, fc, ph, rtt_*, jpg}
   ZMQ SUB tcp://<gcs>:5556 ← {t_cap 原样回填, found, target(odom), sim}
     ▼
-  /track/target  PointStamped (header.stamp = 拍摄时刻; sim → frame_id "odom_sim")
+  /track/target  PointStamped (header.stamp = 拍摄时刻; sim → frame_id "odom_sim")  —— 只在 aruco 模式
   /bridge/rtt    String       往返时间
   /vision_bridge/cam  String (JSON, 1Hz)  相机状态 —— flight_monitor「识别相机」读它
 
@@ -77,10 +77,8 @@ vision_bridge.py — 飞机侧图传/检测桥 (新相机直连版, 2026-10-12)
     相机 3840×1080 MJPG 双目并排 → 检测线程(只处理最新帧):
       MJPG 降采样解码(1920×540) → 双目校正 → gate_detector.process(L, R, t_cap, T_WC)
       T_WC = T_odom←body(t_cap, 位姿缓冲插值) · T_BC(左目外参, 参数给)
-    → /track/target  PointStamped (odom 系, stamp = t_cap)  —— 默认 frame_id "odom_sim"!
-                     (_gate_sim:=false 才是 "odom", 才会真的驱动 stage11; 机上检测没有地面开关, 只有这一道)
-    → /gate/target   PoseWithCovarianceStamped (位置 + 3×3 协方差)
-    → /gate/status   String JSON (阶段/距离/来源/耗时/环/红点...) 每帧
+    → /gate/status   String JSON (阶段/距离/来源/耗时/环/红点...) 每帧; sim 字段 = _gate_sim (默认 true)
+    ★2026-10-30: 以前另发的 /track/target 和 /gate/target (给 stage11 用) 已删除 —— 穿环脚本只订 /gate/status
     上行: 发校正后左目小图(带叠加)给地面站看; 地面站回包里的 target 在 gate 模式下**不发布**。
   需要同目录: gate_detector.py  ring_detector.py  stereo_calib.yaml  gate_params.json
   例:  bash run_vision.sh 192.168.2.179 _mode:=gate _cam_fps:=15 _cam_pitch_deg:=0
@@ -89,7 +87,7 @@ vision_bridge.py — 飞机侧图传/检测桥 (新相机直连版, 2026-10-12)
 ★ gate_gcs 模式 (2026-10-15 新增, _mode:=gate_gcs) —— 格子环 + 红点, **地面**识别
 -------------------------------------------------------------------------------
   机上只做: 采集 → 1920×540 并排帧 (MJPG 降采样解码 + JPEG q=jpeg_q) → 上行;
-            收地面观测 → 按 t_cap 插值位姿 → GateFuser 融合 → 发布 (同 gate 模式的三个话题)。
+            收地面观测 → 按 t_cap 插值位姿 → GateFuser 融合 → 发 /gate/status (同 gate 模式)。
   地面 (gcs_gate.py) 做全部检测, 只回**相机(校正左目)系观测**, 不需要也拿不到位姿。
     上行包头: sbs=True, w/h=并排帧尺寸, gate=飞机最新融合结果 (地面只拿来显示)
     下行包:   {t_cap, found, gate: 观测, rig: {f, R1, ...}, sim}
@@ -131,7 +129,7 @@ import time
 
 import numpy as np
 import rospy
-from geometry_msgs.msg import PointStamped, PoseStamped, PoseWithCovarianceStamped
+from geometry_msgs.msg import PointStamped, PoseStamped
 from mavros_msgs.msg import State
 from std_msgs.msg import String
 
@@ -431,14 +429,13 @@ class PoseBuffer(object):
 
 class GateOut(object):
     """
-    gate / gate_gcs 共用的发布器: /track/target  /gate/target  /gate/status。
-    frame_id: 飞机 _gate_sim 或 (地面检测时) 地面 sim 任一为真 → "odom_sim" (stage11 不响应)。
+    gate / gate_gcs 共用的发布器: /gate/status (每帧一条 JSON)。
+    sim 字段: 飞机 _gate_sim 或 (地面检测时) 地面 sim 任一为真 → true (穿环脚本不拿它冲刺)。
+    ★2026-10-30 /track/target、/gate/target 删除 (只有 stage11 订阅, stage11 已删除)。
     """
 
     def __init__(self, sim, lost_timeout):
         self.sim, self.lost_timeout = bool(sim), float(lost_timeout)
-        self.pub_t = rospy.Publisher("/track/target", PointStamped, queue_size=1)
-        self.pub_c = rospy.Publisher("/gate/target", PoseWithCovarianceStamped, queue_size=1)
         self.pub_s = rospy.Publisher("/gate/status", String, queue_size=1)
         self.n, self.ms_sum, self.last = 0, 0.0, {}
 
@@ -461,25 +458,6 @@ class GateOut(object):
                       side=tg.side, published=publish,
                       # INTERFACE_gate §1: 世界系协方差 m² (行主序 3×3)。stage12 拿它把 σ 拆到靶面
                       cov=[float("%.4g" % v) for v in np.asarray(tg.cov_w, float).reshape(-1)[:9]])
-        if publish:
-            hdr_stamp = rospy.Time.from_sec(t)
-            frame = "odom_sim" if sim else "odom"
-            m = PointStamped()
-            m.header.stamp, m.header.frame_id = hdr_stamp, frame
-            m.point.x, m.point.y, m.point.z = (float(v) for v in tg.pos_w)
-            self.pub_t.publish(m)
-            c = PoseWithCovarianceStamped()
-            c.header.stamp, c.header.frame_id = hdr_stamp, frame
-            c.pose.pose.position.x, c.pose.pose.position.y, c.pose.pose.position.z = (float(v) for v in tg.pos_w)
-            c.pose.pose.orientation.w = 1.0
-            cov = [0.0] * 36
-            for i in range(3):
-                for j in range(3):
-                    cov[i * 6 + j] = float(tg.cov_w[i, j])
-            for i in range(3, 6):
-                cov[i * 6 + i] = 1e6               # 姿态无意义
-            c.pose.covariance = cov
-            self.pub_c.publish(c)
         self.pub_s.publish(String(data=json.dumps(st, default=str)))
         self.n += 1
         self.ms_sum += st["ms"]
@@ -924,7 +902,7 @@ class Bridge(object):
                 continue
             if self.gate is not None:
                 rospy.logwarn_throttle(10.0, "[bridge] gate 模式: 忽略地面站回包里的 target "
-                                             "(/track/target 由机上 gate 检测发布)")
+                                             "(环由机上 gate 检测发 /gate/status)")
                 continue
             tgt = det.get("target")
             if tgt is None or tc is None:
@@ -1136,12 +1114,9 @@ def main():
                   % cfg["status_topic"])
     rospy.loginfo("[bridge] 上行队列: SNDHWM=%d 内核 SNDBUF=%dB (实际 128KB)" % (SNDHWM_MSGS, SNDBUF_BYTES))
 
-    if gate is not None:
-        pub = gate.out.pub_t
-    elif fuse is not None:
-        pub = fuse.out.pub_t
-    else:
-        pub = rospy.Publisher("/track/target", PointStamped, queue_size=1)
+    # /track/target 只在 aruco 模式发 (gate / gate_gcs 的下行不走这里, 见 downlink_loop)
+    pub = None if (gate is not None or fuse is not None) else \
+        rospy.Publisher("/track/target", PointStamped, queue_size=1)
     rtt_pub = rospy.Publisher("/bridge/rtt", String, queue_size=1)
     cam_pub = rospy.Publisher("/vision_bridge/cam", String, queue_size=1)
     rospy.Subscriber(POSE_TOPIC, PoseStamped, br.on_pose, queue_size=1)

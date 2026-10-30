@@ -134,7 +134,7 @@ select.sm{width:auto;padding:1px 6px;font-size:12px}
 .seg button.on{background:var(--info-bg);color:var(--info)}
 
 /* ================== 监控页 ==================
-   左栏: [识别画面 或 俯视图] + 跟踪质量
+   左栏: [识别画面 或 俯视图] + 穿环卡片
    右栏: [俯视图 (画面开着时)] + 安全余量 + 事件
    识别画面收起时, 俯视图搬到左栏放大, 右栏只剩安全余量和事件。 */
 #tab-mon.on{display:grid;grid-template-columns:minmax(0,1fr) var(--side);gap:8px}
@@ -214,10 +214,7 @@ body.cam-off #top-swap{display:none}
 .srow .val{text-align:right;font-size:11.5px;white-space:nowrap;overflow:hidden}
 .srow.na{opacity:.4}
 
-/* 跟踪质量: 布局固定, 不在跟踪段时只是变灰, 不改变高度 */
-#card-trk{flex:none}
-.trk-spark{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-.trk-small{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:6px}
+/* 卡片里的数字格 (穿环卡片用) */
 .tile{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px 8px;min-width:0;display:flex;flex-direction:column}
 .tile .th{display:flex;align-items:baseline;gap:6px;min-width:0}
 .tile label{font-size:11px;color:var(--muted);white-space:nowrap}
@@ -227,9 +224,8 @@ body.cam-off #top-swap{display:none}
 .tile.ok{border-color:var(--ok)} .tile.warn{border-color:var(--warn)} .tile.bad{border-color:var(--bad)}
 .counts{display:flex;flex-wrap:nowrap;gap:4px 12px;font-size:12px;margin-top:5px;white-space:nowrap;overflow:hidden}
 .counts span b{font-family:var(--mono)}
-#card-trk.idle .trk-spark,#card-trk.idle .trk-small,#card-trk.idle .counts{opacity:.4}
 
-/* ★2026-10-19 穿环卡片: 和「跟踪质量」占同一个位置 (按任务二选一), 高度固定 */
+/* ★2026-10-19 穿环卡片: 高度固定 */
 #card-gate{flex:none}
 .gate-body{display:grid;grid-template-columns:minmax(170px,32%) minmax(0,1fr);gap:8px}
 #cvw-tgt{flex:none;height:178px;background:var(--panel2);border:1px solid var(--line);border-radius:7px}
@@ -366,8 +362,6 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
   #slot-main{flex:none;height:62vh} #slot-side{flex:none;height:56vh}
   #card-ev{flex:none;height:40vh}
   .det-charts{flex:none;height:150vh} #det-raw{flex:none;height:70vh}
-  .trk-small{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .trk-spark{grid-template-columns:repeat(2,minmax(0,1fr))}
   #tab-cfg .card{overflow:visible}
 }
 </style>
@@ -444,26 +438,7 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
         </div>
       </div>
     </div>
-    <div class="card" id="card-trk">
-      <div class="card-h"><h3>跟踪质量</h3><span id="trk-src" class="st muted small"></span>
-        <div class="r small muted">曲线 = 最近 30 秒，完整曲线在「详情」</div></div>
-      <div class="trk-spark">
-        <div class="tile spark" id="t-d"><div class="th"><label>水平距离 d</label><b class="num">—</b></div><small></small><div class="cv"><canvas></canvas></div></div>
-        <div class="tile spark" id="t-ez"><div class="th"><label>高度误差</label><b class="num">—</b></div><small></small><div class="cv"><canvas></canvas></div></div>
-        <div class="tile spark" id="t-g"><div class="th"><label>增益 gain</label><b class="num">—</b></div><small></small><div class="cv"><canvas></canvas></div></div>
-        <div class="tile spark" id="t-v"><div class="th"><label>水平速度</label><b class="num">—</b></div><small></small><div class="cv"><canvas></canvas></div></div>
-      </div>
-      <div class="trk-small">
-        <div class="tile" id="t-age"><div class="th"><label>数据年龄</label><b class="num">—</b></div><small></small></div>
-        <div class="tile" id="t-leash"><div class="th"><label>牵引绳</label><b class="num">—</b></div><small></small></div>
-        <div class="tile" id="t-rej"><div class="th"><label>拒绝率</label><b class="num">—</b></div><small></small></div>
-        <div class="tile" id="t-entry"><div class="th"><label>入场门禁</label><b>—</b></div><small></small></div>
-        <div class="tile" id="t-qual"><div class="th"><label>质量门禁</label><b>—</b></div><small></small></div>
-      </div>
-      <div class="counts" id="trk-counts"></div>
-    </div>
-    <!-- ★2026-10-19 穿环: 和「跟踪质量」二选一 (按 task 自动切换) -->
-    <div class="card" id="card-gate" hidden>
+    <div class="card" id="card-gate">
       <div class="card-h"><h3>穿环</h3><span id="gate-src" class="st muted small"></span>
         <div class="r small muted">靶面 = 从飞机这边看向环</div></div>
       <div class="gate-body">
@@ -494,14 +469,10 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
           </div></div>
         <div class="legend-pop" id="legend" hidden>
           <span><i style="background:var(--text)"></i>飞机（箭头 = 机头）</span>
-          <span><i style="background:var(--sp)"></i>设定点 + 牵引绳</span>
-          <span><i style="background:var(--tgt)"></i>目标（平滑后）</span>
-          <span><i style="background:var(--dim)"></i>目标（原始）</span>
-          <span><i style="background:var(--shell)"></i>停靠壳</span>
+          <span><i style="background:var(--sp)"></i>设定点</span>
           <span><i style="border:1px dashed var(--muted)"></i>水平软限</span>
           <span><i style="border:1px solid var(--bad)"></i>硬围栏</span>
           <span><i style="border:1px dashed var(--warn)"></i>当前阶段水平限制</span>
-          <span><i style="border:1px dashed var(--info)"></i>检测远端（以飞机为圆心）</span>
           <span style="margin-top:4px"><b>穿环</b>：环从上面看是一条线，粗段 = 环带、中间 = 开口</span>
           <span><i style="background:var(--tgt)"></i>环（识别）　<i style="background:var(--sp)"></i>环（脚本锁定 / 计划路径）</span>
           <span><i style="background:#e5534b"></i>红点（瞄准点）　箭头 = 法向，指向进近侧　虚线 = 进近走廊</span>
@@ -540,12 +511,12 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
         <div class="seg" id="det-win"><button data-v="30">30s</button><button data-v="60" class="on">60s</button><button data-v="120">120s</button></div>
       </div></div>
     <div class="det-charts">
-      <div><span class="lab">水平距离 d<i style="background:var(--text)"></i>d<i style="background:var(--shell);height:8px"></i>停靠壳</span><div class="cv"><canvas id="dc-d"></canvas></div></div>
-      <div><span class="lab">高度（相对起飞点）<i style="background:var(--text)"></i>飞机<i style="background:var(--sp)"></i>设定点<i style="background:var(--tgt)"></i>目标<i style="background:var(--band);height:8px"></i>门限带</span><div class="cv"><canvas id="dc-z"></canvas></div></div>
-      <div><span class="lab">高度误差 err_z<i style="background:var(--band);height:8px"></i>z 死区</span><div class="cv"><canvas id="dc-ez"></canvas></div></div>
-      <div><span class="lab">数据年龄 ms<i style="background:var(--ok)"></i>满增益线<i style="background:var(--bad)"></i>归零线</span><div class="cv"><canvas id="dc-age"></canvas></div></div>
-      <div><span class="lab">增益 gain<i style="background:var(--ok)"></i>gain</span><div class="cv"><canvas id="dc-g"></canvas></div></div>
-      <div><span class="lab">水平速度 m/s<i style="background:var(--info)"></i>实测<i style="background:var(--muted)"></i>指令<i style="background:var(--bad)"></i>阶段硬限</span><div class="cv"><canvas id="dc-v"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-d"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-z"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-ez"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-age"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-g"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-v"></canvas></div></div>
     </div>
   </div>
   <div class="card">
@@ -596,8 +567,8 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
     <table><thead><tr><th style="width:70px">状态</th><th style="width:190px">项目</th><th>路径（→ 软链接实际指向）</th><th>说明</th></tr></thead>
       <tbody id="paths-body"></tbody></table>
     <p class="note">全部文件放在同一个文件夹时，只有「现场档案目录」「启动脚本」「飞行日志」在文件夹外面。
-      飞行脚本按文件名 <code>stage&lt;版本号&gt;_&lt;任务&gt;.py</code> 找：后缀 <code>_gate</code> = 穿环，<code>_track</code>（老名字 <code>_real</code>）= 停靠跟踪，
-      每种任务取编号最大的；配置页按档案的「任务」选用哪个。同目录有 <code>flight.py</code> 软链接时只用它。</p>
+      飞行脚本按文件名 <code>stage&lt;版本号&gt;_&lt;任务&gt;.py</code> 找，取编号最大的（2026-10-30 起只有穿环 <code>_gate</code>，
+      停靠跟踪已删除）。同目录有 <code>flight.py</code> 软链接时只用它。</p>
   </div>
 </section>
 
@@ -615,10 +586,10 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
     <form id="cfg-form" onsubmit="return false"></form>
     <details>
       <summary>高级：覆盖原始参数（会写进档案的 set.KEY 行）</summary>
-      <div class="note">每行一个 <code>KEY=VALUE</code>，例如 <code>TRACK_LEASH_MAX=0.8</code>。
+      <div class="note">每行一个 <code>KEY=VALUE</code>，例如 <code>GATE_HOLD_S=2</code>。
         只能改大写的数值/开关参数；安全项照样受限。保存时写进档案（<code>set.KEY = VALUE</code>），
         启动命令只需要 <code>--site 档案名</code>，不会因为少复制一段而悄悄换了配置。</div>
-      <textarea id="cfg-sets" spellcheck="false" placeholder="TRACK_SHADOW=True"></textarea>
+      <textarea id="cfg-sets" spellcheck="false" placeholder="GATE_SHADOW=True"></textarea>
     </details>
   </div>
 
@@ -721,7 +692,7 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
         脚本会先停掉旧的 det_cam_node / 看门狗 / 旧桥（它们会抢相机）；<code>~/tools</code> 那套不用再跑。</p>
       <p>地面站跑 <code>gcs_aruco_det2.py</code>，终端里应是 <code>上行=1920x1080</code>。</p>
       <p class="sub">「机况检查 → 识别相机」显示采集帧率、上行帧率、原样转发比例、每张 KB、自动重开次数。
-        没有目标也允许起飞 —— 跟踪段会停在 MANUAL，等 tag 进入视野后按 <kbd>T</kbd>。</p>
+        没有目标也允许起飞 —— 起飞后先在手动段，看到环后按 <kbd>T</kbd>。</p>
     </div></div>
   </div>
 
@@ -762,9 +733,8 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
 
   <div class="card">
     <div class="card-h"><h3>穿环模式（2026-10-19）</h3></div>
-    <p>网页按「任务」自动换布局：飞行脚本遥测 / 配置里 <code>task = "gate"</code> 时，「跟踪质量」换成「穿环」卡片；
-      脚本没在跑时，只要图传是 gate / gate_gcs 模式（或收到了 <code>/gate/status</code>），也显示穿环布局 ——
-      悬停等初始识别时就能看环的估计有没有收敛。stage11（没有 task 字段）照旧是停靠跟踪布局。</p>
+    <p>监控页左下是「穿环」卡片（2026-10-30 停靠跟踪布局已删除）。脚本没在跑时也会显示 <code>/gate/status</code> 的识别结果 ——
+      悬停等初始识别时就能看环的估计有没有收敛。</p>
     <ul>
       <li><b>靶面视图</b>（穿环卡片左边）：站在飞机这边看向环。灰环 = 环带，红点 = 瞄准点，白点 = 飞机现在沿法向的投影，
         ✕ + 椭圆 = 脚本预计的穿越点和误差。卡片标题旁标着数据来自
@@ -781,7 +751,7 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
         <code>GATE_DASH_TILT_DEG</code>（默认 45° 持续 0.3 s），撞纸的短时大倾角不会停桨。</li>
     </ul>
     <p><b>飞行脚本 stage12_gate.py</b>（同目录还要有 <code>gate_plan.py</code>）：档案里写 <code>task = 穿环</code>，
-      配置页选了「任务 = 穿环」或脚本是 stage12 时，表单只显示穿环用的旋钮。流程：起飞 → <b>手动段</b>
+      流程：起飞 → <b>手动段</b>
       （WASD 平移 / R F 升降 / Q E 转向 / 空格悬停，把飞机开到想起跑的地方）→ <b>按 T</b> 找环 → 规划 →
       摆到起跑点 → 取样锁定 → <b>在飞行终端按 G</b> 冲刺 → 刹停 → 原地降落。
       起跑点是动态的：离环在 [最小助跑, <code>run_max</code>] 之间就地起跑，近了后退、远了前进。
@@ -789,8 +759,7 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
       冲刺中只有 X（停桨）立即生效，L / 断连等刹停后再降。
       测试顺序：<code>set.GATE_SHADOW = True</code>（影子：不摆位不冲刺）→ <code>set.GATE_VIRTUAL_OFFSET = 2.0</code>
       （虚拟环：真冲刺，停在纸前）→ 正式。视觉链路用 <code>python3 run_vision.py gate_gcs</code>（模式必须写）。
-      网页按档案的任务选脚本：穿环 → 编号最大的 <code>stageNN_gate.py</code>，跟踪 → <code>stageNN_track.py</code>；
-      档案没写任务时用 flight_monitor 的 <code>--task</code>（默认：有穿环脚本就是穿环）。</p>
+      网页用编号最大的 <code>stageNN_gate.py</code>。</p>
     <p class="sub">各字段的含义、坐标约定（靶面 h/v、法向朝向）、bridge / 地面程序 / 新飞行脚本各要补什么，见同目录
       <code>INTERFACE_gate.md</code>。缺字段时网页会降级显示，机况检查「环识别」一行会说缺了什么。</p>
   </div>
@@ -838,27 +807,26 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
 
   <div class="card">
     <div class="card-h"><h3>飞行流程和按键（按键在飞行终端里按）</h3></div>
-    <div class="flow"><span>起飞</span><i>→</i><span>悬停 5s</span><i>→</i><span>手动段</span><i>→</i>
-      <span>视觉跟踪段</span><i>→</i><span>返航</span><i>→</i><span>下降</span><i>→</i><span>自动降落</span></div>
+    <div class="flow"><span>起飞</span><i>→</i><span>手动段</span><i>→</i><span>T 找环 / 规划</span><i>→</i>
+      <span>摆位 / 锁定</span><i>→</i><span>G 冲刺</span><i>→</i><span>制动 / 悬停</span><i>→</i><span>原地降落</span></div>
     <table style="margin-top:10px">
-      <thead><tr><th style="width:110px">按键</th><th>悬停</th><th>手动段</th><th>视觉跟踪段</th></tr></thead>
+      <thead><tr><th style="width:110px">按键</th><th>手动段</th><th>冲刺前（找环 / 摆位 / 锁定 / 等确认）</th><th>冲刺中</th></tr></thead>
       <tbody>
-        <tr><td><kbd>W</kbd><kbd>S</kbd><kbd>A</kbd><kbd>D</kbd></td><td class="muted">—</td>
-          <td>机头方向 前 / 后 / 左 / 右</td><td>抢回手动（粘性）并移动</td></tr>
-        <tr><td><kbd>R</kbd><kbd>F</kbd></td><td class="muted">—</td><td>升 / 降</td><td>抢回手动并升降</td></tr>
-        <tr><td><kbd>Q</kbd><kbd>E</kbd></td><td class="muted">—</td><td>左转 / 右转</td><td>抢回手动并转向</td></tr>
-        <tr><td><kbd>空格</kbd></td><td class="muted">—</td><td>原地悬停</td><td>抢回手动并悬停</td></tr>
-        <tr><td><kbd>T</kbd></td><td>跳过手动段，直接进跟踪</td><td>结束手动段，进跟踪</td><td>交还视觉（MANUAL → TRACK）</td></tr>
-        <tr><td><kbd>L</kbd></td><td>就地降落</td><td>就地降落</td><td>结束跟踪 → 返航 → 降落</td></tr>
+        <tr><td><kbd>W</kbd><kbd>S</kbd><kbd>A</kbd><kbd>D</kbd></td><td>机头方向 前 / 后 / 左 / 右</td><td>回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>R</kbd><kbd>F</kbd></td><td>升 / 降</td><td>回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>Q</kbd><kbd>E</kbd></td><td>左转 / 右转</td><td>回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>空格</kbd></td><td>原地悬停</td><td>回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>T</kbd></td><td>开始找环 / 规划</td><td class="muted">—</td><td class="muted">—</td></tr>
+        <tr><td><kbd>M</kbd></td><td class="muted">—</td><td>不冲了，回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>G</kbd> / <kbd>Y</kbd></td><td class="muted">—</td><td>确认冲刺（降速了只认 Y）</td><td class="muted">—</td></tr>
+        <tr><td><kbd>L</kbd></td><td>就地降落</td><td>就地降落</td><td>记下，刹停后再降</td></tr>
         <tr><td><kbd>X</kbd></td><td colspan="3"><b class="bad">紧急停桨（空中也会立刻停 = 掉下来），最后手段</b></td></tr>
       </tbody>
     </table>
     <ul class="small">
-      <li>手动段：松键 0.3s 自动停；5s 没按任何键会自动结束手动段、进入跟踪段（不是降落）。</li>
-      <li>跟踪段开始时没有目标、或目标比进场门远 → 停在 MANUAL。用 WASD 挪近，tag 进视野后按 <kbd>T</kbd>。</li>
-      <li>跟踪段前 5s 拒绝率超过 20% → 自动退回 MANUAL（检测质量不够，不上闭环）。</li>
-      <li>MANUAL 下 90s 没按键 → 结束跟踪，返航降落。目标丢失 3s → 原地悬停，重新看到自动继续。</li>
-      <li>SSH 断开（普通终端才有效）→ 立即就地降落。</li>
+      <li>手动段：松键 0.3s 自动停；<code>GATE_MANUAL_TIMEOUT</code>（默认 120s）一个键都没按 → 降落。</li>
+      <li>冲刺前放弃（锁不住 / 不可行 / G 超时）→ 回手动段，可以再按 T。</li>
+      <li>SSH 断开（普通终端才有效）→ 就地降落；冲刺中断开 → 刹停后再降。</li>
     </ul>
   </div>
 
@@ -884,10 +852,10 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
   <div class="card">
     <div class="card-h"><h3>飞完 / 常见问题</h3></div>
     <ul>
-      <li>日志在 <code>~/uav_logs/flight_YYYYMMDD_HHMMSS/</code>：<code>flight_log.csv</code> 主日志、<code>track.csv</code> 跟踪、
+      <li>日志在 <code>~/uav_logs/flight_NNNN/</code>：<code>flight_log.csv</code> 主日志、<code>gate.csv</code> 穿环段、
         <code>site_config.txt</code> 本次生效的全部参数（复盘先看它）。</li>
-      <li><b>飞机看得见 tag 但不动</b>：看「监控」页跟踪质量里的 <code>zbad</code> —— 多的话是目标高度不在 z 门限带内，
-        改档案的目标最低/最高高度；或者看入场门禁是否「未过」（目标比进场门远）。</li>
+      <li><b>看得到环却一直不锁定</b>：飞行终端的 <code>[manual]</code> / <code>[wait]</code> 行会写「识别到了但单帧被拒: …」，
+        说明卡在哪道门（σ / 距离 / 斜视角）。</li>
       <li><b>飞行脚本说「拒绝起飞: 检测到在 tmux 里运行」</b>：照提示在笔记本新开普通终端再 ssh 上去跑。</li>
       <li><b>飞行脚本说「不认识的参数」</b>：命令拼错了（比如 <code>--dryrun</code>）。以前这种情况会被当成真飞。</li>
       <li><b>本页一直「无数据」但飞机正常</b>：roscore / mavros 重启过，重启本监控。</li>
@@ -916,7 +884,7 @@ function store(k, v) { try { if (v === undefined) return localStorage.getItem(k)
 
 const PHASE = {idle:"空闲", init:"初始化", preflight:"起飞前检查", preflight_failed:"检查未通过",
   prime:"预热设定点", offboard_switch:"切 OFFBOARD", arm:"解锁", takeoff:"起飞", hover:"悬停",
-  teleop:"手动", track:"视觉跟踪", return_home:"返航", descend:"下降", auto_land:"自动降落",
+  teleop:"手动", return_home:"返航", descend:"下降", auto_land:"自动降落",
   cleanup:"结束", handover:"飞手接管"};
 const PHASE_HINT = {
   init: "飞行脚本初始化…",
@@ -924,11 +892,11 @@ const PHASE_HINT = {
   preflight_failed: "起飞前检查未通过 —— 原因在飞行终端里",
   prime: "预热设定点，马上切 OFFBOARD 并解锁", offboard_switch: "切 OFFBOARD…", arm: "解锁…",
   takeoff: "起飞中  ·  L = 就地降落  X = 停桨",
-  hover: "悬停  ·  T = 直接进视觉跟踪   L = 就地降落   X = 停桨",
-  teleop: "手动段  ·  WASD 平移  R/F 升降  Q/E 转向  空格 悬停  ·  T = 进跟踪   L = 降落   X = 停桨",
+  hover: "悬停  ·  L = 就地降落   X = 停桨",
+  teleop: "手动段  ·  WASD 平移  R/F 升降  Q/E 转向  空格 悬停  ·  L = 降落   X = 停桨",
   return_home: "返航中（遇到缓降请求会就地降落）", descend: "下降中", auto_land: "PX4 自动降落中，等落地上锁",
   cleanup: "飞行结束", handover: "飞手接管中 —— 脚本只看不动"};
-const FLYING = new Set(["takeoff","hover","teleop","track","return_home","descend","auto_land","handover"]);
+const FLYING = new Set(["takeoff","hover","teleop","return_home","descend","auto_land","handover"]);
 // ★2026-10-19 穿环: 新 stage 用 phase "gate" + 遥测 gate.seg 区分段;
 //   如果它改用 gate_xxx 这种阶段名, 下面也认 (isGatePhase)
 Object.assign(PHASE, {gate: "穿环", gate_wait: "等待识别", gate_align: "对准", gate_commit: "提交",
@@ -1105,21 +1073,16 @@ function toPlane(g, p) {
 }
 function planeToWorld(g, h, v) { return V3.add(g.c, V3.add(V3.mul(g.right, h), V3.mul(g.up, v))); }
 function dronePos() { return S && S.pose && S.pose.age < 2 ? [S.pose.x, S.pose.y, S.pose.z] : null; }
-// 当前任务。脚本在跑 → 它说了算; 否则配置里的 task; 都没有 = 停靠跟踪 (stage11 没有 task 字段)
+// 当前任务。脚本在跑 → 它说了算; 否则配置里的 task; 都没有 = 穿环 (2026-10-30 起只有穿环)
 function visionMode() { const c = S && S.cam; return c && c.age < 5 && c.cfg ? c.cfg.mode : null; }
 function curTask() {
   const t = tel();
-  if (t) return t.task || (isGatePhase(t.phase) ? "gate" : "track");
+  if (t) return t.task || "gate";
   const cs = cfgSrc();
-  return (cs && cs.c.task) || "track";
+  return (cs && cs.c.task) || "gate";
 }
-// 监控页用不用穿环布局: 任务是穿环; 或脚本没在跑、但图传是 gate 模式 / 有环数据 (悬停前先看识别)
-function gateView() {
-  if (curTask() === "gate") return true;
-  if (tel()) return false;
-  const m = visionMode();
-  return m === "gate" || m === "gate_gcs" || !!(S && S.gate && S.gate.age < 5);
-}
+// 监控页用穿环布局。2026-10-30 停靠跟踪布局已删除 → 总是 true (保留函数, 以后按目标类型切换布局时用)
+function gateView() { return true; }
 // 穿环卡片 / 靶面 / 俯视图共用的一组数
 function gateNow() {
   const t = tel(), tg = t && t.gate && Object.keys(t.gate).length ? t.gate : null;
@@ -1161,13 +1124,6 @@ function ingestTel(tm, t) {
   if (!t) return;
   if (t.setpoint && t.setpoint.mode === "ZHOLD" && nz(t.setpoint.pz))
     push(H.spz, tm, rel(0, 0, t.setpoint.pz)[2]);
-  const tr = t.track || {};
-  if (t.phase === "track" && nz(tr.d)) {
-    push(H.d, tm, tr.d); push(H.ez, tm, tr.err ? tr.err[2] : null); push(H.g, tm, tr.gain);
-    push(H.age, tm, nz(tr.age) ? tr.age * 1000 : null);
-    if (tr.cmd) push(H.cv, tm, Math.hypot(tr.cmd[0], tr.cmd[1]));
-    if (tr.valid && tr.tgt) push(H.tgz, tm, rel(0, 0, tr.tgt[2])[2]);
-  }
   const g = t.gate;
   if (g && nz(g.along)) {
     lastGateCtlTm = tm;
@@ -1307,20 +1263,6 @@ function updateHint(t) {
   else if (!t) {
     if (S && S.pose && S.pose.age < 1) txt = "飞行脚本未运行  ·  起飞前看「机况检查」，配置在「起飞配置」，流程见「帮助」";
     else { cls = "warn"; txt = "没有位姿数据 —— mavros / VINS 没起来？（看「机况检查」）"; }
-  } else if (t.phase === "track") {
-    const tr = t.track || {}, g = t.gates || {};
-    if (t.sub_mode !== "TRACK") {
-      cls = "warn";
-      let why = "";
-      if (g.quality_checked && g.quality_ok === false) why = "前段拒绝率超标，已退回手动；";
-      else if (g.entry_ok === false)
-        why = g.entry_valid ? `进场时目标 ${fx(g.entry_d0, 1)} m，超过进场门 ${fx(g.entry_max, 1)} m；`
-                            : "进场时没有有效目标；";
-      txt = "跟踪段 · MANUAL：视觉没有在驱动飞机 —— " + why + "WASD 挪近、tag 进视野后按 T";
-    } else if (tr.lost) { cls = "warn"; txt = "跟踪段 · 目标丢失，原地悬停 —— 重新看到会自动继续"; }
-    else if (tr.sim && tr.hold_out) { cls = "info"; txt = "跟踪段 · 收到 SIM 假数据：输出被拦截，飞机不响应视觉"; }
-    else if (t.shadow) { cls = "info"; txt = "跟踪段 · 影子模式：视觉指令只计算不下发"; }
-    else { cls = "ok"; txt = "跟踪段 · 视觉正在驱动飞机   ·   方向键 = 抢回手动   L = 结束跟踪返航   X = 停桨"; }
   } else if (isGatePhase(t.phase)) {
     // 穿环段: 文字只说"现在处于哪一段 / 还能不能中止", 具体按键以飞行终端里的提示为准
     const g = t.gate || {}, cm = g.commit || {}, seg = g.seg;
@@ -1395,12 +1337,7 @@ function onState() {
     setChip("#c-phase", PHASE[t.phase] || t.phase,
             t.abort ? "bad" : t.land ? "warn" : isFlying(t.phase) ? "info" : "", t.phase);
     if (t.takeover) setChip("#c-sub", "飞手", "warn", t.takeover);
-    else if (t.phase === "track") {
-      if (t.sub_mode === "TRACK")
-        setChip("#c-sub", t.shadow ? "视觉(影子)" : "视觉驱动", t.shadow ? "info" : "ok",
-                t.shadow ? "只计算不下发" : "视觉正在驱动飞机");
-      else setChip("#c-sub", "人工 MANUAL", "warn", "按 T 交还视觉");
-    } else if (isGatePhase(t.phase)) {
+    else if (isGatePhase(t.phase)) {
       const g = t.gate || {}, cm = g.commit || {};
       const past = cm.passed || cm.abort_ok === false;
       setChip("#c-sub", (SEG[g.seg] || g.seg || "穿环") + (t.shadow ? "(影子)" : ""),
@@ -1409,16 +1346,14 @@ function onState() {
     else setChip("#c-sub", isFlying(t.phase) ? "脚本/人工" : "—", "", "");
     setChip("#c-loop", t.shadow ? "影子模式" : "实闭环", t.shadow ? "ok" : "warn");
     setChip("#c-sim", t.sim_drive ? "假数据可驱动!" : "假数据拦截", t.sim_drive ? "bad" : "ok");
-    if ((t.task || "track") === "gate") setChip("#c-z", "—", "", "穿环没有 z 跟踪环");
-    else setChip("#c-z", t.z_enable ? "开" : "关", t.z_enable ? "info" : "");
+    setChip("#c-z", "—", "", "穿环没有 z 跟踪环");
   } else {
     setChip("#c-phase", "—", "dim", ""); setChip("#c-sub", "—", "dim", "");
     const p = P();
-    const gt = curTask() === "gate";          // ★穿环脚本的开关名不同
-    const shadow = gt ? p.GATE_SHADOW : p.TRACK_SHADOW, simd = gt ? p.GATE_ALLOW_SIM_DRIVE : p.TRACK_ALLOW_SIM_DRIVE;
+    const shadow = p.GATE_SHADOW, simd = p.GATE_ALLOW_SIM_DRIVE;
     setChip("#c-loop", shadow ? "影子模式" : "实闭环", "dim");
     setChip("#c-sim", simd ? "假数据可驱动!" : "假数据拦截", simd ? "bad" : "dim");
-    setChip("#c-z", gt ? "—" : p.TRACK_Z_ENABLE ? "开" : "关", "dim");
+    setChip("#c-z", "—", "dim");
   }
   // 飞控
   const mv = S.mavros || {};
@@ -1482,7 +1417,6 @@ function renderMonitor() {
   ATT.drawn = undefined;          // 尺寸 / 主题变化后让姿态球在下一帧重画
   const t = tel();
   const d = D();
-  const tr = (t && t.phase === "track") ? (t.track || {}) : null;
   const o = origin();
   $("#top-info").textContent = {
     flight: "原点 = 本次起飞点",
@@ -1499,28 +1433,17 @@ function renderMonitor() {
   if (t && t.setpoint && (t.setpoint.mode === "ZHOLD" || t.setpoint.mode === "TRAJ") && nz(t.setpoint.px)) {
     const r = rel(t.setpoint.px, t.setpoint.py, t.setpoint.pz); sp = r; spz = r[2];
   }
-  let tgt = null, raw = null;
-  if (tr && tr.valid && tr.tgt && nz(tr.tgt[0])) tgt = rel(tr.tgt[0], tr.tgt[1], tr.tgt[2]);
-  if (S.track_target && S.track_target.age < 1) {
-    const q = S.track_target; raw = rel(q.x, q.y, q.z);
-  }
   const lim = (t && t.envelope) ? t.envelope[0] : null;
-  // ★穿环: 布局二选一; 环 / 计划路径 / 制动段画进俯视图和高度条
-  const gv = gateView();
-  $("#card-trk").hidden = gv;
-  $("#card-gate").hidden = !gv;
-  const G = gv ? gateNow() : null;
+  // ★穿环: 环 / 计划路径 / 制动段画进俯视图和高度条
+  const G = gateNow();
   const gtop = G ? topGateData(G) : null;
-  drawTop($("#cv-top"), {d, drone, sp, tgt, raw, trail, lim, mode: topMode,
-                          leashMax: P().TRACK_LEASH_MAX, gate: gtop});
+  drawTop($("#cv-top"), {d, drone, sp, trail, lim, mode: topMode, gate: gtop});
   let gh = null;
   if (G && G.geo) gh = {cz: relv(G.geo.c)[2], r_in: G.geo.r_in, r_out: G.geo.r_out,
                         aimz: relv(G.geo.aim)[2], vertical: !!G.geo.n};
-  drawHeight($("#cv-h"), {d, z: drone ? drone.z : null, spz,
-    tgtz: tgt ? tgt[2] : null,
-    zin: tr && nz(tr.z_in) ? tr.z_in - (o ? o[2] : 0) : null, rc: tr ? tr.rej_code : null, gate: gh});
+  drawHeight($("#cv-h"), {d, z: drone ? drone.z : null, spz, gate: gh});
   renderSafety(t);
-  if (gv) renderGate(t, G); else renderTrack(t, tr);
+  renderGate(t, G);
   drawCamOverlay();
 }
 
@@ -1556,7 +1479,7 @@ function drawTop(cv, o) {
   if (o.mode === "follow" && o.drone) { cx = o.drone.x; cy = o.drone.y; R = 3.2; }
   else {
     R = Math.max(hard || 2, 1.5);
-    const pts = [o.drone, o.tgt && {x: o.tgt[0], y: o.tgt[1]}];
+    const pts = [o.drone];
     if (o.gate) {                         // 穿环: 环 / 计划路径 / 制动终点都要在画面里
       for (const g of o.gate.rings) pts.push({x: g.c[0], y: g.c[1]});
       for (const q of (o.gate.plan ? o.gate.plan.pts : [])) pts.push({x: q[0], y: q[1]});
@@ -1601,20 +1524,6 @@ function drawTop(cv, o) {
   ctx.strokeStyle = C.text; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(X(0) - 6, Y(0)); ctx.lineTo(X(0) + 6, Y(0));
   ctx.moveTo(X(0), Y(0) - 6); ctx.lineTo(X(0), Y(0) + 6); ctx.stroke();
-  // 目标 + 停靠壳
-  if (o.tgt && d && d.standoff_shell) {
-    const [ri, ro] = d.standoff_shell;
-    ctx.beginPath(); ctx.fillStyle = C.shell;
-    ctx.arc(X(o.tgt[0]), Y(o.tgt[1]), ro * s, 0, Math.PI * 2);
-    ctx.arc(X(o.tgt[0]), Y(o.tgt[1]), Math.max(0, ri) * s, 0, Math.PI * 2, true);
-    ctx.fill("evenodd");
-  }
-  if (o.raw) { ctx.fillStyle = C.dim; ctx.beginPath(); ctx.arc(X(o.raw[0]), Y(o.raw[1]), 3, 0, Math.PI * 2); ctx.fill(); }
-  if (o.tgt) {
-    const tx = X(o.tgt[0]), ty = Y(o.tgt[1]);
-    ctx.fillStyle = C.tgt; ctx.beginPath();
-    ctx.moveTo(tx, ty - 8); ctx.lineTo(tx + 7, ty); ctx.lineTo(tx, ty + 8); ctx.lineTo(tx - 7, ty); ctx.closePath(); ctx.fill();
-  }
   // ★穿环: 环 (从上面看是一条线) / 进近走廊 / 法向 / 红点 / 计划路径 / 制动段 / 预计穿越点
   if (o.gate) {
     const G = o.gate;
@@ -1690,10 +1599,9 @@ function drawTop(cv, o) {
     ctx.globalAlpha = 1;
   }
   if (o.drone) {
-    if (d && d.detect_range) ring(o.drone.x, o.drone.y, d.detect_range[1], C.info, [2, 5], 1);
     if (o.sp) {
       const L = Math.hypot(o.sp[0] - o.drone.x, o.sp[1] - o.drone.y);
-      const lm = o.leashMax || 0.6;
+      const lm = o.leashMax || P().GATE_REPO_LEASH || 0.6;
       ctx.strokeStyle = L > 0.9 * lm ? C.warn : C.sp; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(X(o.drone.x), Y(o.drone.y)); ctx.lineTo(X(o.sp[0]), Y(o.sp[1])); ctx.stroke();
       ctx.strokeRect(X(o.sp[0]) - 4, Y(o.sp[1]) - 4, 8, 8);
@@ -1820,7 +1728,7 @@ function drawHeight(cv, o) {
     ctx.fillStyle = C.dim; ctx.fillText("无配置", 4, 16); return;
   }
   const gz = o.gate && nz(o.gate.cz) ? o.gate : null;
-  const top = Math.max(d.max_height + 0.6, nz(o.z) ? o.z + 0.6 : 0, nz(o.tgtz) ? o.tgtz + 0.6 : 0,
+  const top = Math.max(d.max_height + 0.6, nz(o.z) ? o.z + 0.6 : 0,
                        gz ? gz.cz + gz.r_out + 0.4 : 0, 2.2);
   const pad = 12, x0 = 36, x1 = w - 34;
   const Y = z => pad + (1 - z / top) * (h - 2 * pad);
@@ -1874,15 +1782,6 @@ function drawHeight(cv, o) {
   if (nz(o.z)) {
     tri(o.z, C.text, true, 1);
     ctx.fillStyle = C.text; ctx.textAlign = "left"; ctx.fillText(o.z.toFixed(2), x1 + 13, Y(clamp(o.z, 0, top)) + 4, w - x1 - 14);
-  }
-  if (nz(o.tgtz)) {
-    const y = Y(clamp(o.tgtz, 0, top)), x = (x0 + x1) / 2;
-    ctx.fillStyle = C.tgt; ctx.beginPath();
-    ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.closePath(); ctx.fill();
-  }
-  if (nz(o.zin)) {
-    const col = o.rc === 0 ? C.ok : o.rc === 1 ? C.bad : C.warn;
-    ctx.fillStyle = col; ctx.beginPath(); ctx.arc((x0 + x1) / 2 + 14, Y(clamp(o.zin, 0, top)), 4.5, 0, Math.PI * 2); ctx.fill();
   }
 }
 
@@ -1946,63 +1845,12 @@ function renderSafety(t) {
   $("#saf-rows").innerHTML = html;
 }
 
-// ---------------- 跟踪质量 (布局固定, 只改内容) ----------------
+// ---------------- 卡片数字格 ----------------
 function setTile(id, val, cls, sub) {
   const el = $(id);
   el.className = el.className.replace(/\b(ok|warn|bad)\b/g, "").trim() + (cls ? " " + cls : "");
   el.querySelector("b").textContent = val;
   const sm = el.querySelector("small"); sm.textContent = sub || ""; sm.title = sub || "";
-}
-function renderTrack(t, tr) {
-  const p = P();
-  const card = $("#card-trk");
-  const on = !!(tr && Object.keys(tr).length);
-  card.classList.toggle("idle", !on);
-  const g = (t && t.gates) || {};
-  const sd = p.TRACK_STANDOFF, db = p.TRACK_DEADBAND, zdb = p.TRACK_Z_DEADBAND || 0.05;
-  const full = p.TRACK_AGE_FULL, zero = p.TRACK_AGE_ZERO;
-  const lm = p.TRACK_LEASH_MAX || 0.6, vmax = p.TRACK_V_MAX || 0.45;
-  const rejMax = p.TRACK_QUALITY_MAX_REJ || 20;
-  $("#trk-src").textContent = on ? `${fx(tr.elapsed, 0)} / ${fx(tr.duration, 0)} s`
-    : (t ? "当前阶段：" + (PHASE[t.phase] || t.phase) + " —— 进入跟踪段后显示" : "飞行脚本未运行");
-  const T = on ? tr : {};
-  const ez = T.err ? T.err[2] : null;
-  const cmdH = T.cmd ? Math.hypot(T.cmd[0], T.cmd[1]) : null;
-  const vNow = S.vel && S.vel.age < 1 ? Math.hypot(S.vel.x, S.vel.y) : null;
-  const vlim = t && t.envelope ? t.envelope[1] : null;
-  setTile("#t-d", fx(T.d, 2, " m"), on && nz(T.d_eff) && Math.abs(T.d_eff) < db ? "ok" : "",
-          `停靠 ${fx(sd, 2)}±${fx(db, 2)}  d_eff ${fx(T.d_eff, 2)}`);
-  setTile("#t-ez", fx(ez, 2, " m"), on && nz(ez) && Math.abs(ez) < zdb ? "ok" : "",
-          `死区 ±${fx(zdb, 2)}${T.z_moving ? " · 调整中" : ""}`);
-  setTile("#t-g", fx(T.gain, 2), !on ? "" : T.gain >= 0.99 ? "ok" : T.gain > 0 ? "warn" : "bad",
-          !on ? "" : T.lost ? "★ 目标丢失, 悬停中" : (T.valid ? "目标有效" : "无有效目标"));
-  setTile("#t-v", fx(vNow, 2, " m/s"), nz(vNow) && nz(vlim) && vNow > 0.8 * vlim ? "warn" : "",
-          `指令 ${fx(cmdH, 2)}${nz(cmdH) && cmdH >= vmax * 0.98 ? " 饱和" : ""} · 硬限 ${fx(vlim, 2)}`);
-  const ageMs = nz(T.age) ? T.age * 1000 : null;
-  setTile("#t-age", nz(ageMs) ? ageMs.toFixed(0) + " ms" : "—",
-          !on ? "" : !nz(T.age) ? "bad" : T.age <= full ? "ok" : T.age < zero ? "warn" : "bad",
-          `满增益 ≤${fx(full * 1000, 0)} · 归零 ≥${fx(zero * 1000, 0)}`);
-  const leashPct = nz(T.leash) ? 100 * T.leash / lm : null;
-  setTile("#t-leash", nz(leashPct) ? leashPct.toFixed(0) + "%" : "—", nz(leashPct) && leashPct > 90 ? "warn" : "",
-          `${fx(T.leash, 2)} / ${fx(lm, 2)} m`);
-  const rej = T.rej_pct;
-  setTile("#t-rej", nz(rej) ? rej.toFixed(1) + "%" : "—",
-          !nz(rej) ? "" : rej > rejMax ? "bad" : rej > rejMax * 0.6 ? "warn" : "ok", `熔断线 ${rejMax}%`);
-  setTile("#t-entry", !on ? "—" : g.entry_ok ? "通过" : "未过", !on ? "" : g.entry_ok ? "ok" : "warn",
-          !on ? "" : g.entry_valid ? `目标 ${fx(g.entry_d0, 2)} / ${fx(g.entry_max, 1)} m` : "当时没有目标");
-  setTile("#t-qual", !on ? "—" : !g.quality_checked ? "等待" : g.quality_ok ? "通过" : "退回手动",
-          !on || !g.quality_checked ? "" : g.quality_ok ? "ok" : "bad",
-          g.quality_checked ? `前 ${fx(p.TRACK_QUALITY_WIN, 0)}s 拒绝 ${fx(g.quality_rej, 1)}%` : `第 ${fx(p.TRACK_QUALITY_WIN, 0)}s 判定`);
-  const c = T.counts || {};
-  $("#trk-counts").innerHTML = ["accept", "stale", "jump", "zbad", "zflip", "clamp"].map(k =>
-     `<span class="${k === "zbad" && c[k] ? "bad" : k === "zflip" && c[k] ? "warn" : ""}">${k} <b>${c[k] ?? "—"}</b></span>`).join("")
-     + (T.sim ? '<span class="warn">SIM 数据</span>' : "") + (T.hold_out ? '<span class="info">输出被拦截(影子/SIM)</span>' : "");
-  // 迷你曲线 (30s)
-  const d = D() || {};
-  drawChart($("#t-d canvas"), {series: [{data: H.d, color: C.text}], band: d.standoff_shell, bandColor: C.shell, win: 30, compact: true});
-  drawChart($("#t-ez canvas"), {series: [{data: H.ez, color: C.text}], band: [-zdb, zdb], win: 30, compact: true, minSpan: 0.2});
-  drawChart($("#t-g canvas"), {series: [{data: H.g, color: C.ok}], min: -0.05, max: 1.05, win: 30, compact: true});
-  drawChart($("#t-v canvas"), {series: [{data: H.v, color: C.info}], lines: [{v: vlim, color: C.bad}], min: 0, win: 30, compact: true});
 }
 
 // ---------------- 穿环卡片 (★2026-10-19) ----------------
@@ -2225,7 +2073,7 @@ function drawChart(cv, o) {
 // =====================================================================
 // 详情页
 // =====================================================================
-// 详情页曲线标题: 停靠跟踪 / 穿环两套 (按 gateView 切换)
+// 详情页曲线标题 (穿环)
 const LI = (c, txt, hh) => `<i style="background:${c}${hh ? ";height:8px" : ""}"></i>${txt}`;
 const DET_LAB_GATE = [
   "距环平面 along（过环后为负）" + LI("var(--text)", "along") + LI("var(--tgt)", "环平面"),
@@ -2236,13 +2084,11 @@ const DET_LAB_GATE = [
   "速度 m/s" + LI("var(--info)", "水平实测") + LI("var(--text)", "沿法向实测") + LI("var(--muted)", "沿法向指令") +
     LI("var(--bad)", "阶段硬限"),
 ];
-let DET_LAB_TRACK = null, detLabMode = "track";
-function setDetLabels(mode) {
-  const labs = $$(".det-charts .lab");
-  if (!DET_LAB_TRACK) DET_LAB_TRACK = labs.map(e => e.innerHTML);
-  if (mode === detLabMode) return;
-  detLabMode = mode;
-  labs.forEach((e, i) => { e.innerHTML = (mode === "gate" ? DET_LAB_GATE : DET_LAB_TRACK)[i]; });
+let detLabSet = false;
+function setDetLabels() {
+  if (detLabSet) return;
+  detLabSet = true;
+  $$(".det-charts .lab").forEach((e, i) => { e.innerHTML = DET_LAB_GATE[i]; });
 }
 function renderDetailGate(t, d, W) {
   const G = gateNow(), g = G.geo;
@@ -2264,21 +2110,9 @@ function renderDetail() {
   loadColors();
   const t = tel(), p = P(), d = D() || {};
   const W = detWin;
-  const zdb = p.TRACK_Z_DEADBAND || 0.05;
   $("#det-info").textContent = t ? `阶段 ${PHASE[t.phase] || t.phase}` + (t.log_dir ? `  ·  日志 ${t.log_dir}` : "") : "飞行脚本未运行（只有 mavros 的曲线）";
-  const gv = gateView();
-  setDetLabels(gv ? "gate" : "track");
-  if (gv) { renderDetailGate(t, d, W); renderRaw(t); return; }
-  drawChart($("#dc-d"), {series: [{data: H.d, color: C.text}], band: d.standoff_shell, bandColor: C.shell, win: W});
-  drawChart($("#dc-z"), {series: [{data: H.z, color: C.text}, {data: H.spz, color: C.sp}, {data: H.tgz, color: C.tgt}],
-                         band: d.z_band, bandNoScale: true, win: W, minSpan: 0.5});
-  drawChart($("#dc-ez"), {series: [{data: H.ez, color: C.text}], band: [-zdb, zdb], win: W, minSpan: 0.2});
-  drawChart($("#dc-age"), {series: [{data: H.age, color: C.text}], min: 0,
-                           lines: [{v: nz(p.TRACK_AGE_FULL) ? p.TRACK_AGE_FULL * 1000 : null, color: C.ok},
-                                   {v: nz(p.TRACK_AGE_ZERO) ? p.TRACK_AGE_ZERO * 1000 : null, color: C.bad}], win: W, minSpan: 200});
-  drawChart($("#dc-g"), {series: [{data: H.g, color: C.ok}], min: -0.05, max: 1.05, win: W});
-  drawChart($("#dc-v"), {series: [{data: H.v, color: C.info}, {data: H.cv, color: C.muted}],
-                         lines: [{v: t && t.envelope ? t.envelope[1] : null, color: C.bad}], min: 0, win: W, minSpan: 0.5});
+  setDetLabels();
+  renderDetailGate(t, d, W);
   renderRaw(t);
 }
 function fmtVal(v) {
@@ -2300,15 +2134,12 @@ function renderRaw(t) {
     rates[k] = `${fx(S.rates[k], 1)} Hz` + (nz(S.ages[k]) ? `  (${fx(S.ages[k], 2)}s 前)` : "");
   const html = (t ? kvTable("飞行脚本", t, ["track", "safety", "gates", "gate", "t"]) +
                     (t.gate && Object.keys(t.gate).length ? kvTable("穿环 gate（控制）", t.gate, ["t"]) : "") +
-                    kvTable("跟踪 track", t.track, ["t"]) +
-                    kvTable("安全 safety", t.safety, ["t"]) +
-                    kvTable("门禁 gates", t.gates, ["t"]) : "")
+                    kvTable("安全 safety", t.safety, ["t"]) : "")
     + (S.gate ? kvTable("/gate/status（感知）", S.gate, ["diag", "t"]) : "")
     + kvTable("话题频率", rates)
     + kvTable("MAVROS", Object.assign({}, S.mavros, {batt_v: S.batt_v, landed_state: S.landed}))
     + kvTable("位姿 (世界系)", S.pose, ["t"])
-    + kvTable("速度", S.vel, ["t"])
-    + kvTable("/track/target 原始", S.track_target, ["t"]);
+    + kvTable("速度", S.vel, ["t"]);
   $("#det-raw").innerHTML = html;
 }
 
@@ -2396,9 +2227,7 @@ let pvTimer = null, pvSeq = 0;
 const DEFAULT_OF = {   // 旋钮 → 从默认 dry-run 结果里取"默认值"作占位
   z_low: r => r.derived && r.derived.z_band && r.derived.z_band[0],
   z_high: r => r.derived && r.derived.z_band && r.derived.z_band[1],
-  takeoff_h: r => r.params.TAKEOFF_HEIGHT, xy_radius: r => r.params.TRACK_XY_MAX ?? r.params.GATE_XY_MAX,
-  standoff: r => r.params.TRACK_STANDOFF, detect_far: r => r.params.DETECT_RANGE_MAX,
-  entry_dist: r => r.params.TRACK_ENTRY_MAX_D, mission_s: r => r.params.TRACK_DURATION,
+  takeoff_h: r => r.params.TAKEOFF_HEIGHT, xy_radius: r => r.params.GATE_XY_MAX,
   // ★2026-10-19 穿环 (stage12)
   dash_v: r => r.params.DASH_V, d_back: r => r.params.D_BACK, d_rear: r => r.params.D_REAR,
   d_side: r => r.params.D_SIDE, l_f: r => r.params.L_F, l_r: r => r.params.L_R,
@@ -2411,10 +2240,10 @@ const DEFAULT_OF = {   // 旋钮 → 从默认 dry-run 结果里取"默认值"�
 // ★2026-10-19 表单按任务显示旋钮: 旋钮表的 tasks 字段 (没有 = 两种任务都用)。
 //   任务 = 表单里选的「任务」旋钮; 没选就是飞行脚本自己的任务 (默认 dry-run 的 task)。
 //   不属于当前任务的旋钮隐藏 —— 但**填了值的不藏** (载入了别的任务的档案时要让人看见, dry-run 会报错)。
-const TASK_OF = {"跟踪": "track", "穿环": "gate"};
+const TASK_OF = {"穿环": "gate"};
 function formTask() {
   const el = document.querySelector('[data-k="task"]');
-  return (el && TASK_OF[el.value]) || (defaults && defaults.task) || "track";
+  return (el && TASK_OF[el.value]) || (defaults && defaults.task) || "gate";
 }
 function applyTaskFilter() {
   if (!SCHEMA) return;
@@ -2436,7 +2265,7 @@ function applyTaskFilter() {
     if (sm) sm.textContent = `高级：速度 / 加速度 / 冲刺（${n} 项，空着 = 按上面的旋钮推导）`;
   }
   const ta = $("#cfg-sets");
-  if (ta) ta.placeholder = task === "gate" ? "GATE_SHADOW=True" : "TRACK_SHADOW=True";
+  if (ta) ta.placeholder = "GATE_SHADOW=True";
 }
 
 async function initConfig() {
@@ -2609,12 +2438,7 @@ function renderPreview(r) {
       ? `<span class="sw info">虚拟环：前移 ${fx(sw.GATE_VIRTUAL_OFFSET, 1)} m，停在纸前</span>` : "",
     `<span class="sw ${sw.GATE_CONFIRM_DASH ? "okk" : "danger"}">${sw.GATE_CONFIRM_DASH ? "冲刺前按 G" : "锁定后直接冲刺"}</span>`,
     `<span class="sw ${sw.GATE_ALLOW_SIM_DRIVE ? "danger" : "okk"}">${sw.GATE_ALLOW_SIM_DRIVE ? "SIM 识别可冲刺！" : "SIM 识别拦截"}</span>`,
-    `<span class="sw">${sw.GATE_REQUIRE_NORMAL ? "必须有法向 n" : "无法向按视线进入"}</span>`].join("") : [
-    `<span class="sw ${sw.TRACK_SHADOW ? "okk" : "danger"}">${sw.TRACK_SHADOW ? "影子模式（只算不发）" : "实闭环：视觉将驱动飞机"}</span>`,
-    `<span class="sw ${sw.TRACK_ALLOW_SIM_DRIVE ? "danger" : "okk"}">${sw.TRACK_ALLOW_SIM_DRIVE ? "假数据可驱动！" : "假数据拦截"}</span>`,
-    `<span class="sw">${sw.TRACK_Z_ENABLE ? "Z 环开" : "Z 环关"}</span>`,
-    sw.TRACK_VZ_FEEDFORWARD ? `<span class="sw danger">Z 速度前馈开（未飞过）</span>` : "",
-    `<span class="sw">${sw.PREFLIGHT_REQUIRE_VISION ? "起飞前要视觉" : "可先起飞再就位"}</span>`].join("");
+    `<span class="sw">${sw.GATE_REQUIRE_NORMAL ? "必须有法向 n" : "无法向按视线进入"}</span>`].join("") : "";
   if (d) {
     drawTop($("#pv-top"), {d, drone: {x: 0, y: 0, yaw: Math.PI / 2}, trail: [], mode: "fence", noLabel: true,
                            lim: d.phase_envelope && d.phase_envelope.takeoff ? d.phase_envelope.takeoff[0] : null});
@@ -2622,34 +2446,7 @@ function renderPreview(r) {
     const pe = d.phase_envelope || {};
     const t = d.timeouts || {}, s = d.speeds || {}, sf = d.safety || {};
     const row = (k, val) => `<dt>${k}</dt><dd class="num">${val}</dd>`;
-    if (isGate) { $("#pv-env").innerHTML = gateEnvRows(d, row); }
-    else $("#pv-env").innerHTML = [
-      row("目标高度带", `${fx(d.z_band[0])} ~ ${fx(d.z_band[1])} m`),
-      row("高度钳位", `${fx(d.z_clamp[0])} ~ ${fx(d.z_clamp[1])} m · 硬顶 ${fx(d.max_height, 1)} m`),
-      row("起飞高度", `${fx(d.takeoff_height)} m`),
-      row("水平", `软限 ${fx(d.xy_soft)} · 硬围栏 ${fx(d.xy_hard)} · 起降 ${fx(d.base_drift)} m`),
-      row("目标距离", `停靠壳 ${fx(d.standoff_shell[0])}~${fx(d.standoff_shell[1])} · 检测远端 ${fx(d.detect_range[1])} · 进场门 ${fx(d.entry_dist)} m`),
-      row("可用带", `<span class="${d.approach_band < 0.3 ? "warn" : ""}">${fx(d.approach_band)} m</span>`),
-      row("速度", `跟踪 ${fx(s.TRACK_V_MAX)} / 垂直 ${fx(s.TRACK_VZ_MAX)} · 手动 ${fx(s.TELEOP_XY_SPEED)} m/s`),
-      row("速度硬限", `track ${fx(pe.track && pe.track[1])} · teleop ${fx(pe.teleop && pe.teleop[1])} · 返航 ${fx(pe.return_home && pe.return_home[1])} m/s`),
-      row("牵引绳", `${fx(d.leash[0])} / ${fx(d.leash[1])} m`),
-      row("时间", `跟踪 ${fx(t.TRACK_DURATION, 0)} · 手动 ${fx(t.TELEOP_DURATION, 0)} · 返航 ${fx(t.RETURN_TIMEOUT, 0)} · 降落 ${fx(t.DESCEND_TIMEOUT, 0)} s`),
-      row("安全", `倾角停桨 ${fx(sf.MAX_TILT_DEG, 0)}° · 视觉断供 ${fx(sf.VISION_LOST_LAND_S)} s`),
-      // ★2026-10-19 (flight_profile 给了才显示): 速度上限链 [[名字, 值], ...] —— 实际可达速度 = 其中最小的
-      Array.isArray(d.speed_chain) && d.speed_chain.length ? (() => {
-        const ch = d.speed_chain.filter(x => Array.isArray(x) && nz(x[1]));
-        const m = ch.reduce((a, b) => (b[1] < a[1] ? b : a), ch[0]);
-        return row("速度上限链", ch.map(x => `${esc(x[0])} ${fx(x[1])}`).join(" · ") +
-                   (m ? ` → <b class="warn">实际 ≤ ${fx(m[1])} m/s（瓶颈：${esc(m[0])}）</b>` : ""));
-      })() : "",
-      d.gate ? row("穿环", [
-        nz(d.gate.dash_v) ? `冲刺 ${fx(d.gate.dash_v, 1)} m/s` : "",
-        nz(d.gate.brake_acc) ? `制动 ${fx(d.gate.brake_acc, 1)} m/s²` : "",
-        nz(d.gate.brake_dist) ? `制动距离 ${fx(d.gate.brake_dist)} m` : "",
-        nz(d.gate.d_align) ? `对准距离 ${fx(d.gate.d_align, 1)} m` : "",
-        nz(d.gate.d_commit) ? `提交距离 ${fx(d.gate.d_commit, 1)} m` : "",
-      ].filter(Boolean).join(" · ")) : "",
-    ].join("");
+    $("#pv-env").innerHTML = gateEnvRows(d, row);
   } else { $("#pv-env").innerHTML = ""; prep($("#pv-top")); prep($("#pv-h")); }
   $("#pv-applied").innerHTML = (r.applied || []).map(([k, v]) => `<div>${esc(k)} = ${esc(v)}</div>`).join("") || '<span class="muted">（无，全是代码默认值）</span>';
   $("#pv-lines").innerHTML = (r.lines || []).map(l => `<li>${esc(l)}</li>`).join("");
@@ -2689,10 +2486,6 @@ function gateEnvRows(d, row) {
 function setSaveEnabled(en) { $("#sv-btn").disabled = $("#sv-go").disabled = $("#sv-temp").disabled = !en; }
 function dangerOk(sets, verb) {
   const danger = [];
-  if (/TRACK_SHADOW\s*=\s*(False|false|0)\b/.test(sets)) danger.push("关闭影子模式（视觉将实际驱动飞机）");
-  if (/TRACK_ALLOW_SIM_DRIVE\s*=\s*(True|true|1)\b/.test(sets)) danger.push("允许假数据驱动飞机");
-  if (/TRACK_Z_ENABLE\s*=/.test(sets)) danger.push("改动 Z 环开关");
-  // ★2026-10-19 穿环
   if (/GATE_SHADOW\s*=\s*(False|false|0)\b/.test(sets)) danger.push("关闭穿环影子模式（锁定后会冲刺）");
   if (/GATE_ALLOW_SIM_DRIVE\s*=\s*(True|true|1)\b/.test(sets)) danger.push("允许 SIM 识别结果驱动冲刺");
   if (/GATE_CONFIRM_DASH\s*=\s*(False|false|0)\b/.test(sets)) danger.push("冲刺前不再等 G 确认");

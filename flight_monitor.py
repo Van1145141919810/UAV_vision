@@ -17,10 +17,9 @@ flight_monitor.py —— 飞机上的网页监控站（只读监控 + 起飞配�
   离线试页面(不需要 ROS, 笔记本上就能跑):
           python3 flight_monitor.py --fake
 
-  飞行脚本: ★2026-10-19 按任务各找一个 —— 文件名 stage<版本号>_<任务>.py, 编号 = 版本,
-           后缀 = 任务: _track 停靠跟踪 (老名字 _real 也算跟踪), _gate 穿环。每种任务取编号最大的。
-           配置页按档案的「任务」选脚本做 dry-run / 生成启动脚本; 没选任务时用 --task
-           (默认 auto: 有穿环脚本就是穿环)。--script 指定单个脚本时只用它 (同目录 flight.py 软链接同理)。
+  飞行脚本: 文件名 stage<版本号>_<任务>.py, 编号 = 版本, 取编号最大的。
+           2026-10-30 起只有穿环 (_gate); 停靠跟踪 (_track / _real) 已删除。
+           --script 指定单个脚本时只用它 (同目录 flight.py 软链接同理)。
 
 为什么这样设计
 -------------------------------------------------------------------------------
@@ -39,18 +38,16 @@ flight_monitor.py —— 飞机上的网页监控站（只读监控 + 起飞配�
 
 数据来源
 -------------------------------------------------------------------------------
-  /flight_ctrl/telemetry  脚本内部状态 (阶段/跟踪/安全余量/门禁)   5Hz
+  /flight_ctrl/telemetry  脚本内部状态 (阶段/穿环段/安全余量)   5Hz
   /flight_ctrl/config     生效配置 + 派生量 + 原点 (latched)
   /rosout                 脚本的告警/事件 (按节点名过滤; 节点名从遥测里学, 不写死)
   mavros 话题              位姿/速度/电池/模式 (脚本没启动也有)
-  VINS / track 话题        只统计频率和延迟
+  VINS 话题               只统计频率和延迟
   ROS master              机况检查: geometric_controller、谁在发设定点、版本是否配套、
                           有没有旧的抓帧节点/旧版桥还在跑
   /vision_bridge/cam      图传桥自己报的新相机状态 (1Hz JSON: 帧率/分辨率/原样转发比例/重开次数)
 
-节点名 /flight_ctrl 是固定的, 不随飞行脚本文件的版本号变。旧版脚本用的是
-/stage9_track + /stage9/*: 只要 ROS 图里还有人发布或订阅 /stage9/*, 机况检查
-「版本配套」就会指出是谁 (ROS1 订阅一个没人发布的话题不会报错, 只会静默没数据)。
+节点名 /flight_ctrl 是固定的, 不随飞行脚本文件的版本号变。
 
 单实例 / 端口 (2026-10-10)
 -------------------------------------------------------------------------------
@@ -76,8 +73,7 @@ flight_monitor.py —— 飞机上的网页监控站（只读监控 + 起飞配�
                /api/logs  /api/log?dir=&file=   只读飞行日志 (网页「回放」页)
   机况检查     任务 / 图传配套、环识别、PX4 机动参数 (MPC_TILTMAX_AIR 等,
                只在飞控已连接且**未解锁**时读 mavros 的参数缓存)
-  布局         网页按遥测/配置里的 task 自动切换 (没有 task = 停靠跟踪, stage11 照旧);
-               脚本没跑时, 图传是 gate 模式或有环数据就显示穿环布局
+  布局         穿环布局 (2026-10-30 停靠跟踪布局已删除)
   离线试       python3 flight_monitor.py --fake --fake-task gate
                (带一个假的识别画面 /fake/snapshot.jpg, 用来核对画面叠加的投影)
 ===============================================================================
@@ -111,7 +107,6 @@ except ImportError:
 
 SCRIPT_NODE = "/flight_ctrl"           # 飞行脚本的节点名 (stageNN_*.py 的 NODE_NAME)
 STATUS_TOPIC = SCRIPT_NODE + "/status"  # vision_bridge 应当订阅它 (转给地面站 HUD)
-LEGACY_PREFIX = "/stage9/"             # 旧版脚本的话题前缀 —— 出现即说明有版本没更新
 SETPOINT_PREFIX = "/mavros/setpoint_"  # 任何人往这些话题发数据都要在起飞前发现
 HOSTNAME = socket.gethostname()        # 页头显示: 同时开两条隧道时一眼看出是哪架飞机
 
@@ -132,7 +127,7 @@ PX4_PARAMS = ("MPC_XY_VEL_MAX", "MPC_XY_CRUISE", "MPC_ACC_HOR", "MPC_ACC_HOR_MAX
 LOG_DIR_RE = re.compile(r"^flight_[\w\-]+$")
 LOG_FILE_RE = re.compile(r"^[\w\-.]+\.(csv|txt|log)$")
 LOG_MAX_BYTES = 40 * 1024 * 1024
-TASK_LABEL = {"track": "停靠跟踪", "gate": "穿环"}
+TASK_LABEL = {"gate": "穿环"}
 
 
 def _abs_node(n):
@@ -140,16 +135,15 @@ def _abs_node(n):
     return n if n.startswith("/") else "/" + n
 
 
-SCRIPT_RE = re.compile(r"^stage(\d+)_(track|gate|real)\.py$")
-SUFFIX_TASK = {"track": "track", "real": "track", "gate": "gate"}
-KNOB_TASK = {"跟踪": "track", "穿环": "gate"}
+SCRIPT_RE = re.compile(r"^stage(\d+)_(gate)\.py$")
+SUFFIX_TASK = {"gate": "gate"}
+KNOB_TASK = {"穿环": "gate"}
 
 
 def discover_scripts(d=HERE):
     """
     ★2026-10-19 同目录的飞行脚本, 按任务各取编号最大的一个 → {task: 绝对路径}。
-    文件名 stage<版本号>_<任务>.py: _track / _real(老名字) = 停靠跟踪, _gate = 穿环。
-    同一个版本号同时有 _track 和 _real 时用 _track。
+    文件名 stage<版本号>_<任务>.py (SCRIPT_RE)。
     """
     best = {}
     for f in os.listdir(d):
@@ -157,7 +151,7 @@ def discover_scripts(d=HERE):
         if not m:
             continue
         task = SUFFIX_TASK[m.group(2)]
-        key = (int(m.group(1)), m.group(2) != "real")
+        key = (int(m.group(1)),)
         if task not in best or key > best[task][0]:
             best[task] = (key, os.path.join(d, f))
     return {t: v[1] for t, v in best.items()}
@@ -256,7 +250,7 @@ class Store:
         self.landed = None
         self.pose_hist = collections.deque(maxlen=600)       # (t, x, y, z)
         self.meters = {k: RateMeter() for k in
-                       ("pose", "vins", "vision_pose", "track_target", "telemetry", "gate")}
+                       ("pose", "vins", "vision_pose", "telemetry", "gate")}
         self.cam = None                    # 图传桥 /vision_bridge/cam 的最新一条 (dict)
         self.t_cam = None
         self.gate = None                   # /gate/status 最新一条 (dict, bridge 原样)
@@ -266,7 +260,6 @@ class Store:
         self.tel_buf = collections.deque(maxlen=TEL_BUF_N)    # (seq, 接收时刻, telemetry)
         self.gate_buf = collections.deque(maxlen=GATE_BUF_N)  # (seq, 接收时刻, gate_status)
         self.px4 = {"params": {}, "t": None, "t_try": None, "error": None}
-        self.track_target = None
         self.telemetry = None
         self.t_telemetry = None
         self.config = None
@@ -275,7 +268,7 @@ class Store:
         self.events = collections.deque(maxlen=600)
         self.event_id = 0
         self.graph = {"ok": False, "t": None, "nodes": [], "setpoint_pubs": {},
-                      "legacy_pubs": {}, "legacy_subs": {}, "status_subs": [],
+                      "status_subs": [],
                       "error": None, "master_restarted": False,
                       # 识别相机 (见 run_checks「识别相机」)
                       "bridge_img_subs": [],    # vision_bridge 订的图像话题 (非空 = 旧版桥)
@@ -322,12 +315,6 @@ class Store:
         with self.lock:
             self.cam = d
             self.t_cam = time.time()
-
-    def set_track_target(self, x, y, z, sim):
-        with self.lock:
-            self.track_target = {"x": x, "y": y, "z": z, "sim": bool(sim),
-                                 "t": time.time()}
-            self.meters["track_target"].tick()
 
     def set_telemetry(self, d):
         ph = d.get("phase")
@@ -432,9 +419,6 @@ class Store:
                 "landed": self.landed,
                 "rates": {k: round(v.rate(now), 1) for k, v in m.items()},
                 "ages": {k: v.age(now) for k, v in m.items()},
-                "track_target": dict(self.track_target,
-                                     age=now - self.track_target["t"])
-                if self.track_target else None,
                 "telemetry": self.telemetry,
                 "telemetry_age": (now - self.t_telemetry) if self.t_telemetry else None,
                 "script_alive": self.script_alive(now),
@@ -506,14 +490,13 @@ STORE = Store()
 # =============================================================================
 def current_task():
     """
-    当前任务: 脚本在跑 → 它遥测里的 task; 否则 → 配置里的 task; 都没有 = 停靠跟踪
-    (stage11 没有 task 字段, 所以老脚本永远是 "track", 行为不变)。
+    当前任务: 脚本在跑 → 它遥测里的 task; 否则 → 配置里的 task; 都没有 = 穿环。
     """
     now = time.time()
     with STORE.lock:
         t = STORE.telemetry if STORE.script_alive(now) else None
         c = STORE.config or STORE.config_fallback or {}
-    return (t or {}).get("task") or c.get("task") or "track"
+    return (t or {}).get("task") or c.get("task") or "gate"
 
 
 def _bridge_mode(s):
@@ -535,14 +518,6 @@ def gate_checks(add, s):
     elif task == "gate" and not gate_mode:
         add("任务 / 图传配套", "fail", "任务 = 穿环, 图传 = %s" % mode,
             "穿环要 gate_gcs (地面检测) 或 gate (机上检测) —— 重起: python3 run_vision.py gate_gcs")
-    elif task != "gate" and gate_mode:
-        tt = s.get("track_target") or {}
-        live = (s["rates"].get("track_target") or 0.0) > 0.5 and not tt.get("sim")
-        add("任务 / 图传配套", "warn" if live else "info",
-            "任务 = %s, 图传 = %s" % (tl, mode),
-            "gate 模式下 /track/target 发的是**环中心**%s, 停靠跟踪脚本会把它当目标去停靠。"
-            "飞穿环请用穿环任务; 只是在看识别效果就忽略这条"
-            % (" (现在不带 sim 标记 = 会真的驱动)" if live else ""))
     else:
         add("任务 / 图传配套", "ok", "任务 %s · 图传 %s" % (tl, mode))
 
@@ -745,19 +720,8 @@ def run_checks(args):
             add("设定点话题", "ok", "无其他发布者")
 
         # ---- 版本配套: 飞行脚本 / vision_bridge / 本程序用的话题名必须一致
-        lp, ls = g.get("legacy_pubs") or {}, g.get("legacy_subs") or {}
-        old_pub = sorted({n for ns in lp.values() for n in ns})
-        old_sub = sorted({n for ns in ls.values() for n in ns})
         bridges = [n for n in g["nodes"] if "vision_bridge" in n]
-        if old_pub:
-            add("版本配套", "fail", "旧版飞行脚本在跑: " + ", ".join(old_pub),
-                "它发布的是 %s* —— 本页看不到它的遥测。停掉它, 用新版 (节点 %s)"
-                % (LEGACY_PREFIX, SCRIPT_NODE))
-        elif old_sub:
-            add("版本配套", "warn", "旧版订阅者: " + ", ".join(old_sub),
-                "还在订阅 %s* (多半是旧版 vision_bridge), 地面站 HUD 看不到阶段。"
-                "更新后重启它" % LEGACY_PREFIX)
-        elif bridges and not any(b in (g.get("status_subs") or []) for b in bridges):
+        if bridges and not any(b in (g.get("status_subs") or []) for b in bridges):
             add("版本配套", "warn", "vision_bridge 没订阅 %s" % STATUS_TOPIC,
                 "地面站 HUD 看不到阶段。检查 vision_bridge 的 _status_topic 参数")
         else:
@@ -793,18 +757,7 @@ def run_checks(args):
                "VINS 自启会崩, 需手动: tmux 里 roslaunch vins stereo120.launch (见帮助页)")
     rate_check("vision_pose → 飞控", "vision_pose", 15, 5, "VINS 到 mavros 的桥")
 
-    tt = s["track_target"]
-    r = s["rates"].get("track_target") or 0.0
-    if r < 1:
-        add("视觉链路 /track/target", "warn", "无数据",
-            "vision_bridge / 地面站没在跑? (起飞前没有目标也允许起飞)")
-    elif tt and tt.get("sim"):
-        add("视觉链路 /track/target", "warn", "%.1f Hz  SIM 假数据" % r,
-            "地面站在发模拟数据, 实闭环会被拦截")
-    else:
-        add("视觉链路 /track/target", "ok", "%.1f Hz" % r)
-
-    gate_checks(add, s)
+    gate_checks(add, s)                  # 视觉链路: /gate/status (原 /track/target 的检查并进这里)
     px4_check(add, s)
 
     # ---- 电池
@@ -846,7 +799,7 @@ def run_checks(args):
         n = len(fp.list_sites(args.sites_dir))
         add("现场档案", "ok" if n else "warn", "%d 个" % n, args.sites_dir)
     if not args.scripts:
-        add("飞行脚本文件", "fail", "找不到", "同目录放 stageNN_track.py / stageNN_gate.py")
+        add("飞行脚本文件", "fail", "找不到", "同目录放 stageNN_gate.py")
     else:
         add("飞行脚本文件", "ok" if args.script else "warn",
             "  ".join("%s %s" % (TASK_LABEL.get(t, t), os.path.basename(p))
@@ -1270,7 +1223,7 @@ def paths_info(args):
     fp_path = (getattr(fp, "__file__", "") if fp else "") or os.path.join(HERE, "flight_profile.py")
     add("flight_profile.py", fp_path,
         "现场档案的解析/校验。监控和飞行脚本各自从**自己所在目录** import 它")
-    for t, sp in sorted(args.scripts.items()) or [("track", "")]:
+    for t, sp in sorted(args.scripts.items()) or [("gate", "")]:
         add("飞行脚本 · %s" % TASK_LABEL.get(t, t), sp,
             getattr(args, "script_src", "") + ("  ★默认任务" if t == args.task else ""))
         if not sp:
@@ -1526,7 +1479,7 @@ class Handler(BaseHTTPRequestHandler):
 def start_ros(args, srv=None):
     import rospy
     import rosgraph
-    from geometry_msgs.msg import PoseStamped, TwistStamped, PointStamped
+    from geometry_msgs.msg import PoseStamped, TwistStamped
     from mavros_msgs.msg import State, ExtendedState
     from nav_msgs.msg import Odometry
     from sensor_msgs.msg import BatteryState
@@ -1553,10 +1506,6 @@ def start_ros(args, srv=None):
     def on_vel(m):
         v = m.twist.linear
         STORE.set_vel(v.x, v.y, v.z)
-
-    def on_target(m):
-        STORE.set_track_target(m.point.x, m.point.y, m.point.z,
-                               m.header.frame_id.endswith("_sim"))
 
     def on_json(setter):
         def cb(m):
@@ -1591,7 +1540,6 @@ def start_ros(args, srv=None):
     S("/vins_estimator/odometry", Odometry, lambda m: STORE.tick("vins"), queue_size=1)
     S("/mavros/vision_pose/pose", PoseStamped,
       lambda m: STORE.tick("vision_pose"), queue_size=1)
-    S(args.track_topic, PointStamped, on_target, queue_size=1)
     S(args.telemetry_topic, String, on_json(STORE.set_telemetry), queue_size=1)
     S(args.config_topic, String, on_json(STORE.set_config), queue_size=1)
     S("/rosout", Log, on_rosout, queue_size=50)
@@ -1674,20 +1622,16 @@ def start_ros(args, srv=None):
                     print("[monitor] ★ ROS master 重启过, 本程序的订阅已失效, 请重启我")
                 pubs, subs, _srvs = master.getSystemState()
                 nodes = set()
-                sp, lpub, lsub, ssub = {}, {}, {}, []
+                sp, ssub = {}, []
                 img_subs, det_pubs = [], []
                 for topic, ns in pubs:
                     nodes.update(ns)
                     if topic.startswith(SETPOINT_PREFIX):
                         sp[topic] = list(ns)
-                    if topic.startswith(LEGACY_PREFIX):
-                        lpub[topic] = list(ns)
                     if topic == args.det_image_topic:
                         det_pubs = list(ns)
                 for topic, ns in subs:
                     nodes.update(ns)
-                    if topic.startswith(LEGACY_PREFIX):
-                        lsub[topic] = [n for n in ns if n != "/flight_monitor"]
                     if topic == args.status_topic:
                         ssub = list(ns)
                     # 桥订了图像话题 = 旧版桥 (新版自己开相机, 不订图像)
@@ -1695,7 +1639,7 @@ def start_ros(args, srv=None):
                             "image" in topic or topic in (args.det_image_topic, args.old_image_topic)):
                         img_subs.append(topic)
                 STORE.set_graph(ok=True, nodes=sorted(nodes), setpoint_pubs=sp,
-                                legacy_pubs=lpub, legacy_subs=lsub, status_subs=ssub,
+                                status_subs=ssub,
                                 bridge_img_subs=sorted(img_subs), det_cam_pubs=det_pubs,
                                 error=None)
             except Exception as e:
@@ -1720,195 +1664,6 @@ def quat_from_euler(roll, pitch, yaw):
             cr * cp * cy + sr * sp * sy)
 
 
-def start_fake(args):
-    STORE.mode = "fake"
-    STORE.set_px4(FAKE_PX4)
-    cfg = STORE.config_fallback or {"params": {}, "derived": {}}
-    der = cfg.get("derived") or {}
-    P = cfg.get("params") or {}
-    standoff = P.get("TRACK_STANDOFF", 0.9)
-    timeline = [("idle", 4), ("preflight", 3), ("prime", 2), ("takeoff", 4),
-                ("hover", 3), ("teleop", 5), ("track", 45), ("return_home", 6),
-                ("descend", 6), ("auto_land", 3), ("cleanup", 2)]
-    total = sum(d for _, d in timeline)
-    origin = [0.0, 0.0, 0.05, 0.0]
-
-    def phase_at(t):
-        t = t % total
-        for name, d in timeline:
-            if t < d:
-                return name, t
-            t -= d
-        return "idle", 0
-
-    STORE.set_graph(ok=True, nodes=["/mavros", "/vins_estimator", "/rosout"]
-                    + ([SCRIPT_NODE] if True else []),
-                    setpoint_pubs={"/mavros/setpoint_raw/local": [SCRIPT_NODE]})
-
-    def loop():
-        t0 = time.time()
-        x = y = 0.0
-        z = 0.05
-        yaw = 0.0
-        last_ph = None
-        counts = dict(accept=0, stale=0, jump=0, zbad=0, zflip=0, clamp=0)
-        while True:
-            now = time.time()
-            t = now - t0
-            ph, tin = phase_at(t)
-            flying = ph in ("takeoff", "hover", "teleop", "track", "return_home",
-                            "descend", "auto_land")
-            # ---- 运动学 (很粗糙, 只为让页面动起来)
-            tx = 2.2 * math.cos(t * 0.15)
-            ty = 1.4 * math.sin(t * 0.15)
-            tz = 1.6 + 0.4 * math.sin(t * 0.3)
-            gx, gy, gz = x, y, z
-            if ph == "takeoff":
-                gz = min(1.5, 0.05 + tin * 0.5)
-            elif ph in ("hover", "teleop"):
-                gz = 1.5
-                if ph == "teleop":
-                    gx, gy = 0.5 * math.sin(tin), 0.3 * tin / 5
-            elif ph == "track":
-                dx, dy = tx - x, ty - y
-                d = math.hypot(dx, dy) or 1e-6
-                gx, gy = tx - dx / d * standoff, ty - dy / d * standoff
-                gz = tz
-                yaw = math.atan2(dy, dx)
-            elif ph == "return_home":
-                gx, gy = 0.0, 0.0
-            elif ph in ("descend", "auto_land"):
-                gz = max(0.05, z - 0.08)
-            elif ph in ("idle", "cleanup", "preflight", "prime"):
-                gz = 0.05 if not flying else z
-            k = 0.08
-            vx, vy = (gx - x) * k * 20, (gy - y) * k * 20
-            x += (gx - x) * k + 0.003 * math.sin(t * 7)
-            y += (gy - y) * k + 0.003 * math.cos(t * 5)
-            z += (gz - z) * k
-            tilt = min(25.0, math.hypot(vx, vy) * 12)
-            # 姿态: 速度转到机体系 → 前进时机头下压, 向左飞时左倾 (FLU), 再加一点晃动
-            cyw, syw = math.cos(yaw), math.sin(yaw)
-            v_fwd, v_left = vx * cyw + vy * syw, -vx * syw + vy * cyw
-            roll_r = math.radians(max(-25.0, min(25.0, -v_left * 12 + 2 * math.sin(t * 1.7))))
-            pitch_r = math.radians(max(-25.0, min(25.0, v_fwd * 12 + 1.5 * math.sin(t * 1.1))))
-            STORE.set_pose(x, y, z, *quat_from_euler(roll_r, pitch_r, yaw))
-            STORE.set_vel(vx, vy, (gz - z) * 1.6)
-            STORE.set_batt(16.4 - 0.004 * (t % total))
-            armed = flying or ph == "prime"
-            STORE.set_state(True, armed, "OFFBOARD" if armed else "POSCTL")
-            STORE.tick("vins")
-            STORE.tick("vision_pose")
-            if int(now) != int(now - 0.05):                    # 桥 1Hz 报相机状态
-                STORE.set_cam({"t": now, "ok": True, "err": "", "dev": "/dev/v4l/by-id/FAKE-STYT",
-                               "w": 1920, "h": 1080, "cam_fps": 10.0, "tx_hz": 10.0,
-                               "raw_pct": 100.0, "kb": 238.0, "mbps": 18.6, "drop": 0,
-                               "rx_hz": 10.0, "reopens": 0, "raw_supported": True,
-                               "frame_age": 0.02})
-            if ph == "track" or int(t * 2) % 3 == 0:
-                STORE.set_track_target(tx + 0.02 * math.sin(t * 9),
-                                       ty, tz, False)
-            # ---- 脚本遥测
-            alive = ph != "idle"
-            if alive and int(t * 5) != int((t - 0.05) * 5):
-                d = math.hypot(tx - x, ty - y)
-                age = 0.18 + 0.12 * abs(math.sin(t * 1.3))
-                if ph == "track" and int(t * 5) % 23 == 0:
-                    age = 0.9                                   # 偶发延迟尖峰
-                full = P.get("TRACK_AGE_FULL", 0.35)
-                zero = P.get("TRACK_AGE_ZERO", 0.75)
-                gain = 1.0 if age <= full else max(0.0, 1 - (age - full) / (zero - full))
-                if ph == "track":
-                    counts["accept"] += 2
-                    if int(t * 5) % 17 == 0:
-                        counts["zbad"] += 1
-                    if int(t * 5) % 29 == 0:
-                        counts["jump"] += 1
-                seen = sum(v for k2, v in counts.items() if k2 != "clamp")
-                rc = 1 if int(t * 5) % 17 == 0 else 0
-                tele = {
-                    "t": now, "node": SCRIPT_NODE, "phase": ph,
-                    "sub_mode": ("TRACK" if tin > 4 else "MANUAL") if ph == "track" else "",
-                    "air": z > 0.15, "abort": False, "land": False,
-                    "abort_reason": None, "land_reason": None, "t_requested": False,
-                    "shadow": P.get("TRACK_SHADOW", False),
-                    "sim_drive": P.get("TRACK_ALLOW_SIM_DRIVE", False),
-                    "z_enable": P.get("TRACK_Z_ENABLE", True),
-                    "origin": origin,
-                    "setpoint": {"mode": "ZHOLD", "px": gx, "py": gy, "pz": gz,
-                                 "yaw": yaw, "vx": vx, "vy": vy},
-                    "z_filt": z, "cells": 4, "fly_min_v": 14.0,
-                    "envelope": (der.get("phase_envelope") or {}).get(
-                        ph, (der.get("phase_envelope") or {}).get("_default", [0.8, 1.0])),
-                    "log_dir": "~/uav_logs/flight_FAKE",
-                    "track": {} if ph != "track" else {
-                        "sub_mode": "TRACK" if tin > 4 else "MANUAL", "valid": True,
-                        "sim": False, "hold_out": P.get("TRACK_SHADOW", False),
-                        "tgt": [tx, ty, tz], "age": age, "gain": gain,
-                        "err": [tx - x, ty - y, tz - z], "d": d, "d_eff": d - standoff,
-                        "d3": math.sqrt(d * d + (tz - z) ** 2),
-                        "cmd": [vx * 0.6, vy * 0.6, (tz - z) * 0.8],
-                        "sp": [gx, gy, gz], "leash": math.hypot(gx - x, gy - y),
-                        "leash_z": gz - z, "xy_moving": abs(d - standoff) > 0.08,
-                        "z_moving": abs(tz - z) > 0.05, "yaw_meas": yaw, "dyaw": 0.02,
-                        "yaw_rate": 0.05, "lost": False, "counts": dict(counts),
-                        "rej_pct": 100.0 * (seen - counts["accept"]) / seen if seen else None,
-                        "z_in": tz if rc == 0 else tz + 3.0, "rej_code": rc,
-                        "elapsed": tin, "duration": P.get("TRACK_DURATION", 120.0)},
-                    "safety": {} if not flying else {
-                        "horiz_lim": 11.0, "vel_lim": 1.0, "max_height": 11.0,
-                        "max_tilt": 30.0, "pose_stale": 0.15, "vision_lost": 0.8,
-                        "jump_max": 0.2, "jump": 0.01, "confirm_s": 0.25,
-                        "deb": {"height": 0, "horiz": 0, "tilt": 0},
-                        "dz": z - origin[2], "horiz": math.hypot(x, y),
-                        "tilt": tilt, "pose_age": 0.03, "odom_age": 0.08,
-                        "horiz_v": math.hypot(vx, vy), "batt_v": 16.4 - 0.004 * t,
-                        "fly_min_v": 14.0},
-                    "gates": {} if ph != "track" else {
-                        "entry_ok": True, "entry_valid": True, "entry_d0": 1.4,
-                        "entry_max": P.get("TRACK_ENTRY_MAX_D", 10),
-                        "quality_checked": tin > 5, "quality_total": seen,
-                        "quality_rej": 4.1, "quality_ok": True},
-                }
-                for sec in ("track", "safety", "gates"):     # 和真脚本一样带时间戳
-                    if tele[sec]:
-                        tele[sec]["t"] = now
-                STORE.set_telemetry(tele)
-                if ph != last_ph:
-                    if ph == "preflight":
-                        c = dict(cfg)
-                        c["t"] = now
-                        c["origin"] = origin
-                        c["src"] = "FAKE: " + str(cfg.get("src"))
-                        STORE.set_config(c)
-                    if ph == "track":
-                        counts = dict(accept=0, stale=0, jump=0, zbad=0, zflip=0, clamp=0)
-                        STORE.add_event("WARN", "[track] 入场门禁: 当前没有有效目标点 → 停在 MANUAL")
-                    if ph == "takeoff":
-                        STORE.add_event("WARN", "[takeoff] LIFTOFF DETECTED at dz=0.11")
-                    last_ph = ph
-                if ph == "track" and abs(tin - 20) < 0.11:
-                    STORE.add_event("WARN", "[safety] 水平越界 (3.12) — 进入 0.25s 观察期, 恢复则忽略")
-                if ph == "track" and abs(tin - 20.4) < 0.11:
-                    STORE.add_event("INFO", "[safety] 水平已回到带内 — 观察期解除")
-            if not alive and last_ph not in (None, "idle"):
-                last_ph = "idle"
-                with STORE.lock:
-                    STORE.config = None
-            if int(now) != int(now - 0.05):          # 每秒刷新一次"ROS 图"
-                STORE.set_graph(ok=True,
-                                nodes=["/mavros", "/vins_estimator", "/rosout", "/vision_bridge"]
-                                + ([SCRIPT_NODE] if alive else []),
-                                setpoint_pubs={"/mavros/setpoint_raw/local":
-                                               [SCRIPT_NODE] if alive else []},
-                                status_subs=["/vision_bridge"],
-                                bridge_img_subs=[], det_cam_pubs=[])
-            STORE.watch_script()
-            time.sleep(0.05)
-
-    threading.Thread(target=loop, daemon=True).start()
-
-
 # -----------------------------------------------------------------------------
 # FAKE 穿环 (--fake --fake-task gate)
 #   一架假飞机看着一个假环: 起飞 → 悬停识别 → 对准 → 冲刺穿环 → 制动 → 返航。
@@ -1923,6 +1678,7 @@ FAKE_PX4 = {"MPC_XY_VEL_MAX": 12.0, "MPC_XY_CRUISE": 5.0, "MPC_ACC_HOR": 3.0,
             "MPC_ACC_HOR_MAX": 5.0, "MPC_JERK_AUTO": 4.0, "MPC_TILTMAX_AIR": 45.0,
             "MPC_XY_P": 0.95, "MPC_XY_VEL_P_ACC": 1.8, "MPC_Z_VEL_MAX_UP": 3.0,
             "COM_OBL_ACT": 2}
+
 
 
 def _va(a, b):
@@ -2224,8 +1980,6 @@ def start_fake_gate(args):
             # ---- 感知 (bridge 每帧发一条 /gate/status)
             st = perceive(now, p, yaw, pitch)
             STORE.set_gate(st)
-            if st.get("published"):
-                STORE.set_track_target(st["target"][0], st["target"][1], st["target"][2], False)
             cur["v"] = {"p": p, "yaw": yaw, "pitch": pitch, "st": st, "t": now}
             if now - last_cam >= 1.0:
                 last_cam = now
@@ -2285,9 +2039,9 @@ def start_fake_gate(args):
                     "t": now, "node": SCRIPT_NODE, "task": "gate", "schema": 2,
                     "phase": ph, "sub_mode": "", "air": p[2] - origin[2] > 0.15,
                     "abort": False, "land": False, "abort_reason": None, "land_reason": None,
-                    "t_requested": False, "shadow": P.get("TRACK_SHADOW", False),
-                    "sim_drive": P.get("TRACK_ALLOW_SIM_DRIVE", False),
-                    "z_enable": P.get("TRACK_Z_ENABLE", True), "origin": origin,
+                    "t_requested": False, "shadow": P.get("GATE_SHADOW", False),
+                    "sim_drive": P.get("GATE_ALLOW_SIM_DRIVE", False),
+                    "z_enable": False, "origin": origin,
                     "setpoint": {"mode": "ZHOLD", "px": p[0], "py": p[1], "pz": p[2],
                                  "yaw": yaw, "vx": v[0], "vy": v[1]},
                     "z_filt": p[2], "cells": 4, "fly_min_v": 14.0, "envelope": env,
@@ -2368,10 +2122,10 @@ def main():
                     help="监听地址 (默认只本机, 通过 SSH 端口映射访问)")
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--script", default=None,
-                    help="只用这一个飞行脚本 (默认: 同目录按任务各找编号最大的 stageNN_track.py / "
-                         "stageNN_gate.py; 有 flight.py 软链接就只用它)")
-    ap.add_argument("--task", choices=("auto", "track", "gate"), default="auto",
-                    help="档案没写任务时用哪种任务的脚本 (默认 auto: 有穿环脚本就是穿环)")
+                    help="只用这一个飞行脚本 (默认: 同目录编号最大的 stageNN_gate.py; "
+                         "有 flight.py 软链接就只用它)")
+    ap.add_argument("--task", choices=("auto", "gate"), default="auto",
+                    help="档案没写任务时用哪种任务的脚本 (只剩 gate)")
     ap.add_argument("--sites-dir", default=None,
                     help="现场档案目录 (默认: flight_profile.DEFAULT_SITES_DIR)")
     ap.add_argument("--node", default=SCRIPT_NODE,
@@ -2380,7 +2134,6 @@ def main():
     ap.add_argument("--config-topic", default=SCRIPT_NODE + "/config")
     ap.add_argument("--status-topic", default=STATUS_TOPIC,
                     help="vision_bridge 应订阅的状态话题 (只用于版本配套检查)")
-    ap.add_argument("--track-topic", default="/track/target")
     ap.add_argument("--cam-status-topic", default="/vision_bridge/cam",
                     help="图传桥报相机状态的话题 (1Hz JSON)")
     ap.add_argument("--det-image-topic", default="/det_cam/image_raw",
@@ -2399,8 +2152,8 @@ def main():
                     help="启动脚本生成超过多少秒, 运行时要求输入 yes 确认 (默认 60)")
     ap.add_argument("--nice", type=int, default=10, help="降低进程优先级 (默认 10)")
     ap.add_argument("--fake", action="store_true", help="不连 ROS, 用模拟数据试页面")
-    ap.add_argument("--fake-task", choices=("track", "gate"), default="track",
-                    help="--fake 时模拟哪种任务: track = 停靠跟踪 (默认), gate = 穿环 (带假识别画面)")
+    ap.add_argument("--fake-task", choices=("gate",), default="gate",
+                    help="--fake 时模拟哪种任务 (只剩 gate = 穿环, 带假识别画面)")
     args = ap.parse_args()
     # 记下每个路径是怎么来的 (「机况检查 → 文件与路径」里显示)
     # ★2026-10-19 飞行脚本按任务找 (见 discover_scripts)
@@ -2408,14 +2161,14 @@ def main():
                           if os.path.exists(os.path.join(HERE, "flight.py")) else None)
     if one:
         one = os.path.abspath(one)
-        t = task_of_script(one) or (args.task if args.task != "auto" else "track")
+        t = task_of_script(one) or "gate"
         args.scripts = {t: one}
         args.script_src = "来源: --script 参数" if args.script else "来源: 同目录的 flight.py"
     else:
         args.scripts = discover_scripts()
         args.script_src = "来源: 同目录 stage<版本>_<任务>.py 编号最大的"
     if args.task == "auto":
-        args.task = "gate" if "gate" in args.scripts else "track"
+        args.task = "gate"
         args.task_src = "--task auto"
     else:
         args.task_src = "--task 参数"
@@ -2447,7 +2200,7 @@ def main():
     # ② 再做耗时的 dry-run 和 ROS 初始化 (这期间网页已能打开, 只是数据还没来)
     STORE.config_fallback = default_config(args)
     if args.fake:
-        (start_fake_gate if args.fake_task == "gate" else start_fake)(args)
+        start_fake_gate(args)
     else:
         try:
             start_ros(args, srv)
