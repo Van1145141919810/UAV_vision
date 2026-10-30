@@ -44,9 +44,16 @@ ROS_SETUP = ["/opt/ros/noetic/setup.bash", "~/ros_ws/devel/setup.bash"]   # 和 
 CAM = {"cam_pitch_deg": 5.23, "cam_roll_deg": 3.40, "cam_yaw_deg": -0.73,
        "cam_x": 0.080, "cam_y": 0.030, "cam_z": -0.115}
 
-NEED = {"gate": ["vision_bridge.py", "gate_detector.py", "ring_detector.py", "stereo_calib.yaml"],
-        "gate_gcs": ["vision_bridge.py", "gate_detector.py", "ring_detector.py"],
-        "aruco": ["vision_bridge.py"]}
+# 2026-10-30: 检测库搬进 vb09/ 包 (gate_detector.py / ring_detector.py 只剩兼容壳, 桥不再用它们)
+_VB09_COMMON = ["vb09/__init__.py", "vb09/common/__init__.py", "vb09/common/geom.py", "vb09/common/wire.py"]
+_VB09_FUSE = ["vb09/perception/__init__.py", "vb09/perception/ring/__init__.py",
+              "vb09/perception/ring/config.py", "vb09/perception/ring/frame.py",
+              "vb09/perception/ring/geom3d.py", "vb09/perception/ring/fusion.py", "vb09/perception/ring/locate.py"]
+NEED = {"gate": ["vision_bridge.py", "stereo_calib.yaml", "vb09/perception/stereo_rig.py",
+                 "vb09/perception/ring/det2d.py", "vb09/perception/ring/detect.py",
+                 "vb09/perception/ring/draw.py"] + _VB09_COMMON + _VB09_FUSE,
+        "gate_gcs": ["vision_bridge.py"] + _VB09_COMMON + _VB09_FUSE,
+        "aruco": ["vision_bridge.py"] + _VB09_COMMON + _VB09_FUSE}
 EXPECT = {
     "gate": ["[cam] 已打开 ...  →  [cam] 分辨率确认 3840x1080",
              "[gate] 标定 ... 工作分辨率 960x540/目   [gate] T_BC: ... frame_id=odom%s",

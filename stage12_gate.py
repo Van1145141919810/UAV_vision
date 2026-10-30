@@ -450,6 +450,7 @@ from sensor_msgs.msg import BatteryState
 from std_msgs.msg import String
 
 import gate_plan as gp      # 同目录, 纯函数 (flight_profile 的 finalize 已经确认它在)
+from vb09.common import geom
 
 
 # =============================================================================
@@ -921,44 +922,22 @@ def get_envelope(phase):
 # =============================================================================
 # ===============================   Helpers   =================================
 # =============================================================================
+# 四元数 / 角度小函数: 2026-10-30 起公式在 vb09/common/geom.py (和监控、地面共用), 这里只是按 msg 取分量
 def yaw_from_quat(q):
-    siny = 2.0 * (q.w * q.z + q.x * q.y)
-    cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
-    return math.atan2(siny, cosy)
+    return geom.yaw_from_quat(q.x, q.y, q.z, q.w)
 
 
-def wrap_pi(a):
-    return math.atan2(math.sin(a), math.cos(a))
-
-
-def clamp(v, lo, hi):
-    return max(lo, min(hi, v))
+wrap_pi = geom.wrap_pi
+clamp = geom.clamp
 
 
 def rpy_deg_from_quat(q):
-    n = math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
-    if n < 1e-6:
-        return 0.0, 0.0, 0.0
-    qx, qy, qz, qw = q.x / n, q.y / n, q.z / n, q.w / n
-    sr = 2.0 * (qw * qx + qy * qz)
-    cr = 1.0 - 2.0 * (qx * qx + qy * qy)
-    roll = math.degrees(math.atan2(sr, cr))
-    sp = 2.0 * (qw * qy - qz * qx)
-    sp = clamp(sp, -1.0, 1.0)
-    pitch = math.degrees(math.asin(sp))
-    sy = 2.0 * (qw * qz + qx * qy)
-    cy = 1.0 - 2.0 * (qy * qy + qz * qz)
-    yaw = math.degrees(math.atan2(sy, cy))
-    return roll, pitch, yaw
+    r, p, y = geom.rpy_from_quat(q.x, q.y, q.z, q.w, eps=1e-6)
+    return math.degrees(r), math.degrees(p), math.degrees(y)
 
 
 def tilt_deg_from_quat(q):
-    n = math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
-    if n < 1e-6:
-        return 0.0
-    qx, qy = q.x / n, q.y / n
-    c = clamp(1.0 - 2.0 * (qx * qx + qy * qy), -1.0, 1.0)
-    return math.degrees(math.acos(c))
+    return math.degrees(geom.tilt_from_quat(q.x, q.y, q.z, q.w, eps=1e-6))
 
 
 def force_disarm_with_timeout(cmd_long, overall_timeout=2.0):

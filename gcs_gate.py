@@ -22,8 +22,8 @@ gcs_gate.py — 地面站 格子环 + 红点 检测 (配飞机 vision_bridge _mo
          --show-color / --preview-gray   画面固定是校正后左目彩色图 (= 检测器看到的)
   --real (旧写法) = --mode 2, 隐藏参数, 已有脚本不用改。
 
-  同目录需要: gate_detector.py  ring_detector.py  stereo_calib.yaml  (gate_params.json 可选)
-              preview_server.py (网页「识别画面」用, 可选)
+  同目录需要: vb09/ (common + perception)  stereo_calib.yaml  (gate_params.json 可选)
+              网页「识别画面」用 vb09/common/preview_server.py
 
 保险 (单保险, 和 gcs_aruco_det2 一样只看地面 --mode)
 -------------------------------------------------------------------------------
@@ -59,23 +59,16 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import gate_detector as gd     # noqa: E402
-import ring_detector as rd     # noqa: E402
+from vb09.common import geom   # noqa: E402
+from vb09.common.wire import pack, unpack, require_msgpack, zmq, frame_to_msg, rig_to_msg   # noqa: E402
+from vb09.perception.stereo_rig import StereoRig   # noqa: E402
+from vb09.perception.ring.config import GateConfig   # noqa: E402
+from vb09.perception.ring.detect import GateDetector   # noqa: E402
+from vb09.perception.ring.det2d import apply_wb, segment   # noqa: E402
+from vb09.perception.ring.draw import draw_frame   # noqa: E402
+from vb09.perception.ring.geom3d import ring_tilt_deg   # noqa: E402
 
-try:
-    import zmq
-except ImportError:
-    zmq = None
-try:
-    import msgpack
-
-    def pack(o):
-        return msgpack.packb(o, use_bin_type=True)
-
-    def unpack(b):
-        return msgpack.unpackb(b, raw=False)
-except ImportError:
-    sys.exit("必须安装 msgpack: pip install msgpack")
+require_msgpack("必须安装 msgpack: pip install msgpack")       # zmq 可以没有 (--replay 离线回放)
 
 UP_PORT, DOWN_PORT = 5555, 5556
 MODE_NAMES = {0: "OFF", 1: "GATE-SIM", 2: "GATE-REAL"}
@@ -343,15 +336,8 @@ class Stats:
 
 def quat_to_rpy(q):
     """四元数 → (roll, pitch, yaw)，单位：度（HUD 显示用）"""
-    x, y, z, w = q
-    n = math.sqrt(x * x + y * y + z * z + w * w)
-    if n < 1e-9:
-        return 0.0, 0.0, 0.0
-    x, y, z, w = x / n, y / n, z / n, w / n
-    roll = math.atan2(2.0 * (w * x + y * z), 1.0 - 2.0 * (x * x + y * y))
-    pitch = math.asin(max(-1.0, min(1.0, 2.0 * (w * y - z * x))))
-    yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
-    return math.degrees(roll), math.degrees(pitch), math.degrees(yaw)
+    r, p, y = geom.rpy_from_quat(*q, eps=1e-9)
+    return math.degrees(r), math.degrees(p), math.degrees(y)
 
 
 # =============================================================================
@@ -464,7 +450,7 @@ def draw_hud(show, mode, probe, st, fc, ph, fr, fst, pose, found, t_cap, src_wh)
                 s += f"  rms={r.plane_rms * 1000:.0f}mm"
             s += f"  corners={r.n_corners}"
             if r.n is not None:
-                s += f"  n:{r.n_src or '?'} tilt={gd.ring_tilt_deg(r.c, r.n):.0f}deg"
+                s += f"  n:{r.n_src or '?'} tilt={ring_tilt_deg(r.c, r.n):.0f}deg"
             dd = dot_dist(fr)
             if dd is not None:
                 s += f"   dot {fr.dot().src} {dd:.2f}m"
@@ -695,13 +681,13 @@ def main():
         print("[gcs_gate] ! 画面固定是校正后左目彩色图 (= 检测器看到的), --show-color/--preview-gray 忽略")
     sim = (args.mode != 2) or args.probe          # 同 gcs_aruco_det2: probe 永远 sim
 
-    rig = rd.StereoRig.from_file(args.calib, (1920, 1080), args.scale)
+    rig = StereoRig.from_file(args.calib, (1920, 1080), args.scale)
     if os.path.exists(args.params):
-        cfg, src = gd.GateConfig.load(args.params), args.params
+        cfg, src = GateConfig.load(args.params), args.params
     else:
-        cfg, src = gd.GateConfig(), "默认参数 (没找到 %s)" % args.params
-    det = gd.GateDetector(rig, cfg)
-    rig_msg = gd.rig_to_msg(rig)
+        cfg, src = GateConfig(), "默认参数 (没找到 %s)" % args.params
+    det = GateDetector(rig, cfg)
+    rig_msg = rig_to_msg(rig)
     print(f"[gcs_gate] 标定 {args.calib}: 工作分辨率 {rig.size[0]}x{rig.size[1]}/目 f={rig.f:.1f} "
           f"B={rig.B * 1000:.1f}mm (T 单位 {rig.T_unit})  参数: {src}")
     print(f"[gcs_gate] 模式 {args.mode} = {MODE_NAMES[args.mode]}   回包 sim={sim}")
@@ -743,7 +729,7 @@ def main():
     preview_server = None
     if not args.no_preview:
         try:
-            import preview_server
+            from vb09.common import preview_server
             import inspect
             _ps = inspect.signature(preview_server.publish).parameters
             pv_full = "meta" in _ps and "raw" in _ps
@@ -874,7 +860,7 @@ def main():
                        "found": found, "target": None,      # gate 结果不走旧的世界系 target 字段
                        "sim": sim, "mode": args.mode, "model": "gate/" + MODE_NAMES[args.mode]}
                 if fr is not None:                           # mode 0: 不带 gate → 桥只统计往返
-                    msg["gate"], msg["rig"] = gd.frame_to_msg(fr), rig_msg
+                    msg["gate"], msg["rig"] = frame_to_msg(fr), rig_msg
                 try:
                     pub.send(pack(msg), flags=zmq.NOBLOCK)
                 except zmq.Again:
@@ -882,9 +868,9 @@ def main():
 
             if need_img:
                 # 检测标记画在 960×540 工作图上, 不写字 (同 gcs_aruco_det2: 网页图不画 HUD)
-                vis = gd.draw_frame(L, fr, det, None, text=False) if fr is not None else L.copy()
+                vis = draw_frame(L, fr, det, None, text=False) if fr is not None else L.copy()
                 if args.show_mask and fr is not None:
-                    m_ = gd.segment(gd.apply_wb(L, cfg), cfg)["sat"]
+                    m_ = segment(apply_wb(L, cfg), cfg)["sat"]
                     vis = np.hstack([vis, cv2.cvtColor(m_, cv2.COLOR_GRAY2BGR)])
                 if pv is not None:
                     pv_publish(vis, preview_meta(args, sim, st, fr, fst, head, jpg), jpg)

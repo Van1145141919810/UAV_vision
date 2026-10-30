@@ -49,100 +49,13 @@ stage12_gate.py 用它; 也能在笔记本上离线跑:  python3 gate_plan.py   
 import math
 
 # =============================================================================
-# 小向量工具 (3 元组)
+# 小向量工具 / 靶面坐标 —— 2026-10-30 搬到 vb09/common/geom.py (和网页、监控共用一份)。
+# 这里重新导出, 老调用 gp.vadd / gp.gate_axes / gp.sigma_hva … 照用。
 # =============================================================================
-
-
-def vadd(a, b):
-    return (a[0] + b[0], a[1] + b[1], a[2] + b[2])
-
-
-def vsub(a, b):
-    return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
-
-
-def vmul(a, k):
-    return (a[0] * k, a[1] * k, a[2] * k)
-
-
-def vdot(a, b):
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-
-
-def vcross(a, b):
-    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
-
-
-def vnorm(a):
-    return math.sqrt(vdot(a, a))
-
-
-def vunit(a):
-    n = vnorm(a)
-    return vmul(a, 1.0 / n) if n > 1e-12 else (0.0, 0.0, 0.0)
-
-
-def hunit(a):
-    """水平分量单位化 (z 置 0)。太短返回 None。"""
-    h = (a[0], a[1], 0.0)
-    n = vnorm(h)
-    return vmul(h, 1.0 / n) if n > 1e-9 else None
-
-
-def ang_deg(a, b):
-    c = max(-1.0, min(1.0, vdot(vunit(a), vunit(b))))
-    return math.degrees(math.acos(c))
-
-
-def gate_axes(n):
-    """靶面坐标轴 (right, up)。和 flight_monitor.gate_axes 逐字同一公式。"""
-    d = vmul(n, -1.0)
-    right = vunit(vcross(d, (0.0, 0.0, 1.0)))
-    return right, vcross(right, d)
-
-
-def to_plane(p, c, n):
-    """→ (h, v, along)。见文件头。"""
-    r, u = gate_axes(n)
-    q = vsub(p, c)
-    return vdot(q, r), vdot(q, u), vdot(q, n)
-
-
-def yaw_of(d):
-    return math.atan2(d[1], d[0])
-
-
-def entry_axes(d):
-    """进入方向 d (朝环飞为正) → (right, up, d)。和 gate_axes(n = −d) 同一套靶面轴。"""
-    right, up = gate_axes(vmul(d, -1.0))
-    return right, up, d
-
-
-def sigma_hva(d, cov=None, sd_cm=None):
-    """
-    环心位置 σ 投到靶面: → (σ_h, σ_v, σ_along) cm (首飞问题 §1)。
-      cov    9 个数 (m², 行主序 3×3, world) —— /gate/status 的 cov
-      sd_cm  3 个数 (cm, world xyz) —— 没有 cov 时当对角协方差用
-    都没有 → None
-    """
-    if cov is not None and len(cov) >= 9:
-        C = [[float(cov[3 * i + j]) * 1e4 for j in range(3)] for i in range(3)]
-    elif sd_cm is not None and len(sd_cm) >= 3:
-        C = [[float(sd_cm[i]) ** 2 if i == j else 0.0 for j in range(3)] for i in range(3)]
-    else:
-        return None
-    out = []
-    for a in entry_axes(d):
-        q = sum(a[i] * C[i][j] * a[j] for i in range(3) for j in range(3))
-        out.append(math.sqrt(max(q, 0.0)))
-    return tuple(out)
-
-
-def spread_hva(points, d):
-    """一组世界点按靶面轴的 p90−p10 → (h, v, along) cm。"""
-    if len(points) < 2:
-        return (0.0, 0.0, 0.0)
-    return tuple(pct_range([vdot(q, a) for q in points]) * 100.0 for a in entry_axes(d))
+from vb09.common.geom import (  # noqa: E402,F401
+    vadd, vsub, vmul, vdot, vcross, vnorm, vunit, hunit, ang_deg, yaw_of,
+    gate_axes, to_plane, entry_axes, sigma_hva, spread_hva, pct_range,
+)
 
 
 # =============================================================================
@@ -696,16 +609,6 @@ def median(xs):
     if n == 0:
         return float("nan")
     return s[n // 2] if n % 2 else 0.5 * (s[n // 2 - 1] + s[n // 2])
-
-
-def pct_range(xs, lo=0.1, hi=0.9):
-    """p90 − p10 (比 max−min 抗单个野值)。"""
-    s = sorted(xs)
-    if len(s) < 2:
-        return 0.0
-    i0 = int(round(lo * (len(s) - 1)))
-    i1 = int(round(hi * (len(s) - 1)))
-    return s[i1] - s[i0]
 
 
 def fuse_samples(samples, p_ref, d=None):

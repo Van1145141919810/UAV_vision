@@ -100,6 +100,7 @@ from urllib.parse import parse_qs, urlparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+from vb09.common import geom  # noqa: E402
 try:
     import flight_profile as fp
 except ImportError:
@@ -201,15 +202,8 @@ def att_from_quat(qx, qy, qz, qw):
       yaw   相对 VIO 世界系 (VINS 初始化时的机头方向), 不是罗盘航向
       tilt  合成倾角 (飞行脚本判停桨用的就是它)
     """
-    n = math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw)
-    if n < 1e-9:
-        return 0.0, 0.0, 0.0, 0.0
-    qx, qy, qz, qw = qx / n, qy / n, qz / n, qw / n
-    roll = math.atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx * qx + qy * qy))
-    pitch = math.asin(max(-1.0, min(1.0, 2 * (qw * qy - qz * qx))))
-    yaw = math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz))
-    c = max(-1.0, min(1.0, 1 - 2 * (qx * qx + qy * qy)))
-    return math.degrees(roll), -math.degrees(pitch), yaw, math.degrees(math.acos(c))
+    roll, pitch, yaw = geom.rpy_from_quat(qx, qy, qz, qw, eps=1e-9)
+    return math.degrees(roll), -math.degrees(pitch), yaw, math.degrees(geom.tilt_from_quat(qx, qy, qz, qw, eps=1e-9))
 
 
 class RateMeter:
@@ -1243,7 +1237,7 @@ def paths_info(args):
     with STORE.lock:
         live = (STORE.config or {}).get("log_dir") or (STORE.telemetry or {}).get("log_dir")
     root = os.path.expanduser(args.log_root)
-    add("飞行日志根目录", root, "飞行脚本的 LOG_ROOT; 每次飞行一个 flight_YYYYMMDD_HHMMSS 子目录"
+    add("飞行日志根目录", root, "飞行脚本的 LOG_ROOT; 每次飞行一个 flight_NNNN 子目录 (编号递增)"
         " (网页「回放」读这里)", "dir")
     last = live
     if not last and os.path.isdir(root):
@@ -1257,6 +1251,8 @@ def paths_info(args):
     # 视觉链路: 新相机直连版桥 (和本程序同目录)
     add("图传桥 vision_bridge.py", os.path.join(HERE, "vision_bridge.py"),
         "自己打开新相机 (by-id), 掉线自动重开; 老相机只给 VINS")
+    add("共用代码包 vb09/", os.path.join(HERE, "vb09"),
+        "2026-10-30 起: 几何 / 网络格式 / 环检测与融合 / 规划都在这里, 和 .py 入口放同一个文件夹", "dir")
     add("起视觉链路 run_vision.py", os.path.join(HERE, "run_vision.py"),
         "python3 run_vision.py gate_gcs|gate|aruco [--gcs IP]  —— 会先停旧抓帧节点/看门狗/旧桥")
     add("  └ 桥日志", "/tmp/bridge.log", "")
@@ -1271,7 +1267,7 @@ def paths_info(args):
     rows.append({"name": "地面站 (不在飞机上)",
                  "path": "gcs_aruco_det2.py (aruco 模式) / gcs_gate.py (gate_gcs 模式) + preview_server.py",
                  "real": "", "exists": None, "kind": "note",
-                 "note": "放识别笔记本的同一个目录; gcs_gate.py 还要 gate_detector.py ring_detector.py "
+                 "note": "放识别笔记本的同一个目录; gcs_gate.py 还要 vb09/common + vb09/perception 和 "
                          "stereo_calib.yaml; 预览地址 http://127.0.0.1:8091/snapshot.jpg"})
     return {"rows": rows, "host": HOSTNAME, "t": time.time()}
 
@@ -1653,15 +1649,7 @@ def start_ros(args, srv=None):
 # =============================================================================
 # FAKE 侧 —— 笔记本上离线试页面
 # =============================================================================
-def quat_from_euler(roll, pitch, yaw):
-    """ZYX 欧拉角 (rad, FLU 符号) → (qx, qy, qz, qw)。只给 FAKE 模式造数据用。"""
-    cr, sr = math.cos(roll / 2), math.sin(roll / 2)
-    cp, sp = math.cos(pitch / 2), math.sin(pitch / 2)
-    cy, sy = math.cos(yaw / 2), math.sin(yaw / 2)
-    return (sr * cp * cy - cr * sp * sy,
-            cr * sp * cy + sr * cp * sy,
-            cr * cp * sy - sr * sp * cy,
-            cr * cp * cy + sr * sp * sy)
+quat_from_euler = geom.quat_from_euler          # FAKE 模式造数据用
 
 
 # -----------------------------------------------------------------------------
@@ -1681,36 +1669,9 @@ FAKE_PX4 = {"MPC_XY_VEL_MAX": 12.0, "MPC_XY_CRUISE": 5.0, "MPC_ACC_HOR": 3.0,
 
 
 
-def _va(a, b):
-    return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-
-
-def _vs(a, b):
-    return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-
-
-def _vm(a, k):
-    return [a[0] * k, a[1] * k, a[2] * k]
-
-
-def _vd(a, b):
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-
-
-def _vx(a, b):
-    return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
-
-
-def _vu(a):
-    n = math.sqrt(_vd(a, a))
-    return _vm(a, 1.0 / n) if n > 1e-12 else [0.0, 0.0, 0.0]
-
-
-def gate_axes(n):
-    """靶面坐标轴 (INTERFACE_gate.md): n 指向进近侧; 从进近侧看向环, right = 右, up = 上。"""
-    d = _vm(n, -1.0)
-    right = _vu(_vx(d, [0.0, 0.0, 1.0]))
-    return right, _vx(right, d)
+# 小向量 / 靶面轴: 2026-10-30 起和 gate_plan / 网页共用 vb09/common/geom.py (返回元组)
+_va, _vs, _vm, _vd, _vx, _vu = geom.vadd, geom.vsub, geom.vmul, geom.vdot, geom.vcross, geom.vunit
+gate_axes = geom.gate_axes
 
 
 def cam_R_WC(yaw, pitch_down):
