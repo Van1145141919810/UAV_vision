@@ -13,8 +13,10 @@ import sys
 
 
 def qualify(src, names, prefix, skip_lines=None):
+    """names: 可迭代的名字, 或 {旧名: 新属性名} 字典 (换名)"""
     t = ast.parse(src)
-    names = set(names)
+    rename = dict(names) if isinstance(names, dict) else {n: n for n in names}
+    names = set(rename)
     edits = []          # (lineno, col, end_col, text)
     problems = []
     lines = src.splitlines(keepends=True)
@@ -44,7 +46,7 @@ def qualify(src, names, prefix, skip_lines=None):
         if isinstance(node, ast.Name) and node.id in names:
             if skip_lines and node.lineno in skip_lines:
                 continue
-            edits.append((node.lineno, node.col_offset, node.end_col_offset, prefix + "." + node.id))
+            edits.append((node.lineno, node.col_offset, node.end_col_offset, prefix + "." + rename[node.id]))
         elif isinstance(node, ast.Global):
             keep = [x for x in node.names if x not in names]
             if len(keep) != len(node.names):
@@ -65,7 +67,11 @@ def qualify(src, names, prefix, skip_lines=None):
 
 if __name__ == "__main__":
     path, prefix, nf = sys.argv[1:4]
-    names = [x.strip() for x in open(nf) if x.strip()]
+    names = {}
+    for x in open(nf):
+        p = x.split()
+        if p:
+            names[p[0]] = p[1] if len(p) > 1 else p[0]
     skip = set()
     if "--skip-lines" in sys.argv:
         a, b = sys.argv[sys.argv.index("--skip-lines") + 1].split("-")

@@ -50,6 +50,9 @@ def run(root):
             cm = json.load(f) or {}
         for k in ("t", "log_dir", "origin"):
             cm.pop(k, None)
+        for k in ("INITIAL_X", "INITIAL_Y", "INITIAL_Z", "INITIAL_YAW"):   # sim 位姿带噪声: 只要求键在
+            if k in (cm.get("params") or {}):
+                cm["params"][k] = "<num>"
         r["config_msg"] = json.loads(norm(json.dumps(cm, ensure_ascii=False)))
         for fn in ("gate.csv", "flight_log.csv"):
             with open(os.path.join(d, fn), encoding="utf-8") as f:

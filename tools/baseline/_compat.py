@@ -91,5 +91,6 @@ def flight_module():
 def judge():
     """→ (judge(st, now, p_now) → (sample, why), fuse_samples(samples, p_ref, d))"""
     S = flight_module()
-    gi = S.GateInput()
+    GateInput = getattr(S, "GateInput", None) or _first("vb09.flight.target_in").GateInput
+    gi = GateInput()
     return gi.judge, _first("gate_plan").fuse_samples, S
