@@ -49,12 +49,12 @@ RIGHT = unit([d_[1], -d_[0], 0.0])
 UP = [RIGHT[1] * d_[2] - RIGHT[2] * d_[1], RIGHT[2] * d_[0] - RIGHT[0] * d_[2],
       RIGHT[0] * d_[1] - RIGHT[1] * d_[0]]
 AIM = [C[i] + 0.08 * RIGHT[i] - 0.05 * UP[i] for i in range(3)]
-D_BACK, L_F, L_R = 2.0, 0.30, 0.30
+D_BACK, L_F, L_R = 4.0, 0.30, 0.30
 V_TEAR = 0.6 if scenario != "stuck" else 99.0
 
 sites = tempfile.mkdtemp()
 with open(os.path.join(sites, "sim.conf"), "w") as f:
-    f.write("task=穿环\nscene=室内\ntakeoff_h=1.5\nz_low=0.8\nz_high=2.2\nxy_radius=8\n"
+    f.write("task=穿环\nscene=室内\ntakeoff_h=1.5\nz_low=0.8\nz_high=2.2\nxy_radius=10\n"
             "dash_v=2.5\nd_back=%.2f\nd_rear=2.0\nd_side=2.0\nl_f=%.2f\nl_r=%.2f\nw_half=0.25\n"
             % (D_BACK, L_F, L_R))
 os.environ["HOME"] = tempfile.mkdtemp()
