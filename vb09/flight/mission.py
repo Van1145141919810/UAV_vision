@@ -18,36 +18,27 @@ from vb09.flight.ctx import F
 from vb09.flight.ctx import _f, check_abort, request_abort, request_land, set_phase, stop_requested, telem_put, tilt_limit
 from vb09.flight.keys import KeyReader
 from vb09.flight.log import gate_queue
+from vb09.flight.steps.base import StepBack, StepFail
 from vb09.flight.telemetry import clamp, tilt_deg_from_quat, wrap_pi
 
 
 # =============================================================================
 # ==========================   穿环: 状态机   =================================
 # =============================================================================
-class GateStop(Exception):
-    """
-    冲刺前的正常退出 (放弃 / LAND / 接管)。原因在 args[0]。
-    retry=True  = 这一次不行 (锁不住 / 不可行 / G 超时 …), GATE_ABORT_TO_MANUAL 时回手动段重来
-    retry=False = LAND 请求 / 接管 / 手动段超时: 不重来, 降落
-    """
-
-    def __init__(self, why, retry=True):
-        super().__init__(why)
-        self.retry = retry
-
-
-class GateBack(GateStop):
-    """操作员要回手动段 (冲刺前按 M 或任一方向键)。"""
+# 2026-10-30 (第 4.4 步): GateStop / GateBack 改名 StepFail / StepBack, 定义在 steps/base.py; 老名字留着
+GateStop, GateBack = StepFail, StepBack
 
 
 def _l3(v):
     return [_f(x) for x in v] if v is not None else None
 
 
-class GateRun:
+class MissionCtx:
     """
-    一次穿环。phase_gate() 创建它并依次调用各段; 每段都是"循环 + tick()"。
+    步骤看到的 ctx (原 GateRun)。run_mission() 创建它, 依次 ctx.enter(step); lock = step.run(ctx, lock)。
+    步骤只能通过它下指令: pos / vel / hold / yaw_step / set_seg / fail / tick / setpoint / gate_in / again。
     tick() 统一做: 键盘、冲刺前的停止条件、遥测 gate 段、gate.csv、按 GATE_LOOP_HZ 节拍。
+    任务状态 (acq / locked / plan / passed / dash_state …) 也在这里, 遥测 gate 段按它们拼。
     """
 
     def __init__(self, z_hold):
@@ -79,6 +70,36 @@ class GateRun:
         self.t_log = 0.0
         self.origin = (F.INITIAL_X, F.INITIAL_Y, F.INITIAL_Z)
         self.params = gp.params_from_globals(vars(C))
+        self.step = None         # 当前步骤 (enter 设)
+        self._again = None       # 步骤要求"做完回手动段"的原因 (影子档), 见 again()
+
+    # ---------------- 步骤 ----------------
+    def enter(self, step):
+        """
+        进入一个步骤。平台白名单属性在这里生效 (步骤只声明):
+          committed (冲刺) → 速度包络放开到冲刺档, 不能再回手动段, 停桨线换成 GATE_DASH_TILT_DEG;
+                             tick() 推迟 LAND 到刹停后
+          vel_lim "pre"    → 冲刺前的速度包络 GATE_PRE_VEL_LIM
+        """
+        self.step = step
+        if step.committed:
+            set_phase("gate")                                  # 速度包络放开到冲刺档
+            self.back_ok = False
+            F.dash_tilt_on[0] = True                             # 停桨线换成 GATE_DASH_TILT_DEG
+        elif step.vel_lim == "pre":
+            set_phase("gate", vel=C.GATE_PRE_VEL_LIM)
+
+    def again(self, why):
+        """步骤做完后回手动段 (能回的话), why 显示在手动段提示里。"""
+        self._again = why
+
+    @property
+    def setpoint(self):
+        return F.setpoint
+
+    @property
+    def gate_in(self):
+        return F.gate_in
 
     # ---------------- 小工具 ----------------
     def pos(self):
@@ -167,7 +188,10 @@ class GateRun:
         return None, None
 
     # ---------------- 每拍 ----------------
-    def tick(self, dash=False):
+    def tick(self, dash=None):
+        """dash=None: 按当前步骤 committed 决定 (冲刺中 LAND 推迟、不响应 M)。"""
+        if dash is None:
+            dash = bool(self.step is not None and self.step.committed)
         now = rospy.Time.now().to_sec()
         dt = min(max(now - self.last_t, 0.0), 0.2)
         self.last_t = now
@@ -456,351 +480,15 @@ class GateRun:
         self.n_try += 1
         self.last_why = ""
         self.back_ok = self.keys is not None
+        self.step = None
+        self._again = None
         if self.n_try > 1:
             rospy.logwarn(f"[gate] ── 第 {self.n_try} 次")
 
-    # ---------------- ACQUIRE ----------------
-    def acquire(self):
-        self.set_seg("wait", f"悬停识别 (窗口 {C.HOVER_ACQ:.0f}s, 至少 {C.GATE_ACQ_MIN_N} 帧)")
-        set_phase("gate", vel=C.GATE_PRE_VEL_LIM)
-        t_start = rospy.Time.now().to_sec()
-        yaw0 = self.yaw_sp
-        scan = [yaw0 + math.radians(C.GATE_SCAN_DEG), yaw0 - math.radians(C.GATE_SCAN_DEG), yaw0]
-        scan_i = None                      # None = 还没开始扫; len(scan) = 扫完了
-        hp = (self.p_hover[0], self.p_hover[1], self.z_hold)
-        self.p_hover = hp
-        dt = 0.0
-        tol = math.radians(C.GATE_YAW_TOL_DEG)
-        last_why = "还没看到环"
-        rej_snap, _ = F.gate_in.rej_since(None)
-        while True:
-            now = rospy.Time.now().to_sec()
-            p = self.pos()
-            # 只用进入 ACQUIRE 之后收到的帧 (起飞爬升中的帧不算)
-            smp = F.gate_in.valid_since(max(t_start, now - C.HOVER_ACQ))
-            fresh = [s for s in smp if now - s["recv"] < C.GATE_STATUS_MAX_AGE]
-            scanning = False
-            if fresh:                      # 看得到: 机头转向环心
-                c = fresh[-1]["c"]
-                target = math.atan2(c[1] - p[1], c[0] - p[0])
-            elif not smp and now - t_start > C.GATE_ACQ_SCAN_AFTER and (scan_i or 0) < len(scan):
-                if scan_i is None:
-                    scan_i = 0
-                    rospy.logwarn(f"[gate] {C.GATE_ACQ_SCAN_AFTER:.0f}s 没看到环 —— "
-                                  f"±{C.GATE_SCAN_DEG:.0f}° 慢扫一次")
-                target, scanning = scan[scan_i], True
-            else:
-                target = self.yaw_sp
-            err = self.yaw_step(target, dt)
-            if scanning and abs(wrap_pi(target - self.yaw_sp)) < 1e-3 and abs(err) < tol:
-                scan_i += 1
-            self.hold(hp)
-            if len(smp) >= C.GATE_ACQ_MIN_N and fresh and abs(err) < math.radians(C.GATE_YAW_TOL_DEG):
-                d_los = gp.hunit(gp.vsub(fresh[-1]["c"], p)) or (math.cos(self.yaw_sp), math.sin(self.yaw_sp), 0.0)
-                f = gp.fuse_samples(smp, p, d=d_los)
-                self._raw_sigma(f, smp)
-                sh, sv, sa = f["spread_hva"]
-                if f.get("raw"):                     # 每帧原始环心: 散布本来就大, 看中值的标准误
-                    sh, sv, sa = (x * 2.56 / 1.25 for x in f["sig_hva"])
-                if max(sh, sv) <= C.GATE_ACQ_SPREAD_CM and sa <= 2.0 * C.GATE_ACQ_SPREAD_CM:
-                    self._sd_fields(f)
-                    self.acq = f
-                    rospy.loginfo(f"[gate] 粗估: 环心 ({f['c'][0]:+.2f},{f['c'][1]:+.2f},{f['c'][2]:+.2f}) "
-                                  f"k={f['k']} 离散 横{max(sh, sv):.1f}/深{sa:.1f}cm  σ {self._sig_txt(f)}  "
-                                  f"法向 {'有' if f.get('n') else '无'}  红点 {'有' if f.get('aim') else '无'}")
-                    return
-                last_why = (f"样本离散 横{max(sh, sv):.1f}/深{sa:.1f}cm > "
-                            f"{C.GATE_ACQ_SPREAD_CM:.0f}/{2 * C.GATE_ACQ_SPREAD_CM:.0f}cm")
-            elif smp:
-                last_why = f"有效帧 {len(smp)}/{C.GATE_ACQ_MIN_N}" + (
-                    "" if abs(err) < math.radians(C.GATE_YAW_TOL_DEG) else
-                    f", 机头还差 {math.degrees(err):+.0f}°")
-            if now - t_start > C.GATE_ACQ_TIMEOUT:
-                nv, nr, rej = F.gate_in.counters()
-                self.fail(f"{C.GATE_ACQ_TIMEOUT:.0f}s 内没拿到稳定识别 ({last_why}; "
-                          f"拒绝原因 {', '.join(f'{k}={v}' for k, v in rej.items() if v)})")
-            if now - self.t_log > 1.0:
-                self.t_log = now
-                rej_snap, rtxt = F.gate_in.rej_since(rej_snap)
-                if not smp and rtxt:
-                    last_why = rtxt
-                rospy.loginfo(f"    [wait] {last_why}")
-            dt = self.tick()
-
-    # ---------------- PLAN ----------------
-    def make_plan(self, est, p_from, label):
-        aim = est.get("aim") or est["c"]
-        P = gp.plan_dash(aim, est["c"], est.get("n"), p_from, self.origin, self.params,
-                         virtual_offset=C.GATE_VIRTUAL_OFFSET)
-        if not P.ok:
-            self.fail(f"{label}: " + "; ".join(P.errors))
-        self.plan = P
-        self.plan_seq += 1
-        rospy.loginfo(f"[gate] {label}: {P.summary()}")
-        for w in P.notes + P.warnings:
-            rospy.logwarn(f"[gate]   ⚠ {w}")
-        S = P.S
-        if est.get("c") is not None and P.dir is not None:
-            # 靶面上看: 目标 (红点/环心) 和机体中心瞄点各在环心的哪里
-            r_, u_, _ = gp.entry_axes(P.dir)
-            c0 = est["c"]
-            t_h, t_v = gp.vdot(gp.vsub(P.aim_tool, c0), r_), gp.vdot(gp.vsub(P.aim_tool, c0), u_)
-            a_h, a_v = gp.vdot(gp.vsub(P.aim, c0), r_), gp.vdot(gp.vsub(P.aim, c0), u_)
-            rospy.loginfo(f"[gate]   靶面 (相对环心, 右/上 cm): 目标 ({t_h*100:+.0f},{t_v*100:+.0f})  "
-                          f"机体中心瞄 ({a_h*100:+.0f},{a_v*100:+.0f})  "
-                          f"针尖预计 ({(a_h+C.NEEDLE_RIGHT)*100:+.0f},{(a_v+C.NEEDLE_UP)*100:+.0f})"
-                          + (f"  ★偏离目标 {P.tool_miss*100:.0f}cm" if P.aim_clamped else ""))
-        rospy.loginfo(f"[gate]   起跑点 S=({S[0]:+.2f},{S[1]:+.2f},{S[2]:+.2f})  "
-                      f"制动终点 E=({P.E[0]:+.2f},{P.E[1]:+.2f},{P.E[2]:+.2f})  "
-                      f"进入方向 {math.degrees(gp.yaw_of(P.dir)):+.0f}°")
-        return P
-
-    # ---------------- REPOSITION ----------------
-    def move_to(self, S, yaw_mode, timeout, label):
-        """
-        setpoint 以 GATE_REPO_V 斜坡走直线到 S (3D, 带牵引绳)。yaw_mode:
-          "ring" = 机头盯环心 (保持环在视野里)   数值 = 固定朝向
-        全程查"飞机在环前 ≥1.5m" (环系 x ≤ REPO_X_MAX)。
-        """
-        self.set_seg("align", label)
-        P = self.plan
-        fwd, _ = gp._ring_frame(P.dir, (self.used() or {}).get("n"))
-        sp = self.pos()
-        t_end = rospy.Time.now().to_sec() + timeout
-        reach = 0
-        need = max(1, int(round(0.5 * C.GATE_LOOP_HZ)))
-        dt = 0.0
-        while True:
-            now = rospy.Time.now().to_sec()
-            p = self.pos()
-            d = gp.vsub(S, sp)
-            dn = gp.vnorm(d)
-            step = C.GATE_REPO_V * dt
-            sp = S if dn <= step else gp.vadd(sp, gp.vmul(d, step / max(dn, 1e-9)))
-            lead = gp.vsub(sp, p)
-            ln = gp.vnorm(lead)
-            if ln > C.GATE_REPO_LEASH:
-                sp = gp.vadd(p, gp.vmul(lead, C.GATE_REPO_LEASH / ln))
-            if yaw_mode == "ring":
-                c = (self.used() or {}).get("c") or P.aim
-                if math.hypot(c[0] - p[0], c[1] - p[1]) > 0.5:
-                    self.yaw_step(math.atan2(c[1] - p[1], c[0] - p[0]), dt)
-            else:
-                self.yaw_step(yaw_mode, dt)
-            vff = gp.vmul(d, C.GATE_REPO_V / dn) if dn > step and ln <= C.GATE_REPO_LEASH else (0.0, 0.0, 0.0)
-            F.setpoint.set_zhold_mode(sp[0], sp[1], sp[2], self.yaw_sp, vff[0], vff[1])
-            x_ring = gp.vdot(gp.vsub(p, P.aim), fwd)
-            if x_ring > C.REPO_X_MAX + 0.3:
-                self.fail(f"摆位中离环平面只剩 {-x_ring:.2f}m (< {-C.REPO_X_MAX:.1f}m)")
-            err = gp.vnorm(gp.vsub(S, p))
-            reach = reach + 1 if (err < C.GATE_REPO_TOL and sp == S) else 0
-            if reach >= need:
-                return
-            if now > t_end:
-                self.fail(f"{label}: {timeout:.0f}s 没到位 (还差 {err:.2f}m)")
-            if now - self.t_log > 1.0:
-                self.t_log = now
-                rospy.loginfo(f"    [{label}] 离起跑点 {err:.2f}m  离环平面 {-x_ring:.2f}m")
-            dt = self.tick()
-
-    def turn_to(self, yaw_target, hold_p, label, timeout=15.0):
-        t_end = rospy.Time.now().to_sec() + timeout
-        dt = 0.0
-        while True:
-            err = self.yaw_step(yaw_target, dt)
-            self.hold(hold_p)
-            if abs(err) < math.radians(C.GATE_YAW_TOL_DEG) and \
-                    abs(wrap_pi(yaw_target - self.yaw_sp)) < 1e-3:
-                return
-            if rospy.Time.now().to_sec() > t_end:
-                self.fail(f"{label}: 转头 {timeout:.0f}s 没到位 (差 {math.degrees(err):+.0f}°)")
-            dt = self.tick()
-
-    # ---------------- ALIGN ----------------
-    def align(self, hold_p):
-        self.set_seg("align", f"在 {'原地 (影子)' if C.GATE_SHADOW else '起跑点'} 取样 {C.HOVER_ALIGN:.0f}s → 锁定")
-        t_al = rospy.Time.now().to_sec() + 0.5          # 转头/刹停后先稳 0.5s
-        last_why = ""
-        while True:
-            now = rospy.Time.now().to_sec()
-            self.hold(hold_p)
-            if now - t_al >= C.HOVER_ALIGN:
-                p, v = self.pos(), self.vel()
-                smp = F.gate_in.valid_since(max(t_al, now - C.HOVER_ALIGN))
-                d_in = self.plan.dir if self.plan is not None and self.plan.dir is not None else \
-                    (gp.hunit(gp.vsub(smp[-1]["c"], p)) if smp else None)
-                f = gp.fuse_samples(smp, p, d=d_in) if d_in is not None else gp.fuse_samples(smp, p)
-                self._raw_sigma(f, smp)
-                why = []
-                if f["k"] < C.GATE_ACQ_MIN_N:
-                    why.append(f"有效帧 {f['k']} < {C.GATE_ACQ_MIN_N}")
-                else:
-                    # 横向 (h, v) 和深度分开判 (首飞问题 §1)
-                    sh, sv, sa = f.get("spread_hva") or (f["spread_cm"],) * 3
-                    if f.get("raw"):
-                        # 每帧原始环心: 单帧散布大是正常的 (几 cm ~ 深度十几 cm), 精度看中值的标准误
-                        # (下面的 σ 判定已经用了实际散布); 这里只拦散得离谱的 (野值 / 两个解来回跳)
-                        sh, sv, sa = sh / 4.0, sv / 4.0, sa / 4.0
-                    if max(sh, sv) > C.GATE_ALIGN_SPREAD_CM:
-                        why.append(f"环心横向离散 {max(sh, sv):.1f}cm > {C.GATE_ALIGN_SPREAD_CM:.0f}")
-                    if sa > C.GATE_ALIGN_SPREAD_ALONG_CM:
-                        why.append(f"环心深度离散 {sa:.1f}cm > {C.GATE_ALIGN_SPREAD_ALONG_CM:.0f}")
-                    ah_, av_, _ = f.get("aim_spread_hva") or (f.get("aim_spread_cm", 0.0),) * 3
-                    if max(ah_, av_) > C.GATE_ALIGN_SPREAD_CM:
-                        why.append(f"红点横向离散 {max(ah_, av_):.1f}cm > {C.GATE_ALIGN_SPREAD_CM:.0f}")
-                    if self.acq and self.acq.get("n") and f.get("n"):
-                        a = gp.ang_deg(self.acq["n"], f["n"])
-                        if a > C.GATE_N_AGREE_DEG:
-                            why.append(f"两个视角的法向差 {a:.1f}° > {C.GATE_N_AGREE_DEG:.0f}° (翻转解?)")
-                    if gp.vnorm(v) > C.GATE_START_V_MAX:
-                        why.append(f"飞机还在动 {gp.vnorm(v):.2f}m/s")
-                    sg = f.get("sig_hva") or (gp.median([s["sd"] for s in smp]),) * 3
-                    if max(sg[0], sg[1]) > C.GATE_LOCK_SD_LAT_CM:
-                        why.append(f"识别横向 σ 中位数 {max(sg[0], sg[1]):.1f}cm > {C.GATE_LOCK_SD_LAT_CM:.0f}")
-                    if sg[2] > C.GATE_LOCK_SD_ALONG_CM:
-                        why.append(f"识别深度 σ 中位数 {sg[2]:.1f}cm > {C.GATE_LOCK_SD_ALONG_CM:.0f}")
-                if not why:
-                    self._sd_fields(f)
-                    f["t_lock"] = now
-                    f["locked"] = True
-                    self.locked = f
-                    c = f["c"]
-                    shift = gp.vnorm(gp.vsub(c, self.acq["c"])) if self.acq else float("nan")
-                    rospy.logwarn(f"[gate] ★ 锁定: 环心 ({c[0]:+.3f},{c[1]:+.3f},{c[2]:+.3f}) "
-                                  f"k={f['k']} 单帧散布 横{max(f['spread_hva'][:2]):.1f}/深{f['spread_hva'][2]:.1f}cm  "
-                                  f"σ {self._sig_txt(f)}  比粗估挪了 {shift*100:.0f}cm"
-                                  + (f"  红点离环心 {gp.vnorm(gp.vsub(f['aim'], c))*100:.0f}cm"
-                                     if f.get("aim") else "  (没有红点, 瞄环心)"))
-                    return
-                last_why = "; ".join(why)
-                if now - self.t_log > 1.0:
-                    self.t_log = now
-                    rospy.loginfo(f"    [align] 还不能锁定: {last_why}")
-                if now - t_al > C.GATE_ALIGN_MAX_S:
-                    self.fail(f"取样 {C.GATE_ALIGN_MAX_S:.0f}s 仍不收敛: {last_why}")
-            self.tick()
-
-    # ---------------- COMMIT ----------------
-    def commit(self):
-        P = self.plan
-        self.set_seg("commit", "等确认")
-        rospy.logwarn("=" * 64)
-        rospy.logwarn(f"[gate] 计划: {P.summary()}")
-        if P.v < C.DASH_V - 1e-9:
-            rospy.logwarn(f"[gate] ★ 冲刺速度被场地压到 {P.v:.2f} m/s (设定 {C.DASH_V:.2f}) —— 原因见上面"
-                          f"'场地限制'那行; 不接受就按 M 回手动段")
-        if C.GATE_VIRTUAL_OFFSET > 0:
-            rospy.logwarn(f"[gate] ★ 虚拟环: 会停在真纸面前约 {C.GATE_VIRTUAL_OFFSET - P.s_stop:.2f}m")
-        need_y = bool(P.need_confirm)     # 降速了 → 只认 Y, G 不算
-        go_key = 'y' if need_y else 'g'
-        if need_y:
-            rospy.logerr(f"[gate] ★★★ 降速: 计划 {P.v:.2f} m/s, 设定 {C.DASH_V:.2f} m/s —— 按 {C.DASH_V:.2f} 卡在: {P.slow_why}")
-            rospy.logerr(f"[gate] ★★★ 接受 {P.v:.2f} m/s 就按 **Y** 冲刺 (G 不算)  |  不接受按 M 回手动段, 挪位置后 T 重来")
-        if C.GATE_CONFIRM_DASH or need_y:
-            if self.keys is None:
-                self.fail("要按键确认冲刺, 但没有终端键盘")
-            back = "回手动段" if (C.GATE_ABORT_TO_MANUAL and self.back_ok) else "降落"
-            rospy.logwarn(f"[gate] ★★ 按 G 冲刺 (之后不能中止, 只有 X 停桨)  |  M / 方向键 = 不冲了, 回手动段  "
-                          f"|  L = 降落  |  {C.GATE_CONFIRM_TIMEOUT:.0f}s 不按 = {back}")
-        rospy.logwarn("=" * 64)
-        t_end = rospy.Time.now().to_sec() + C.GATE_CONFIRM_TIMEOUT
-        while C.GATE_CONFIRM_DASH or need_y:
-            self.hold(P.S)
-            self.tick()
-            if go_key in self.flags:
-                rospy.logwarn(f"[gate] {go_key.upper()} → 冲刺 {P.v:.2f} m/s")
-                break
-            if need_y and 'g' in self.flags:
-                rospy.logwarn(f"[gate] 这次降速了 ({P.v:.2f} < {C.DASH_V:.2f} m/s), G 不算 —— 接受就按 Y, 不接受按 M")
-            now = rospy.Time.now().to_sec()
-            if now > t_end:
-                self.fail(f"{C.GATE_CONFIRM_TIMEOUT:.0f}s 没按 {go_key.upper()}")
-            if now - self.t_log > 5.0:
-                self.t_log = now
-                lv = F.gate_in.latest_valid()
-                if lv is not None and self.locked:
-                    d = gp.vnorm(gp.vsub(lv["c"], self.locked["c"])) * 100
-                    rospy.loginfo(f"    [commit] 等 G … 最新识别和锁定值差 {d:.0f}cm")
-        # 停稳在起跑点
-        t_end = rospy.Time.now().to_sec() + C.GATE_START_WAIT
-        while True:
-            p, v = self.pos(), self.vel()
-            e = gp.vnorm(gp.vsub(p, P.S))
-            if e < C.GATE_START_TOL and gp.vnorm(v) < C.GATE_START_V_MAX:
-                return
-            if rospy.Time.now().to_sec() > t_end:
-                self.fail(f"起跑前没停稳: 离 S {e:.2f}m, 速度 {gp.vnorm(v):.2f}m/s")
-            self.hold(P.S)
-            self.tick()
-
-    # ---------------- DASH / BRAKE ----------------
-    def dash(self):
-        P = self.plan
-        tr = P.traj
-        aim, d = P.aim, P.dir
-        yaw_d = gp.yaw_of(d)
-        self.yaw_sp = yaw_d
-
-        def sampler(t):
-            s, v, a = tr.at(t)
-            return gp.vadd(aim, gp.vmul(d, s)), gp.vmul(d, v), gp.vmul(d, a)
-
-        set_phase("gate")                                  # 速度包络放开到冲刺档
-        self.back_ok = False
-        F.dash_tilt_on[0] = True                             # 停桨线换成 GATE_DASH_TILT_DEG
-        self.t0 = rospy.Time.now().to_sec() + 0.05
-        F.setpoint.set_traj_mode(sampler, self.t0, yaw_d, C.GATE_ACC_FF)
-        self.set_seg("dash", f"t0, {P.v:.2f}m/s, 预计 {tr.T:.2f}s 后停在 s={P.s_stop:+.2f}")
-        stuck_since = None
-        t_wait_end = tr.T + 3.0 * C.T_LAG
-        warned_dev = False
-        while True:
-            now = rospy.Time.now().to_sec()
-            t = now - self.t0
-            s_p, v_p, _ = tr.at(t)
-            p, v = self.pos(), self.vel()
-            s_e = gp.vdot(gp.vsub(p, aim), d)
-            v_e = gp.vdot(v, d)
-            self.dash_state = (t, s_p, v_p, s_e, v_e)
-            if t >= tr.t2 and self.seg == "dash":
-                self.set_seg("brake", f"s_plan={s_p:+.2f} s_est={s_e:+.2f} v={v_e:.2f}")
-            if not self.passed and s_e > 0.0:
-                self.passed = True
-                rospy.logwarn(f"[gate] 过纸面 (估计) v={v_e:.2f}m/s  t={t:.2f}s")
-            if abs(s_e - s_p) > C.GATE_DEV_WARN and not warned_dev:
-                warned_dev = True
-                rospy.logwarn(f"[gate] 估计 s 和规划差 {s_e - s_p:+.2f}m (只记录, 不改时间表)")
-            # 卡纸: 机尾还没过纸面就被顶住。两种样子:
-            #   ① 还在冲: 实测比规划慢 > DV, 且落后 > DS
-            #   ② 规划已经慢下来 (刹车段后半): 落后 > DS 且实测几乎停了
-            lag_s = s_p - s_e
-            if C.GATE_STUCK_ENABLE and t > 0.3 and s_e < C.L_R and lag_s > C.GATE_STUCK_DS and \
-                    (v_p - v_e > C.GATE_STUCK_DV or v_e < C.GATE_STOP_V):
-                stuck_since = stuck_since if stuck_since is not None else now
-                if now - stuck_since >= C.GATE_STUCK_HOLD:
-                    self.lvl = 1
-                    self.outcome = "stuck"
-                    self.hold(p)
-                    rospy.logerr(f"[gate] ★ 卡纸: 规划 s={s_p:+.2f} v={v_p:.2f} / 实测 s={s_e:+.2f} "
-                                 f"v={v_e:.2f} —— 停止前推, 设定点 = 当前位置")
-                    return
-            else:
-                stuck_since = None
-            if t >= t_wait_end and math.hypot(v[0], v[1]) < C.GATE_STOP_V:
-                break
-            if t >= tr.T + C.GATE_STOP_EXTRA:
-                rospy.logwarn(f"[gate] 轨迹结束 {C.GATE_STOP_EXTRA:.1f}s 还没停稳 "
-                              f"(v={math.hypot(v[0], v[1]):.2f}m/s) —— 照样转悬停")
-                break
-            self.tick(dash=True)
-        self.outcome = self.outcome or "done"
-        rospy.logwarn(f"[gate] 刹停: 规划停在 s={P.s_stop:+.2f}, 估计 s={s_e:+.2f} "
-                      f"(差 {s_e - P.s_stop:+.2f}m)  过纸面={'是' if self.passed else '否'}")
-
-
-def phase_gate(z_hold):
+def run_mission(z_hold, steps):
     """
-    穿环。返回 (x, y, z, yaw) —— 结束时的悬停点, main 从这里原地降落。
+    执行一个任务 (MODES[mode] 的步骤列表)。返回 (x, y, z, yaw) —— 结束时的悬停点, main 从这里原地降落。
+    2026-10-30: 原 phase_gate, 中间写死的段序列换成 `for step in steps: ctx.enter(step); lock = step.run(ctx, lock)`。
 
     流程 (2026-10-19): 手动段 ─T→ 找环 → 规划 → 摆位 → 锁定 → 等 G → 冲刺 → 刹停悬停
       冲刺前放弃 (GateStop.retry) 或按 M / 方向键 (GateBack) → 回手动段, 可以 T 重来;
@@ -808,7 +496,7 @@ def phase_gate(z_hold):
       FATAL (X 键 / 倾角 / 断链) 照常抛 RuntimeError 给 main 的 cleanup。
     """
     set_phase("gate", vel=C.GATE_PRE_VEL_LIM)
-    run = GateRun(z_hold)
+    run = MissionCtx(z_hold)
     if sys.stdin.isatty():
         try:
             run.keys = KeyReader()
@@ -827,35 +515,14 @@ def phase_gate(z_hold):
                 if manual_on:
                     run.manual(why_manual)
                 run.new_attempt()
-                run.acquire()
-                run.make_plan(run.acq, run.pos(), "粗规划")
-                if C.GATE_SHADOW:
-                    run.align(run.pos())
-                    run.make_plan(run.locked, run.pos(), "锁定后规划 (影子)")
-                    run.set_seg("hold", "影子模式: 不摆位不冲刺, 计划已发网页")
-                    t_end = rospy.Time.now().to_sec() + 3.0
-                    hp = run.pos()
-                    while rospy.Time.now().to_sec() < t_end:
-                        run.hold(hp)
-                        run.tick()
-                    run.outcome = "shadow"
-                    if can_retry:
-                        manual_on = True
-                        why_manual = "影子模式做完了 (计划在网页上) —— 换个位置 T 再来, 或 L 降落"
-                        continue
-                else:
-                    P = run.plan
-                    run.move_to(P.S, "ring", C.GATE_REPO_TIMEOUT, "摆位")
-                    run.turn_to(gp.yaw_of(P.dir), P.S, "对正进入方向")
-                    run.align(P.S)
-                    P2 = run.make_plan(run.locked, run.pos(), "锁定后规划")
-                    gap = gp.vnorm(gp.vsub(P2.S, run.pos()))
-                    if gap > C.GATE_START_TOL:
-                        if gap > 0.5:
-                            rospy.logwarn(f"[gate] 锁定后起跑点挪了 {gap:.2f}m —— 再挪过去 (不重新取样)")
-                        run.move_to(P2.S, gp.yaw_of(P2.dir), C.GATE_REPO_TIMEOUT, "微调起跑点")
-                    run.commit()
-                    run.dash()
+                lock = None
+                for step in steps:
+                    run.enter(step)
+                    lock = step.run(run, lock)
+                if run._again is not None and can_retry:
+                    manual_on = True
+                    why_manual = run._again
+                    continue
                 break
             except GateStop as e:
                 back = isinstance(e, GateBack)
@@ -902,3 +569,12 @@ def phase_gate(z_hold):
         F.dash_tilt_on[0] = False
         if run.keys is not None:
             run.keys.__exit__(None, None, None)
+
+
+def phase_gate(z_hold):
+    """穿环 (老入口名)。影子开关 GATE_SHADOW → MODES["shadow"], 否则 MODES["dash"]。"""
+    from vb09.flight.modes import MODES
+    return run_mission(z_hold, MODES["shadow" if C.GATE_SHADOW else "dash"])
+
+
+GateRun = MissionCtx          # 老名字
