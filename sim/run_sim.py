@@ -356,3 +356,5 @@ with open(os.path.join(logs, d, "gate.csv")) as f:
     rows = f.read().splitlines()
 print("gate.csv %d 行, 列 %d" % (len(rows) - 1, len(rows[0].split(","))))
 print("日志目录", os.path.join(logs, d))
+with open(os.path.join(logs, d, "sim_config_msg.json"), "w") as f:      # 等价验证用 (tools/baseline)
+    json.dump(config[-1] if config else None, f, ensure_ascii=False, indent=1, sort_keys=True)

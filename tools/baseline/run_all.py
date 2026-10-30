@@ -9,16 +9,17 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ORDER = ["dryrun_dump.py", "plan_grid.py", "det_replay.py", "fuse_replay.py", "judge_replay.py", "sim_check.py"]
+ORDER = ["dryrun_dump.py", "plan_grid.py", "det_replay.py", "fuse_replay.py", "judge_replay.py", "sim_check.py",
+         "runtime_dump.py"]
 
 
 def main():
     quick = "--quick" in sys.argv
     skip = set()
     if quick:
-        skip |= {"det_replay.py", "sim_check.py"}
+        skip |= {"det_replay.py", "sim_check.py", "runtime_dump.py"}
     if "--no-sim" in sys.argv:
-        skip.add("sim_check.py")
+        skip |= {"sim_check.py", "runtime_dump.py"}
     bad = []
     for s in ORDER:
         if s in skip:

@@ -100,235 +100,10 @@ from datetime import datetime
 
 
 # =============================================================================
-# ############################   CONFIG (常改区)   ############################
+# ############################   CONFIG   ######################################
 # =============================================================================
-# 现场请用 `--site <档案>` (flight_profile.py, 档案里 task = 穿环), 不要手改这里。
-# 这里的值是"不给档案时"的代码默认值, 同样要过 flight_profile 的检查。
-TASK                 = "gate"    # flight_profile / 网页靠它区分任务。不要改
-
-# =============================================================================
-# ========================  A. 高度与可飞范围  ========================
-# =============================================================================
-# 所有高度都相对起飞点 (INITIAL_Z)。
-MAX_HEIGHT           = 3.5     # m，安全硬顶, 超过 (去抖后) → 缓降
-TAKEOFF_HEIGHT       = 1.5     # m，起飞高度 (ACQUIRE 在这个高度识别; 起跑点高度 = 瞄点高度)
-GATE_Z_MIN_DZ        = 0.5     # m，瞄点允许的最低高度 (档案 z_low)。低于它冲刺高度太低 → 不飞
-GATE_Z_MAX_DZ        = 2.5     # m，瞄点允许的最高高度 (档案 z_high)
-GATE_XY_MAX          = 8.0     # m，起跑点 / 制动终点离起飞点最远多少 (档案 xy_radius)
-ENVELOPE_MARGIN      = 1.00    # m，水平硬围栏 = GATE_XY_MAX + 此余量
-BASE_DRIFT_LIM       = 0.60    # m，起飞阶段水平硬限 (descend +0.2, auto_land +0.4)
-
-# =============================================================================
-# ========================  B. 环、机体、场地 (实测量)  ========================
-# =============================================================================
-R_IN                 = 0.60    # m，环内半径 (内径 1.2m)
-R_OUT                = 0.80    # m，环外半径 (显示用)
-DOT_D                = 0.11    # m，红点直径 (显示用)
-# 机体 (含护桨 / 破纸杆), 档案 l_f / l_r / w_half。2026-10-19 实测: 带护罩 56×56cm, 高 22cm
-#   (VINS 相机离地 11cm ≈ 机身半高, 识别相机离地 4cm)。装破纸杆后 L_F 要加上杆长
-L_F                  = 0.28    # m，中心 → 机头
-L_R                  = 0.28    # m，中心 → 机尾
-W_HALF               = 0.28    # m，中心 → 最外侧
-# 场地, 档案 d_back / d_rear / d_side。★ 每个现场卷尺量
-D_BACK               = 2.0     # m，纸面 → 环后墙
-D_REAR               = 2.0     # m，起飞点后方空地
-D_SIDE               = 2.0     # m，环心 → 两侧障碍 (小的那边)
-
-# =============================================================================
-# ========================  C. 识别输入与锁定  ========================
-# =============================================================================
-GATE_STATUS_TOPIC    = "/gate/status"
-CAM_STATUS_TOPIC     = "/vision_bridge/cam"
-GATE_STATUS_MAX_AGE  = 0.50    # s，收到后多久算旧 (按本机收到时刻)
-GATE_STATUS_STALE_S  = 0.30    # s，预检: 最新一条 /gate/status 收到至今超过它 → 警告 (地面检测停了?)
-GATE_PREFLIGHT_TARGET_AGE_MS = 1000.0  # ms，预检: 桥里的环估计 age_ms 超过它 = 旧状态, 拒绝起飞
-GATE_CAP_MAX_AGE     = 1.20    # s，拍摄时刻 t_cap 到现在最多多久 (链路飞行中可到 0.8s)
-GATE_D_MIN           = 1.5     # m，识别距离可信范围
-GATE_D_MAX           = 8.0     # m
-GATE_VIEW_ANG_MAX    = 60.0    # °，视线和法向的最大夹角 (有法向时才查)
-# σ / 离散度都按**靶面坐标**拆开判 (2026-10-19 首飞问题 §1): 横向 h / 竖直 v 决定能不能穿环,
-#   沿进入方向 (深度) 只影响停止点。双目深度 σ ∝ 距离², 横向 ∝ 距离 —— 合在一起判会被深度卡死。
-#   σ 来自 /gate/status 的 cov (没有就用 sd_cm 的对角), 投到 right / up / 进入方向上。
-GATE_SD_MAX_CM       = 8.0     # cm，单帧能不能用: 横向 (h、v 的大者) σ 上限
-GATE_SD_ALONG_MAX_CM = 20.0    # cm，单帧能不能用: 深度 σ 上限
-GATE_DOT_PREFER      = True    # 桥的红点估计是双目红点 (dot_stereo / dot_ray_plane) 且刚更新过 → 样本用红点, 不用环心观测。
-GATE_DOT_MAX_AGE_MS  = 300.0   # ms，红点估计最多这么旧还算"刚更新"
-                               #   2026-10-21 flight_0021: 起跑点 4.0m 在双目角点平面范围 (≤3.5m) 外, 环心只有
-                               #   单目 (还部分出画, σ×2) → 每帧 sd_along 被拒; 同时红点双目 σ 横 0.2/深 1.5cm 却没人用
-                               #   (有 ring_w 就一律用 ring_w)。3 次都"有效帧 0 < 10"。
-GATE_SD_ALONG_PER_M_CM = 7.0   # cm/m (2026-10-23: 4.5 → 7.0, 见下)，桥每帧的环心观测 (ring_w) 用的深度上限放宽到 max(上面, 这个 × 距离)。
-                               #   2026-10-21 flight_0020: 远处只有单目环, 深度 σ = 3%·Z, Z>6.7m 就 >20cm →
-                               #   7.2m 悬停时每一帧都被 sd_along 拒掉, 日志却写"还没看到环", 手动抵近到 6.5m 才行。
-                               #   单帧深度 σ 大没关系: 锁定看的是多帧中值 (σ/√k) 和离散度, 那两道门没放松。
-                               #   2026-10-23: 环部分出画时检测端单目 σ×2 (=6%·Z), 0021/0023 在 3.8~4.6m 每帧
-                               #   都被拒 (又还没看到红点) → 只能手动推到 3.5m。7cm/m 让 partial 的单目环也能进。
-GATE_LOCK_SD_LAT_CM  = 3.0     # cm，锁定: 窗口内横向 σ 中位数上限 (PLAN §3)
-GATE_LOCK_SD_ALONG_CM = 10.0   # cm，锁定: 窗口内深度 σ 中位数上限 (≈ E_ALONG / 2.5; 虚拟环 2m 时在离真环 ~5m 处锁定, 深度 σ ≈ 8cm)
-GATE_N_SD_MAX_DEG    = 3.0     # °，n_sd_deg (有才查)
-GATE_ACQ_MIN_N       = 10      # ACQUIRE: 窗口内至少这么多有效帧
-GATE_ACQ_SPREAD_CM   = 10.0    # cm，ACQUIRE 粗估的样本横向离散度上限 (p90−p10); 深度 ×2
-GATE_ALIGN_SPREAD_CM = 5.0     # cm，ALIGN 锁定时样本横向离散度上限 (p90−p10, 环心和红点)
-GATE_ALIGN_SPREAD_ALONG_CM = 12.0  # cm，ALIGN 锁定时样本深度离散度上限
-GATE_N_AGREE_DEG     = 5.0     # °，ACQUIRE 和 ALIGN 两个视角估的法向夹角上限
-GATE_REQUIRE_NORMAL  = False   # True = 没有法向 n 的识别帧一律不用 (bridge 补上 n 之后建议打开)
-HOVER_ACQ            = 3.0     # s，ACQUIRE 取样窗口
-HOVER_ALIGN          = 2.0     # s，ALIGN 取样时长
-GATE_ALIGN_MAX_S     = 5.0     # s，ALIGN 最多延长到这么久, 还不收敛 → 放弃
-GATE_ACQ_SCAN_AFTER  = 8.0     # s，这么久没看到环 → ±30° 慢扫一次
-GATE_ACQ_TIMEOUT     = 25.0    # s，ACQUIRE 总超时 → 放弃 (降落)
-GATE_SCAN_DEG        = 30.0    # °
-# 两道 sim 保险 (同 stage11 的思路)
-GATE_SHADOW          = False   # True = 识别/锁定/规划照做, 不摆位不冲刺 (网页上看计划)
-GATE_ALLOW_SIM_DRIVE = False   # False = /gate/status 里 sim=true 的帧不许用来冲刺 (影子模式可以用)
-
-# =============================================================================
-# ========================  D. 冲刺规划 (gate_plan.py)  ========================
-# =============================================================================
-DASH_V               = 2.5     # m/s，巡航速度上限 (档案 dash_v)
-DASH_V_MIN           = 1.2     # m/s，场地放不下时最多降到这么低, 再不行就放弃
-DASH_V_STEP          = 0.3     # m/s，每次降多少
-DASH_ACC             = 2.0     # m/s²，加速 (≈ 前倾 11.5°)
-BRAKE_ACC            = 2.5     # m/s²，减速 (≈ 后仰 14.3°)
-T_LAG                = 0.2     # s，控制滞后。用于过纸冲刺的补偿 + 估撞纸速度 (T2 实测后替换)
-D_STRAIGHT           = 1.5     # m，加速完到纸面至少留的匀速直线
-D_ALIGN_MIN          = 2.8     # m，起跑点离纸面最近多少 (识别相机 ≥2.4m 才看得到整个环)
-D_RUN_MAX            = 4.0     # m，动态起跑点 (档案 run_max): 开始规划时离环在 [最小助跑, 它] 之间
-                               #   就地起跑, 更远前进到它, 更近后退到最小助跑。0 = 总是最小助跑
-ENTRY_ANG_MAX        = 20.0    # °，进入方向与法向最大夹角
-E_ALONG              = 0.25    # m，纸面位置误差预算 (只用来估最坏撞纸速度; 2026-10-21 起不再决定刹车点)
-V_TEAR_MIN           = 1.2     # m/s，撕纸最低速度 (撕纸测试 × 2)
-M_PASS               = 0.2     # m，(旧方案的停止窗口下限用, 冲刺现在不用)
-M_WALL               = 0.3     # m，离两侧 / 起飞点后方障碍的余量
-# ---- 过纸冲刺 (2026-10-21): 机头碰纸后保持冲刺速度再冲 PASS_RUN 才刹车, 免得纸缠在机身上 ----
-#   轨迹刹车起点 s_b = −L_F + PASS_RUN + DASH_V·T_LAG (后一项是滞后补偿, 飞机实际匀速过纸 ≈ PASS_RUN)
-#   停止点 s_stop = s_b + v²/(2·BRAKE_ACC), 要满足 s_stop + L_F + M_BACK ≤ D_BACK, 放不下就降速。
-#   冲刺档案里 L_F / L_R 只填机身 (含护桨, 不含针)。
-PASS_RUN             = 1.0     # m，过纸冲刺距离 (档案 pass_run)
-BRAKE_OVER_T         = 0.3     # s，刹车超调 ≈ 它 × 冲刺速度 (10-21 实测 2.0m/s 多冲 0.59m)。查离墙 / 水平范围时加上 (档案 brake_over)
-GATE_SLOW_POLICY     = 1       # 场地放不下 DASH_V 时 (档案 allow_slow): 0 否 = 规划失败回手动段;
-                               #   1 确认 = 降到能飞的速度, 冲刺前必须按 Y (G 不算); 2 是 = 自动降速
-                               #   起飞前 preflight 还会用地面看到的环先算一遍 (见 [4/6])
-M_BACK               = 0.3     # m，刹停后机头离环后墙至少多远 (档案 back_margin)
-AIM_MARGIN           = 0.10    # m，机身截面 (2·W_HALF × 2·H_HALF) 四角离内圈至少留这么多
-H_HALF               = 0.11    # m，机身半高 (含护桨; 2026-10-19 实测高 22cm)。机身扁, 上下比左右能多偏
-# ---- 撞击点 (2026-10-19): 让针尖打红点/环心, 而不是机体中心 ----
-#   机体中心 = 飞控位姿的原点 (mavros local_position)。站在机尾往机头看, 卷尺量针尖相对它的偏移。
-#   例: 针在摄像头右上方, 针尖在机体中心右 6cm、上 8cm → NEEDLE_RIGHT=0.06  NEEDLE_UP=0.08
-NEEDLE_RIGHT         = 0.0     # m，针尖在机体中心右边多少 (右为正)
-NEEDLE_UP            = 0.0     # m，针尖比机体中心高多少 (上为正)
-# 看纸上破洞的经验修正 (也能临时吃掉相机外参的偏差): 洞要往右挪 → 加正的 RIGHT, 往上挪 → 加正的 UP
-#   例: 洞在红点左下 (左 4cm、下 10cm) → AIM_TRIM_RIGHT=+0.04  AIM_TRIM_UP=+0.10
-AIM_TRIM_RIGHT       = 0.0     # m
-AIM_TRIM_UP          = 0.0     # m
-REPO_X_MAX           = -1.5    # m，摆位时飞机必须在环前方至少这么远 (环系 x ≤ 此值)
-GATE_VIRTUAL_OFFSET  = 0.0     # m，> 0 = 虚拟环测试: 环平面往进近侧挪这么多, 真纸面当墙
-GATE_ACC_FF          = True    # 冲刺下发加速度前馈 (False = 只给位置+速度)
-
-# =============================================================================
-# ========================  E. 摆位 / 提交 / 冲刺 / 收尾  ========================
-# =============================================================================
-GATE_REPO_V          = 0.6     # m/s，摆位速度 (setpoint 斜坡)
-GATE_REPO_LEASH      = 0.6     # m，摆位 setpoint 领先实际位置的上限
-GATE_REPO_TOL        = 0.10    # m，到达起跑点的容差
-GATE_REPO_TIMEOUT    = 25.0    # s
-GATE_YAW_RATE        = 0.3     # rad/s，所有转头的速率上限 (VINS 怕快转)
-GATE_YAW_TOL_DEG     = 5.0     # °，转头到位容差
-GATE_START_TOL       = 0.15    # m，冲刺起点: 飞机离 S 不超过这么多
-GATE_START_V_MAX     = 0.15    # m/s，冲刺起点: 飞机速度不超过这么多
-GATE_START_WAIT      = 3.0     # s，等不到"停稳在 S" → 放弃
-GATE_CONFIRM_DASH    = True    # 锁定后等操作员按 G 才冲刺
-# 手动段 (2026-10-19): 起飞后先手动, 按 T 才开始找环/规划 —— 起飞点不合适就先开过去
-GATE_MANUAL_START    = True    # False = 起飞后直接找环 (老行为)
-GATE_ABORT_TO_MANUAL = True    # 冲刺前放弃 (锁不住 / 不可行 / G 超时 / 按 M) → 回手动段; False = 降落
-GATE_MANUAL_TIMEOUT  = 120.0   # s，手动段这么久没按 T → 降落 (按任何键都重新计时)
-TELEOP_XY_SPEED      = 0.4     # m/s，手动平移
-TELEOP_Z_SPEED       = 0.3     # m/s，手动升降
-TELEOP_YAW_RATE      = 0.3     # rad/s，手动转向 (VINS 怕快转)
-TELEOP_DEADMAN       = 0.3     # s，松键后速度归零
-TELEOP_DZ_MIN        = 0.5     # m，手动段高度带 (相对起飞点)
-GATE_CONFIRM_TIMEOUT = 30.0    # s，等 G 超时 → 放弃 (降落)
-GATE_STOP_V          = 0.30    # m/s，轨迹结束后速度低于它算停稳
-GATE_STOP_EXTRA      = 1.5     # s，轨迹结束后最多再等这么久 (等不到也进 HOLD, 记一笔)
-GATE_HOLD_S          = 1.0     # s，刹停后在当前位置悬停多久再降
-GATE_DEV_WARN        = 0.30    # m，冲刺中估计 s 和规划 s 差这么多 → 只记日志/告警
-GATE_STUCK_ENABLE    = True
-GATE_STUCK_DV        = 1.0     # m/s，实测速度比规划低这么多 (或实测 < GATE_STOP_V) …
-GATE_STUCK_DS        = 0.40    # m，… 并且落后规划这么多 (两条同时满足) …
-GATE_STUCK_HOLD      = 0.15    # s，… 持续这么久 → 判卡纸
-
-# =============================================================================
-# ========================  F. 各阶段时序  ========================
-# =============================================================================
-TAKEOFF_TIMEOUT      = 10.0    # s
-TAKEOFF_REACH_TOL    = 0.20    # m
-TAKEOFF_REACH_S      = 0.50    # s，连续到位时间
-TAKEOFF_LIFTOFF_DZ   = 0.10    # m，判定离地
-DESCEND_SPEED        = 0.50    # m/s
-DESCEND_Z_TARGET_DZ  = 0.30    # m，下降到此高度后切 AUTO.LAND
-DESCEND_TIMEOUT      = 45.0    # s
-DESCEND_REACH_TOL    = 0.20    # m
-PRIME_SECONDS        = 2.0     # s
-POSE_WAIT_TIMEOUT    = 10.0    # s
-OFFBOARD_TIMEOUT     = 1.5     # s
-ARM_TIMEOUT          = 1.5     # s
-ARM_MAX_TRIES        = 3
-PARK_MODE            = "AUTO.LOITER"
-AUTO_LAND_TIMEOUT    = 15.0    # s，下限; 实际按进入时高度放大
-AUTO_LAND_SPEED_EST  = 0.50    # m/s
-Z_FILTER_ALPHA       = 0.35    # z 低通 (监控 / 日志用, 不进控制)
-ZDROP_SLOW_WINDOW    = 3.0     # s
-ZDROP_SLOW_THRESH    = 0.10    # m
-ZDROP_FAST_WINDOW    = 0.5     # s
-ZDROP_FAST_THRESH    = 0.05    # m
-ZDROP_REFRACTORY     = 2.0     # s
-ZDROP_MIN_SAMPLES    = 5
-
-# =============================================================================
-# ========================  G. 安全防线 (同 stage11, flight_profile.SAFETY_RULES 守着)
-# =============================================================================
-MAX_TILT_DEG         = 30.0    # °，触发空中停桨。PX4 MPC_TILTMAX_AIR 必须 ≤ 此值 − 5
-# 冲刺段单独的停桨线 (2026-10-19): 按 G 之后到刹停悬停结束。急刹 + 撞纸会有短时大倾角,
-#   能自己回正; 真翻了 (>45° 还持续) 才停桨。其余阶段仍是 MAX_TILT_DEG
-GATE_DASH_TILT_DEG   = 45.0    # °
-GATE_DASH_TILT_CONFIRM_S = 0.30  # s
-VEL_ENVELOPE_RATIO   = 2.0     # 阶段水平速度硬限 = max(基础值, 本系数 × 该阶段指令速度)
-FATAL_CONFIRM_S      = 0.25    # s
-FENCE_VIOLATION_LANDS = True
-POSE_STALE_SEC       = 0.15    # s
-POSE_JUMP_MAX        = 0.20    # m
-VISION_LOST_LAND_S   = 0.80    # s
-VISION_LOST_ENABLE   = True
-STATIC_CHECK_S       = 3.0     # s
-STATIC_XY_STD_MAX    = 0.015   # m
-STATIC_Z_STD_MAX     = 0.030   # m
-STATIC_TILT_MAX_DEG  = 3.0     # °
-CELL_MIN_FLY         = 3.50    # V/芯
-N_CELLS              = 4
-CELL_V_SPLIT         = 18.0    # V
-cell_count           = [N_CELLS]
-PX4_TILT_MARGIN_DEG  = 5.0     # °，预检: MPC_TILTMAX_AIR ≤ MAX_TILT_DEG − 此值, 否则拒绝起飞
-
-# =============================================================================
-# ========================  H. 循环频率、日志与话题  ========================
-# =============================================================================
-SP_PUB_HZ            = 50      # setpoint 发布 (冲刺轨迹在发布时按时间采样)
-GATE_LOOP_HZ         = 30      # 穿环状态机 / gate.csv
-MONITOR_HZ           = 20
-LOG_HZ               = 10
-TIMING_LOG_HZ        = 10
-EKF_LOG_HZ           = 5
-VINS_LOG_HZ          = 30      # Hz，vins_raw.csv 轮询 (按 stamp 去重, 高于 VINS 频率即可)
-PHASE_LOOP_HZ        = 10      # takeoff 等简单阶段
-LOG_ROOT             = "~/uav_logs"
-THROTTLE_S           = 2.0
-FSYNC_INTERVAL_S     = 1.0
-NODE_NAME            = "flight_ctrl"
-STATUS_TOPIC         = "/%s/status" % NODE_NAME
-STATUS_HZ            = 2.0
-TELEMETRY_TOPIC      = "/%s/telemetry" % NODE_NAME
-TELEMETRY_HZ         = 5.0
-TELEMETRY_HZ_FAST    = 20.0    # 提交 / 冲刺 / 制动段
-CONFIG_TOPIC         = "/%s/config" % NODE_NAME
+# 2026-10-30: 全部参数搬到 vb09/flight/config.py, 统一写 C.名字。现场请用 `--site <档案>`。
+from vb09.flight import config as C  # noqa: E402
 
 # =============================================================================
 # ####################   现场档案（必须在派生量之前套用!）   ##################
@@ -353,24 +128,12 @@ except ImportError:
     print("[site] [!] 没找到 flight_profile.py —— 本次用**代码默认值**飞, "
           "且**没有**任何参数校验。把 flight_profile.py 和本文件放同一目录即可。")
 if _fp is not None:
-    _SITE_REPORT = _fp.setup(sys.argv, globals())
+    _SITE_REPORT = _fp.setup(sys.argv, vars(C))
 
 # =============================================================================
 # ##########################   派生量 (不要手改)   ###########################
 # =============================================================================
-# 各阶段 (水平硬限 m, 水平速度硬限 m/s)。水平硬限都相对起飞点。
-# gate: 冲刺段的速度硬限要能容下冲刺速度 (flight_profile 查 ≥ 1.7 × DASH_V);
-#       冲刺前 (识别/摆位) 用 GATE_PRE_VEL_LIM 收紧 (set_phase 动态覆盖)。
-GATE_PRE_VEL_LIM     = max(1.2, VEL_ENVELOPE_RATIO * GATE_REPO_V, VEL_ENVELOPE_RATIO * TELEOP_XY_SPEED)
-TELEOP_XY_MAX        = GATE_XY_MAX            # 手动段水平软限 (相对起飞点); 硬围栏再加 ENVELOPE_MARGIN
-TELEOP_DZ_MAX        = MAX_HEIGHT - 0.5       # 手动段高度上限
-PHASE_ENVELOPE = {
-    "takeoff":       (BASE_DRIFT_LIM, 1.0),
-    "gate":          (GATE_XY_MAX + ENVELOPE_MARGIN, max(1.2, VEL_ENVELOPE_RATIO * DASH_V)),
-    "descend":       (BASE_DRIFT_LIM + 0.20, 0.8),   # 进入时会按实际位置动态放宽
-    "auto_land":     (BASE_DRIFT_LIM + 0.40, 1.0),   # 同上
-    "_default":      (BASE_DRIFT_LIM + 0.20, 1.0),
-}
+C.derive()
 
 # =============================================================================
 # ##############   现场档案第二段: 对最终生效值做全部校验   #################
@@ -378,7 +141,7 @@ PHASE_ENVELOPE = {
 # 必须在派生量**之后**: 这里检查的是最终值(代码默认 + 档案 + --set)和派生量
 # (PHASE_ENVELOPE / 停靠壳 / 可用带)。不过 → 拒绝起飞; --dry-run → 打印后退出。
 if _fp is not None:
-    _SITE_REPORT = _fp.finalize(_SITE_REPORT, globals())
+    _SITE_REPORT = _fp.finalize(_SITE_REPORT, vars(C))
 
 
 # =============================================================================
@@ -456,6 +219,16 @@ from vb09.common import geom
 # =============================================================================
 # ==============================   小函数   ===================================
 # =============================================================================
+def all_params():
+    """
+    以前直接用 globals() 的地方 (site_config.txt 的全部参数 / /flight_ctrl/config 的 params):
+    = C (配置 + 派生量) + 本脚本运行时的大写量 (INITIAL_* / PX4_PULL_TIMEOUT), 和搬家前同一个集合。
+    """
+    g = dict(vars(C))
+    g.update({k: v for k, v in globals().items() if k.isupper() and not k.startswith("_")})
+    return g
+
+
 def cells_from_voltage(v):
     """
     电池电压 → 串数。读不到 (v 为 None 或 <=0) 返回 None, 调用方保持默认并大声警告 ——
@@ -463,7 +236,7 @@ def cells_from_voltage(v):
     """
     if v is None or v <= 0:
         return None
-    return 6 if v >= CELL_V_SPLIT else 4
+    return 6 if v >= C.CELL_V_SPLIT else 4
 
 # abort 分级
 SEV_FATAL = "FATAL"   # 空中停桨
@@ -523,8 +296,8 @@ class Telemetry:
             if self._z_filt is None:
                 self._z_filt = z
             else:
-                self._z_filt = (Z_FILTER_ALPHA * z
-                                + (1.0 - Z_FILTER_ALPHA) * self._z_filt)
+                self._z_filt = (C.Z_FILTER_ALPHA * z
+                                + (1.0 - C.Z_FILTER_ALPHA) * self._z_filt)
 
             self._yaw = yaw_from_quat(m.pose.orientation)
 
@@ -800,8 +573,8 @@ dash_tilt_on = [False]
 def tilt_limit():
     """→ (停桨倾角 °, 去抖 s)。冲刺 / 制动 / 过环悬停用 GATE_DASH_TILT_DEG, 其余 MAX_TILT_DEG。"""
     if dash_tilt_on[0]:
-        return GATE_DASH_TILT_DEG, GATE_DASH_TILT_CONFIRM_S
-    return MAX_TILT_DEG, FATAL_CONFIRM_S
+        return C.GATE_DASH_TILT_DEG, C.GATE_DASH_TILT_CONFIRM_S
+    return C.MAX_TILT_DEG, C.FATAL_CONFIRM_S
 
 # 网页遥测快照。各处只做"整段替换"(一次赋值一个 dict), 读的一方拿到的永远是
 # 某一时刻完整的一段。telem_put 吞掉一切异常 —— 遥测出错绝不能影响控制环和安全监控。
@@ -865,7 +638,7 @@ gate_queue = deque(maxlen=4096)
 
 # z 残差突降滑窗: (t_sec, residual)。
 # 长度约束: maxlen >= LOG_HZ * ZDROP_SLOW_WINDOW
-z_history = deque(maxlen=max(64, int(LOG_HZ * ZDROP_SLOW_WINDOW * 3)))
+z_history = deque(maxlen=max(64, int(C.LOG_HZ * C.ZDROP_SLOW_WINDOW * 3)))
 z_history_lock = threading.Lock()
 
 
@@ -906,7 +679,7 @@ def set_phase(name, horiz=None, vel=None):
     if horiz is None and vel is None:
         envelope_dyn[0] = None
     else:
-        h0, v0 = PHASE_ENVELOPE.get(name, PHASE_ENVELOPE["_default"])
+        h0, v0 = C.PHASE_ENVELOPE.get(name, C.PHASE_ENVELOPE["_default"])
         envelope_dyn[0] = (h0 if horiz is None else horiz,
                            v0 if vel is None else vel)
     phase_ref[0] = name
@@ -916,7 +689,7 @@ def get_envelope(phase):
     dyn = envelope_dyn[0]
     if dyn is not None:
         return dyn
-    return PHASE_ENVELOPE.get(phase, PHASE_ENVELOPE["_default"])
+    return C.PHASE_ENVELOPE.get(phase, C.PHASE_ENVELOPE["_default"])
 
 
 # =============================================================================
@@ -1113,7 +886,7 @@ def init_log_dir():
     global writer_main, writer_vins, writer_ekf, writer_timing, writer_gate
     global zdrop_log_path, events_fh
 
-    base = os.path.expanduser(LOG_ROOT)
+    base = os.path.expanduser(C.LOG_ROOT)
     log_dir, flight_seq = _make_flight_dir(base)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")      # 飞机时钟, 重启后会重置, 只作参考
     try:
@@ -1182,17 +955,18 @@ def init_log_dir():
     try:
         with open(os.path.join(log_dir, "site_config.txt"), "w", encoding="utf-8") as f:
             if _SITE_REPORT:
-                f.write(_fp.site_config_text(_SITE_REPORT, globals()))
+                f.write(_fp.site_config_text(_SITE_REPORT, all_params()))
             else:
                 # 只有 flight_profile.py 不在时才走这里: 把所有大写数值/开关参数写下来。
                 f.write("# 本次未使用现场档案（flight_profile.py 不在）—— 未经任何参数校验\n"
                         "# 以下为全部生效参数\n")
-                for _k in sorted(globals()):
-                    _v = globals()[_k]
+                _g = all_params()
+                for _k in sorted(_g):
+                    _v = _g[_k]
                     if (_k.isupper() and not _k.startswith("_")
                             and isinstance(_v, (bool, int, float))):
                         f.write("%s = %s\n" % (_k, _v))
-                f.write("PHASE_ENVELOPE = %s\n" % (PHASE_ENVELOPE,))
+                f.write("PHASE_ENVELOPE = %s\n" % (C.PHASE_ENVELOPE,))
     except Exception as _e:
         rospy.logwarn(f"写 site_config.txt 失败(不影响飞行): {_e}")
 
@@ -1205,8 +979,8 @@ def init_log_dir():
     with open(zdrop_log_path, "w") as f:
         f.write(f"# z residual drop snapshots. flight_{flight_seq:04d}, 飞机时钟 {ts} (可能未校时)\n")
         f.write("# residual = z_filt - z_setpoint  (不是 z 本身)\n")
-        f.write(f"# slow: {ZDROP_SLOW_THRESH*100:.0f}cm within {ZDROP_SLOW_WINDOW}s\n")
-        f.write(f"# fast: {ZDROP_FAST_THRESH*100:.0f}cm within {ZDROP_FAST_WINDOW}s\n\n")
+        f.write(f"# slow: {C.ZDROP_SLOW_THRESH*100:.0f}cm within {C.ZDROP_SLOW_WINDOW}s\n")
+        f.write(f"# fast: {C.ZDROP_FAST_THRESH*100:.0f}cm within {C.ZDROP_FAST_WINDOW}s\n\n")
 
     # 文字日志落到运行目录。rospy.log* 走的是 Python 的 "rosout" logger, 挂个文件
     # handler 就全收到了 —— 包括 ROS 关闭之后、以及 rosout 聚合丢掉的行。
@@ -1255,7 +1029,7 @@ def fsync_loop():
     """每 FSYNC_INTERVAL_S 把全部日志 fsync 一次。单独线程: eMMC 的 fsync 可能卡几百 ms, 不能卡别人。"""
     while not rospy.is_shutdown() and not abort_flag.is_set():
         fsync_all_logs()
-        time.sleep(FSYNC_INTERVAL_S)
+        time.sleep(C.FSYNC_INTERVAL_S)
 
 
 # =============================================================================
@@ -1325,14 +1099,14 @@ def log_main_row():
             ])
             csv_main.flush()
             # fsync 按 FSYNC_INTERVAL_S 节流: 每行 fsync 会和其他 IO 叠加成阻塞源。
-            if last_fsync[0] is None or (now - last_fsync[0]).to_sec() >= FSYNC_INTERVAL_S:
+            if last_fsync[0] is None or (now - last_fsync[0]).to_sec() >= C.FSYNC_INTERVAL_S:
                 try:
                     os.fsync(csv_main.fileno())
                 except OSError:
                     pass
                 last_fsync[0] = now
     except Exception as e:
-        rospy.logwarn_throttle(THROTTLE_S, f"main csv exception: {e}")
+        rospy.logwarn_throttle(C.THROTTLE_S, f"main csv exception: {e}")
 
 
 def log_vins_row():
@@ -1377,7 +1151,7 @@ def log_vins_row():
             ])
             csv_vins.flush()
     except Exception as e:
-        rospy.logwarn_throttle(THROTTLE_S, f"vins csv exception: {e}")
+        rospy.logwarn_throttle(C.THROTTLE_S, f"vins csv exception: {e}")
 
 
 def log_ekf_row():
@@ -1422,7 +1196,7 @@ def log_ekf_row():
             ])
             csv_ekf.flush()
     except Exception as e:
-        rospy.logwarn_throttle(THROTTLE_S, f"ekf csv exception: {e}")
+        rospy.logwarn_throttle(C.THROTTLE_S, f"ekf csv exception: {e}")
 
 
 def drain_gate_queue():
@@ -1440,7 +1214,7 @@ def drain_gate_queue():
             writer_gate.writerows(rows)
             csv_gate.flush()
     except Exception as e:
-        rospy.logwarn_throttle(THROTTLE_S, f"gate csv exception: {e}")
+        rospy.logwarn_throttle(C.THROTTLE_S, f"gate csv exception: {e}")
 
 
 def gate_logger_loop():
@@ -1469,7 +1243,7 @@ def drain_timing_queue():
                 ])
             csv_timing.flush()
     except Exception as e:
-        rospy.logwarn_throttle(THROTTLE_S, f"timing csv exception: {e}")
+        rospy.logwarn_throttle(C.THROTTLE_S, f"timing csv exception: {e}")
 
 
 def dump_zdrop_snapshot(reason, slow_drop, fast_drop):
@@ -1487,8 +1261,8 @@ def dump_zdrop_snapshot(reason, slow_drop, fast_drop):
                 f.write(f"\n=== Z_DROP EVENT @ t={now.to_sec():.3f} "
                         f"phase={phase_ref[0]} ===\n")
                 f.write(f"reason: {reason}\n")
-                f.write(f"slow_drop_{ZDROP_SLOW_WINDOW}s: {slow_drop*100:.1f}cm  "
-                        f"fast_drop_{ZDROP_FAST_WINDOW}s: {fast_drop*100:.1f}cm\n")
+                f.write(f"slow_drop_{C.ZDROP_SLOW_WINDOW}s: {slow_drop*100:.1f}cm  "
+                        f"fast_drop_{C.ZDROP_FAST_WINDOW}s: {fast_drop*100:.1f}cm\n")
                 f.write(f"z_setpoint: {z_sp if z_sp is None else f'{z_sp:.3f}'}\n")
                 if pose:
                     p = pose.pose.position
@@ -1553,11 +1327,11 @@ def check_z_drop():
     """
     now = rospy.Time.now()
     if last_zdrop_trigger[0] is not None and \
-            (now - last_zdrop_trigger[0]).to_sec() < ZDROP_REFRACTORY:
+            (now - last_zdrop_trigger[0]).to_sec() < C.ZDROP_REFRACTORY:
         return
 
     with z_history_lock:
-        if len(z_history) < ZDROP_MIN_SAMPLES:
+        if len(z_history) < C.ZDROP_MIN_SAMPLES:
             return
         history = list(z_history)
 
@@ -1565,7 +1339,7 @@ def check_z_drop():
 
     slow_max = r_now
     for t, r in reversed(history):
-        if (t_now - t) > ZDROP_SLOW_WINDOW:
+        if (t_now - t) > C.ZDROP_SLOW_WINDOW:
             break
         if r > slow_max:
             slow_max = r
@@ -1574,7 +1348,7 @@ def check_z_drop():
     fast_max = r_now
     n_fast = 0
     for t, r in reversed(history):
-        if (t_now - t) > ZDROP_FAST_WINDOW:
+        if (t_now - t) > C.ZDROP_FAST_WINDOW:
             break
         n_fast += 1
         if r > fast_max:
@@ -1583,12 +1357,12 @@ def check_z_drop():
 
     triggered = False
     reason = ""
-    if n_fast >= 2 and fast_drop > ZDROP_FAST_THRESH:
+    if n_fast >= 2 and fast_drop > C.ZDROP_FAST_THRESH:
         triggered = True
-        reason = f"fast: {fast_drop*100:.1f}cm residual in {ZDROP_FAST_WINDOW}s"
-    elif slow_drop > ZDROP_SLOW_THRESH:
+        reason = f"fast: {fast_drop*100:.1f}cm residual in {C.ZDROP_FAST_WINDOW}s"
+    elif slow_drop > C.ZDROP_SLOW_THRESH:
         triggered = True
-        reason = f"slow: {slow_drop*100:.1f}cm residual in {ZDROP_SLOW_WINDOW}s"
+        reason = f"slow: {slow_drop*100:.1f}cm residual in {C.ZDROP_SLOW_WINDOW}s"
 
     if triggered:
         last_zdrop_trigger[0] = now
@@ -1599,7 +1373,7 @@ def check_z_drop():
 # ============================   后台线程   ===================================
 # =============================================================================
 def main_logger_loop():
-    rate = rospy.Rate(LOG_HZ)
+    rate = rospy.Rate(C.LOG_HZ)
     while not rospy.is_shutdown() and not abort_flag.is_set():
         log_main_row()
         zf = tele.z_filtered()
@@ -1618,21 +1392,21 @@ def main_logger_loop():
 
 def vins_logger_loop():
     # 轮询频率高于 VINS 发布频率即可，去重在 log_vins_row 里做
-    rate = rospy.Rate(VINS_LOG_HZ)
+    rate = rospy.Rate(C.VINS_LOG_HZ)
     while not rospy.is_shutdown() and not abort_flag.is_set():
         log_vins_row()
         rate.sleep()
 
 
 def ekf_logger_loop():
-    rate = rospy.Rate(EKF_LOG_HZ)
+    rate = rospy.Rate(C.EKF_LOG_HZ)
     while not rospy.is_shutdown() and not abort_flag.is_set():
         log_ekf_row()
         rate.sleep()
 
 
 def timing_logger_loop():
-    rate = rospy.Rate(TIMING_LOG_HZ)
+    rate = rospy.Rate(C.TIMING_LOG_HZ)
     while not rospy.is_shutdown() and not abort_flag.is_set():
         drain_timing_queue()
         rate.sleep()
@@ -1640,7 +1414,7 @@ def timing_logger_loop():
 
 
 def publisher_loop(pub):
-    rate = rospy.Rate(SP_PUB_HZ)
+    rate = rospy.Rate(C.SP_PUB_HZ)
     while not rospy.is_shutdown() and not abort_flag.is_set():
         try:
             pub.publish(setpoint.build_msg())
@@ -1651,7 +1425,7 @@ def publisher_loop(pub):
 
 def status_loop(spub):
     """阶段状态 → vision_bridge → 地面站 HUD。纯观测，不参与控制。"""
-    rate = rospy.Rate(STATUS_HZ)
+    rate = rospy.Rate(C.STATUS_HZ)
     while not rospy.is_shutdown():
         try:
             spub.publish(String(json.dumps({
@@ -1660,9 +1434,9 @@ def status_loop(spub):
                 "air":   bool(in_air[0]),
                 "abort": bool(abort_flag.is_set()),
                 "land":  bool(land_flag.is_set()),
-                "shadow": bool(GATE_SHADOW),
+                "shadow": bool(C.GATE_SHADOW),
                 "z_track": False,
-                "task": TASK,
+                "task": C.TASK,
             }, ensure_ascii=False)))
         except Exception:
             pass
@@ -1683,7 +1457,7 @@ def build_telemetry():
     return {
         "t": rospy.Time.now().to_sec(),
         "node": rospy.get_name(),             # 网页靠它过滤 /rosout 事件
-        "task": TASK,
+        "task": C.TASK,
         "schema": 2,
         "phase": phase_ref[0],
         "sub_mode": sub_mode_ref[0],
@@ -1694,14 +1468,14 @@ def build_telemetry():
         "land_reason": land_reason[0],
         "takeover": takeover[0],              # 被接管时 = 飞控模式名
         "t_requested": False,
-        "shadow": bool(GATE_SHADOW),
-        "sim_drive": bool(GATE_ALLOW_SIM_DRIVE),
+        "shadow": bool(C.GATE_SHADOW),
+        "sim_drive": bool(C.GATE_ALLOW_SIM_DRIVE),
         "z_enable": False,
         "origin": [_f(INITIAL_X), _f(INITIAL_Y), _f(INITIAL_Z), _f(INITIAL_YAW)],
         "setpoint": sp,
         "z_filt": _f(tele.z_filtered()),
-        "cells": cell_count[0],
-        "fly_min_v": _f(CELL_MIN_FLY * cell_count[0]),
+        "cells": C.cell_count[0],
+        "fly_min_v": _f(C.CELL_MIN_FLY * C.cell_count[0]),
         "envelope": [_f(h), _f(vl)],
         "log_dir": log_dir,
         "track": {},
@@ -1723,7 +1497,7 @@ def telemetry_loop(tpub):
         except Exception as e:
             rospy.logwarn_throttle(10.0, f"[telemetry] 跳过一帧: {e}")
         fast = phase_ref[0] == "gate" and sub_mode_ref[0] in ("commit", "dash", "brake", "hold")
-        dt = 1.0 / (TELEMETRY_HZ_FAST if fast else TELEMETRY_HZ)
+        dt = 1.0 / (C.TELEMETRY_HZ_FAST if fast else C.TELEMETRY_HZ)
         time.sleep(max(0.0, dt - (time.time() - t0)))
 
 
@@ -1734,18 +1508,18 @@ def publish_config(cpub):
     preflight 前发一次(原点未定), preflight 后再发一次(原点确定)。
     """
     try:
-        params = {k: v for k, v in globals().items()
+        params = {k: v for k, v in all_params().items()
                   if k.isupper() and not k.startswith("_")
                   and isinstance(v, (bool, int, float))}
         if _fp is not None:
-            derived = _fp.derived_snapshot(globals())
+            derived = _fp.derived_snapshot(vars(C))
         else:
-            derived = {"phase_envelope": {k: list(v) for k, v in PHASE_ENVELOPE.items()}}
+            derived = {"phase_envelope": {k: list(v) for k, v in C.PHASE_ENVELOPE.items()}}
         rep = _SITE_REPORT or {}
         cpub.publish(String(json.dumps({
             "t": rospy.Time.now().to_sec(),
             "node": rospy.get_name(),
-            "task": TASK,
+            "task": C.TASK,
             "src": rep.get("src", "（flight_profile.py 不在，未经校验）"),
             "knobs": rep.get("knobs", {}),
             "lines": rep.get("lines", []),
@@ -1804,11 +1578,11 @@ def safety_monitor():
     围栏和倾角要求连续超限 FATAL_CONFIRM_S 才升级, 一次 VIO 毛刺够不到。
     MAVROS 断链不去抖: 断了就是断了。
     """
-    rate = rospy.Rate(MONITOR_HZ)
-    deb_height = Debounce(FATAL_CONFIRM_S)
-    deb_horiz = Debounce(FATAL_CONFIRM_S)
-    deb_tilt = Debounce(FATAL_CONFIRM_S)
-    deb_tilt_dash = Debounce(GATE_DASH_TILT_CONFIRM_S)
+    rate = rospy.Rate(C.MONITOR_HZ)
+    deb_height = Debounce(C.FATAL_CONFIRM_S)
+    deb_horiz = Debounce(C.FATAL_CONFIRM_S)
+    deb_tilt = Debounce(C.FATAL_CONFIRM_S)
+    deb_tilt_dash = Debounce(C.GATE_DASH_TILT_CONFIRM_S)
     warned = {}
 
     while not rospy.is_shutdown() and not abort_flag.is_set():
@@ -1832,10 +1606,10 @@ def safety_monitor():
             tilt = tilt_deg_from_quat(pose.pose.orientation)
 
             # 高度围栏 (去抖后 → LAND)
-            if deb_height.check(dz > MAX_HEIGHT, now):
-                msg = (f"height {dz:.2f}m > {MAX_HEIGHT}m "
-                       f"(持续{FATAL_CONFIRM_S:.2f}s)")
-                if FENCE_VIOLATION_LANDS:
+            if deb_height.check(dz > C.MAX_HEIGHT, now):
+                msg = (f"height {dz:.2f}m > {C.MAX_HEIGHT}m "
+                       f"(持续{C.FATAL_CONFIRM_S:.2f}s)")
+                if C.FENCE_VIOLATION_LANDS:
                     request_land(msg)
                 else:
                     request_abort(msg)
@@ -1844,8 +1618,8 @@ def safety_monitor():
             # 水平围栏 (去抖后 → LAND)
             if deb_horiz.check(horiz > horiz_lim, now):
                 msg = (f"horiz drift {horiz:.2f}m > {horiz_lim:.2f}m "
-                       f"(phase={phase_ref[0]}, 持续{FATAL_CONFIRM_S:.2f}s)")
-                if FENCE_VIOLATION_LANDS:
+                       f"(phase={phase_ref[0]}, 持续{C.FATAL_CONFIRM_S:.2f}s)")
+                if C.FENCE_VIOLATION_LANDS:
                     request_land(msg)
                 else:
                     request_abort(msg)
@@ -1869,7 +1643,7 @@ def safety_monitor():
                                 ("姿态", db_on, tilt)):
                 if db.n == 1 and not warned.get(nm):
                     rospy.logwarn(f"[safety] {nm}越界 ({cur:.2f}) — 进入 "
-                                  f"{(t_hold if nm == '姿态' else FATAL_CONFIRM_S):.2f}s 观察期, 恢复则忽略")
+                                  f"{(t_hold if nm == '姿态' else C.FATAL_CONFIRM_S):.2f}s 观察期, 恢复则忽略")
                     warned[nm] = True
                 elif db.n == 0 and warned.get(nm):
                     rospy.loginfo(f"[safety] {nm}已回到带内 — 观察期解除")
@@ -1878,24 +1652,24 @@ def safety_monitor():
         # ---------- LAND ----------
         if pose_time is not None:
             age = (now - pose_time).to_sec()
-            if age > POSE_STALE_SEC:
+            if age > C.POSE_STALE_SEC:
                 request_land(f"VIO stale {age:.2f}s")
 
         # 视觉源断供 (见 VISION_LOST_LAND_S 注释)
         # 上面那条看的是 EKF2 的输出, VINS 死了它也不会 stale;
         # 这条看的是 VINS 自己还发不发 odometry —— 这才是"视觉真的没了"。
         # 已解锁才判: 没解锁时视觉没起来无所谓, preflight 已经报过。
-        if VISION_LOST_ENABLE and state is not None and state.armed:
+        if C.VISION_LOST_ENABLE and state is not None and state.armed:
             _, odom_time = tele.snap_vins()
             if odom_time is not None:
                 odom_age = (now - odom_time).to_sec()
-                if odom_age > VISION_LOST_LAND_S:
+                if odom_age > C.VISION_LOST_LAND_S:
                     request_land(
                         f"视觉断供 {odom_age:.2f}s (VINS 已停止输出 odometry) — "
                         f"无外部位置观测, 位置环会追惯性漂移, 主动缓降")
 
         jump = tele.take_jump_max()
-        if jump > POSE_JUMP_MAX:
+        if jump > C.POSE_JUMP_MAX:
             request_land(f"VIO jump {jump*100:.0f}cm")
 
         if vel is not None:
@@ -1906,7 +1680,7 @@ def safety_monitor():
                              f"(phase={phase_ref[0]})")
 
         if batt is not None and batt.voltage > 0:
-            fly_min = CELL_MIN_FLY * cell_count[0]
+            fly_min = C.CELL_MIN_FLY * C.cell_count[0]
             if batt.voltage < fly_min:
                 request_land(f"battery {batt.voltage:.2f}V < {fly_min:.2f}V")
 
@@ -1925,11 +1699,11 @@ def safety_monitor():
         # 不碰任何判定逻辑; 整段 try, 出错只丢这一帧遥测。
         try:
             _t = {"horiz_lim": _f(horiz_lim), "vel_lim": _f(vel_lim),
-                  "max_height": _f(MAX_HEIGHT), "max_tilt": _f(tilt_limit()[0]),
-                  "max_tilt_base": _f(MAX_TILT_DEG), "max_tilt_dash": _f(GATE_DASH_TILT_DEG),
+                  "max_height": _f(C.MAX_HEIGHT), "max_tilt": _f(tilt_limit()[0]),
+                  "max_tilt_base": _f(C.MAX_TILT_DEG), "max_tilt_dash": _f(C.GATE_DASH_TILT_DEG),
                   "dash_tilt": bool(dash_tilt_on[0]),
-                  "pose_stale": _f(POSE_STALE_SEC), "vision_lost": _f(VISION_LOST_LAND_S),
-                  "jump_max": _f(POSE_JUMP_MAX), "jump": _f(jump),
+                  "pose_stale": _f(C.POSE_STALE_SEC), "vision_lost": _f(C.VISION_LOST_LAND_S),
+                  "jump_max": _f(C.POSE_JUMP_MAX), "jump": _f(jump),
                   "deb": {"height": deb_height.n, "horiz": deb_horiz.n,
                           "tilt": (deb_tilt_dash if dash_tilt_on[0] else deb_tilt).n},
                   "confirm_s": _f(tilt_limit()[1])}
@@ -1948,7 +1722,7 @@ def safety_monitor():
                 _t["horiz_v"] = _f(math.hypot(vel.twist.linear.x, vel.twist.linear.y))
             if batt is not None and batt.voltage > 0:
                 _t["batt_v"] = _f(batt.voltage)
-                _t["fly_min_v"] = _f(CELL_MIN_FLY * cell_count[0])
+                _t["fly_min_v"] = _f(C.CELL_MIN_FLY * C.cell_count[0])
             telem_put("safety", _t)
         except Exception:
             pass
@@ -1961,8 +1735,8 @@ def safety_monitor():
 # =============================================================================
 def gp_r_lim(axis):
     """机体中心最多能偏离环心多远 (只偏一个方向时): axis 0 = 左右, 1 = 上下。"""
-    r = R_IN - AIM_MARGIN
-    a, b = (H_HALF, W_HALF) if axis == 0 else (W_HALF, H_HALF)
+    r = C.R_IN - C.AIM_MARGIN
+    a, b = (C.H_HALF, C.W_HALF) if axis == 0 else (C.W_HALF, C.H_HALF)
     return max(0.0, math.sqrt(max(r * r - a * a, 0.0)) - b)
 
 
@@ -1970,58 +1744,58 @@ def print_config_summary():
     """arm 之前把生效参数念一遍。让程序自己把最终状态报出来, 比靠人读注释可靠。"""
     L = rospy.loginfo
     W = rospy.logwarn
-    pv = gp.static_preview(gp.params_from_globals(globals()))
+    pv = gp.static_preview(gp.params_from_globals(vars(C)))
     L("=" * 64)
     L("生效参数摘要 (穿环)")
     L("-" * 64)
-    L(f"  机体: 机头 {L_F:.2f} 机尾 {L_R:.2f} 半宽 {W_HALF:.2f} 半高 {H_HALF:.2f} m  → 机体中心离环心 "
+    L(f"  机体: 机头 {C.L_F:.2f} 机尾 {C.L_R:.2f} 半宽 {C.W_HALF:.2f} 半高 {C.H_HALF:.2f} m  → 机体中心离环心 "
       f"左右 ≤ {gp_r_lim(0):.2f} / 上下 ≤ {gp_r_lim(1):.2f} m")
-    if NEEDLE_RIGHT or NEEDLE_UP or AIM_TRIM_RIGHT or AIM_TRIM_UP:
-        W(f"  撞击点: 针尖在机体中心 右 {NEEDLE_RIGHT*100:+.0f} / 上 {NEEDLE_UP*100:+.0f} cm,  "
-          f"经验修正 右 {AIM_TRIM_RIGHT*100:+.0f} / 上 {AIM_TRIM_UP*100:+.0f} cm  "
-          f"→ 机体中心瞄在目标 右 {(AIM_TRIM_RIGHT-NEEDLE_RIGHT)*100:+.0f} / 上 {(AIM_TRIM_UP-NEEDLE_UP)*100:+.0f} cm")
+    if C.NEEDLE_RIGHT or C.NEEDLE_UP or C.AIM_TRIM_RIGHT or C.AIM_TRIM_UP:
+        W(f"  撞击点: 针尖在机体中心 右 {C.NEEDLE_RIGHT*100:+.0f} / 上 {C.NEEDLE_UP*100:+.0f} cm,  "
+          f"经验修正 右 {C.AIM_TRIM_RIGHT*100:+.0f} / 上 {C.AIM_TRIM_UP*100:+.0f} cm  "
+          f"→ 机体中心瞄在目标 右 {(C.AIM_TRIM_RIGHT-C.NEEDLE_RIGHT)*100:+.0f} / 上 {(C.AIM_TRIM_UP-C.NEEDLE_UP)*100:+.0f} cm")
     else:
         L("  撞击点: 机体中心对准目标 (NEEDLE_* / AIM_TRIM_* 都是 0)")
-    L(f"  场地: 环后 {D_BACK:.2f}  起飞点后方 {D_REAR:.2f}  两侧 {D_SIDE:.2f} m  "
-      f"水平范围 {GATE_XY_MAX:.2f} m")
-    L(f"  冲刺: ≤{DASH_V:.2f} m/s (最低降到 {DASH_V_MIN:.2f})  加 {DASH_ACC:.1f} / 减 {BRAKE_ACC:.1f} m/s²  "
-      f"T_LAG {T_LAG:.2f}s")
-    vp = pv.get("v_plan", DASH_V)
-    (W if vp < DASH_V - 1e-9 or pv.get("v_room") is None else L)(
-        f"  正对进入时: {vp:.2f} m/s" + ("" if vp >= DASH_V - 1e-9 else
-                                      f" (环后空间限速; 按 {DASH_V:.2f} 冲要 D_BACK ≥ {pv['d_back_need']:.2f} m)")
+    L(f"  场地: 环后 {C.D_BACK:.2f}  起飞点后方 {C.D_REAR:.2f}  两侧 {C.D_SIDE:.2f} m  "
+      f"水平范围 {C.GATE_XY_MAX:.2f} m")
+    L(f"  冲刺: ≤{C.DASH_V:.2f} m/s (最低降到 {C.DASH_V_MIN:.2f})  加 {C.DASH_ACC:.1f} / 减 {C.BRAKE_ACC:.1f} m/s²  "
+      f"T_LAG {C.T_LAG:.2f}s")
+    vp = pv.get("v_plan", C.DASH_V)
+    (W if vp < C.DASH_V - 1e-9 or pv.get("v_room") is None else L)(
+        f"  正对进入时: {vp:.2f} m/s" + ("" if vp >= C.DASH_V - 1e-9 else
+                                      f" (环后空间限速; 按 {C.DASH_V:.2f} 冲要 D_BACK ≥ {pv['d_back_need']:.2f} m)")
         + f"  助跑 {pv['d_align']:.2f} m")
-    L(f"             过纸冲刺 {PASS_RUN:.2f} m (+滞后补偿 {pv.get('pass_lag', 0):.2f})  "
+    L(f"             过纸冲刺 {C.PASS_RUN:.2f} m (+滞后补偿 {pv.get('pass_lag', 0):.2f})  "
       f"刹车起点 s={pv.get('s_brake', float('nan')):+.2f}  停止 s={pv['overshoot']:+.2f}  "
-      f"含超调 {pv.get('brake_over', 0):.2f} m 后机头离墙 {M_BACK + pv['tol']:.2f} m (要求 ≥ {M_BACK:.2f})")
+      f"含超调 {pv.get('brake_over', 0):.2f} m 后机头离墙 {C.M_BACK + pv['tol']:.2f} m (要求 ≥ {C.M_BACK:.2f})")
     L("             场地不够时: " + {0: "不降速, 规划失败回手动段", 1: "降速, 冲刺前要按 Y 确认",
-                                   2: "自动降速"}.get(int(GATE_SLOW_POLICY), "?"))
+                                   2: "自动降速"}.get(int(C.GATE_SLOW_POLICY), "?"))
     if "v_hit" in pv:
-        L(f"             撞纸 {pv['v_hit']:.2f} m/s (撕纸下限 {V_TEAR_MIN:.2f})  冲刺 {pv['t_dash']:.2f}s")
-    L(f"  识别: 距离 [{GATE_D_MIN:.1f}, {GATE_D_MAX:.1f}] m  单帧σ 横<{GATE_SD_MAX_CM:.0f}/深<{GATE_SD_ALONG_MAX_CM:.0f}cm (环心观测放宽到 {GATE_SD_ALONG_PER_M_CM:.1f}cm×距离)  "
-      f"锁定σ 横<{GATE_LOCK_SD_LAT_CM:.0f}/深<{GATE_LOCK_SD_ALONG_CM:.0f}cm  "
-      f"锁定离散 横<{GATE_ALIGN_SPREAD_CM:.0f}/深<{GATE_ALIGN_SPREAD_ALONG_CM:.0f}cm  "
-      f"{'必须有法向' if GATE_REQUIRE_NORMAL else '没有法向就按视线方向进入'}")
+        L(f"             撞纸 {pv['v_hit']:.2f} m/s (撕纸下限 {C.V_TEAR_MIN:.2f})  冲刺 {pv['t_dash']:.2f}s")
+    L(f"  识别: 距离 [{C.GATE_D_MIN:.1f}, {C.GATE_D_MAX:.1f}] m  单帧σ 横<{C.GATE_SD_MAX_CM:.0f}/深<{C.GATE_SD_ALONG_MAX_CM:.0f}cm (环心观测放宽到 {C.GATE_SD_ALONG_PER_M_CM:.1f}cm×距离)  "
+      f"锁定σ 横<{C.GATE_LOCK_SD_LAT_CM:.0f}/深<{C.GATE_LOCK_SD_ALONG_CM:.0f}cm  "
+      f"锁定离散 横<{C.GATE_ALIGN_SPREAD_CM:.0f}/深<{C.GATE_ALIGN_SPREAD_ALONG_CM:.0f}cm  "
+      f"{'必须有法向' if C.GATE_REQUIRE_NORMAL else '没有法向就按视线方向进入'}")
     L("-" * 64)
-    if GATE_SHADOW:
+    if C.GATE_SHADOW:
         L("  ✓ 影子 GATE_SHADOW=True —— 识别/锁定/规划照做, 不摆位、不冲刺")
     else:
         W("  ✗ 影子 GATE_SHADOW=False —— !!! 锁定后会摆位、冲刺 !!!")
-    if GATE_VIRTUAL_OFFSET > 0:
-        W(f"  ★ 虚拟环: 环平面前移 {GATE_VIRTUAL_OFFSET:.2f} m, 停在纸前")
-    if GATE_CONFIRM_DASH:
+    if C.GATE_VIRTUAL_OFFSET > 0:
+        W(f"  ★ 虚拟环: 环平面前移 {C.GATE_VIRTUAL_OFFSET:.2f} m, 停在纸前")
+    if C.GATE_CONFIRM_DASH:
         L("  ✓ 冲刺前要按 G 确认")
     else:
         W("  ✗ GATE_CONFIRM_DASH=False —— 锁定后直接冲刺, 不等确认")
-    if GATE_ALLOW_SIM_DRIVE:
+    if C.GATE_ALLOW_SIM_DRIVE:
         W("  ✗ GATE_ALLOW_SIM_DRIVE=True —— !!! sim 标记的识别也能驱动冲刺 !!!")
     L("-" * 64)
     for name in ("takeoff", "gate", "descend", "auto_land"):
-        h, v = PHASE_ENVELOPE[name]
+        h, v = C.PHASE_ENVELOPE[name]
         L(f"  包络 {name:<10s} 水平<{h:.2f}m  速度<{v:.2f}m/s")
-    L(f"  冲刺前 gate 段速度包络收紧到 {GATE_PRE_VEL_LIM:.2f} m/s")
-    L(f"  高度硬顶 {MAX_HEIGHT:.2f}m  倾角停桨 {MAX_TILT_DEG:.0f}° (持续 {FATAL_CONFIRM_S:.2f}s)  "
-      f"冲刺段 {GATE_DASH_TILT_DEG:.0f}° (持续 {GATE_DASH_TILT_CONFIRM_S:.2f}s)")
+    L(f"  冲刺前 gate 段速度包络收紧到 {C.GATE_PRE_VEL_LIM:.2f} m/s")
+    L(f"  高度硬顶 {C.MAX_HEIGHT:.2f}m  倾角停桨 {C.MAX_TILT_DEG:.0f}° (持续 {C.FATAL_CONFIRM_S:.2f}s)  "
+      f"冲刺段 {C.GATE_DASH_TILT_DEG:.0f}° (持续 {C.GATE_DASH_TILT_CONFIRM_S:.2f}s)")
     if _SITE_REPORT:
         L("-" * 64)
         L(f"  现场档案: {_SITE_REPORT['src']}")
@@ -2031,7 +1805,7 @@ def print_config_summary():
             W(f"    ⚠️ {_w}")
     else:
         W("  现场档案: flight_profile.py 不在 —— 用的是代码默认值, 且未经任何校验")
-    L(f"  电池 {cell_count[0]}S  低压门槛 {CELL_MIN_FLY * cell_count[0]:.1f}V")
+    L(f"  电池 {C.cell_count[0]}S  低压门槛 {C.CELL_MIN_FLY * C.cell_count[0]:.1f}V")
     L("=" * 64)
 
 
@@ -2117,33 +1891,33 @@ def preflight_plan(st, age):
         aim = tuple(float(v) for v in st["aim"][:3]) if st.get("aim") else c
         n = tuple(float(v) for v in st["n"][:3]) if st.get("n") else None
         r = gp.preflight_check(aim, c, n, (INITIAL_X, INITIAL_Y, INITIAL_Z),
-                               gp.params_from_globals(globals()), TAKEOFF_HEIGHT,
-                               virtual_offset=GATE_VIRTUAL_OFFSET)
+                               gp.params_from_globals(vars(C)), C.TAKEOFF_HEIGHT,
+                               virtual_offset=C.GATE_VIRTUAL_OFFSET)
     except Exception as e:
         rospy.logwarn(f"    起飞前预规划出错 (跳过, 起飞后照常规划): {e}")
         return True
     dist = math.hypot(c[0] - INITIAL_X, c[1] - INITIAL_Y)
     telem_put("gate", {"seg": "preflight", "pre": {
-        "ok_full": r["ok_full"], "v_set": _f(DASH_V), "v_room": _f(r["v_room"]), "why": r["why"],
+        "ok_full": r["ok_full"], "v_set": _f(C.DASH_V), "v_room": _f(r["v_room"]), "why": r["why"],
         "xy_need": _f(r["xy_need"]), "d_back_need": _f(r["d_back_need"]), "ring_dist": _f(dist)}})
     if r["ok_full"]:
-        rospy.loginfo(f"    ✓ 地面看到环 (水平 {dist:.1f} m): 按 {DASH_V:.2f} m/s 放得下 —— {r['summary']}")
+        rospy.loginfo(f"    ✓ 地面看到环 (水平 {dist:.1f} m): 按 {C.DASH_V:.2f} m/s 放得下 —— {r['summary']}")
         return True
     vr = r["v_room"]
     rospy.logerr("    " + "!" * 66)
-    rospy.logerr(f"    ★ 地面看到环 (水平 {dist:.1f} m), 按设定 {DASH_V:.2f} m/s 放不下: {r['why']}")
+    rospy.logerr(f"    ★ 地面看到环 (水平 {dist:.1f} m), 按设定 {C.DASH_V:.2f} m/s 放不下: {r['why']}")
     rospy.logerr("      场地最高能冲 " + (f"{vr:.2f} m/s" if vr is not None else "—— 降到最低速也不行"))
     fix = []
-    if r["xy_need"] is not None and r["xy_need"] > GATE_XY_MAX:
-        fix.append(f"xy_radius ≥ {r['xy_need']:.1f} (现在 {GATE_XY_MAX:.1f}), 或起飞点往环挪 {r['xy_need'] - GATE_XY_MAX:.1f} m")
+    if r["xy_need"] is not None and r["xy_need"] > C.GATE_XY_MAX:
+        fix.append(f"xy_radius ≥ {r['xy_need']:.1f} (现在 {C.GATE_XY_MAX:.1f}), 或起飞点往环挪 {r['xy_need'] - C.GATE_XY_MAX:.1f} m")
     dbn = r["d_back_need"]
-    if dbn > (GATE_VIRTUAL_OFFSET if GATE_VIRTUAL_OFFSET > 0 else D_BACK) + 1e-6:
-        fix.append(f"{'虚拟环偏移' if GATE_VIRTUAL_OFFSET > 0 else 'd_back'} ≥ {dbn:.2f}")
+    if dbn > (C.GATE_VIRTUAL_OFFSET if C.GATE_VIRTUAL_OFFSET > 0 else C.D_BACK) + 1e-6:
+        fix.append(f"{'虚拟环偏移' if C.GATE_VIRTUAL_OFFSET > 0 else 'd_back'} ≥ {dbn:.2f}")
     if vr is not None:
         fix.append(f"或 dash_v 改成 {vr:.2f}")
-    rospy.logerr(f"      要按 {DASH_V:.2f} 冲: " + ";  ".join(fix))
+    rospy.logerr(f"      要按 {C.DASH_V:.2f} 冲: " + ";  ".join(fix))
     act = {0: "空中会规划失败、回手动段", 1: f"空中会降到约 {vr or 0:.2f} m/s, 冲刺前要按 Y 确认",
-           2: f"空中会自动降到约 {vr or 0:.2f} m/s"}.get(int(GATE_SLOW_POLICY), "")
+           2: f"空中会自动降到约 {vr or 0:.2f} m/s"}.get(int(C.GATE_SLOW_POLICY), "")
     rospy.logerr(f"      (地面识别位置可能差 10~20 cm, 起飞后会按空中识别重算。照样起飞的话: {act})")
     rospy.logerr("    " + "!" * 66)
     _flush_stdin()
@@ -2189,21 +1963,21 @@ def preflight(param_get, set_mode, param_pull=None):
         rospy.loginfo("    开局模式 AUTO.LAND (上次正常降落后留下的), 不用切")
     if state.mode == "OFFBOARD":
         rospy.logwarn(f"    ★ 开局模式 {state.mode} 是上一次运行遗留的 (上次没正常收尾) "
-                      f"→ 先切 {PARK_MODE}")
+                      f"→ 先切 {C.PARK_MODE}")
         try:
-            set_mode(custom_mode=PARK_MODE)
+            set_mode(custom_mode=C.PARK_MODE)
             t_end = rospy.Time.now() + rospy.Duration(1.5)
             while rospy.Time.now() < t_end:
-                if tele.state and tele.state.mode == PARK_MODE:
+                if tele.state and tele.state.mode == C.PARK_MODE:
                     break
                 rospy.sleep(0.05)
             cur = tele.state.mode if tele.state else "?"
-            if cur == PARK_MODE:
-                rospy.loginfo(f"    已切到 {PARK_MODE}")
+            if cur == C.PARK_MODE:
+                rospy.loginfo(f"    已切到 {C.PARK_MODE}")
             else:
                 rospy.logwarn(f"    没切成 (当前 {cur}) —— 不影响起飞, 后面会切 OFFBOARD")
         except Exception as e:
-            rospy.logwarn(f"    切 {PARK_MODE} 异常 (不影响起飞): {e}")
+            rospy.logwarn(f"    切 {C.PARK_MODE} 异常 (不影响起飞): {e}")
 
     # 电池串数自动识别 (见 CELL_V_SPLIT)。写在 [1/6] 里, 不打乱 [n/6] 编号。
     t_end = rospy.Time.now() + rospy.Duration(3.0)
@@ -2216,17 +1990,17 @@ def preflight(param_get, set_mode, param_pull=None):
         rospy.sleep(0.1)
     _n = cells_from_voltage(bv)
     if _n is None:
-        rospy.logwarn(f"    ★ 读不到电池电压 → 串数按默认 {N_CELLS}S, "
-                      f"低压门槛 {CELL_MIN_FLY * N_CELLS:.1f}V")
+        rospy.logwarn(f"    ★ 读不到电池电压 → 串数按默认 {C.N_CELLS}S, "
+                      f"低压门槛 {C.CELL_MIN_FLY * C.N_CELLS:.1f}V")
         rospy.logwarn("      ★ 若这架不是 4S 电池, 低压保护会失效, 请手动确认 ★")
     else:
-        cell_count[0] = _n
-        rospy.loginfo(f"    电池 {bv:.2f}V → 判为 {cell_count[0]}S "
-                      f"(≈{bv / cell_count[0]:.2f}V/芯)  低压门槛 "
-                      f"{CELL_MIN_FLY * cell_count[0]:.1f}V")
+        C.cell_count[0] = _n
+        rospy.loginfo(f"    电池 {bv:.2f}V → 判为 {C.cell_count[0]}S "
+                      f"(≈{bv / C.cell_count[0]:.2f}V/芯)  低压门槛 "
+                      f"{C.CELL_MIN_FLY * C.cell_count[0]:.1f}V")
 
     rospy.loginfo("[2/6] VIO pose (/mavros/local_position/pose)...")
-    t_end = rospy.Time.now() + rospy.Duration(POSE_WAIT_TIMEOUT)
+    t_end = rospy.Time.now() + rospy.Duration(C.POSE_WAIT_TIMEOUT)
     while rospy.Time.now() < t_end and tele.pose is None:
         rospy.sleep(0.1)
     if tele.pose is None:
@@ -2250,7 +2024,7 @@ def preflight(param_get, set_mode, param_pull=None):
     INITIAL_YAW = yaw_from_quat(tele.pose.pose.orientation)
 
     # ---------------- 图传模式 + 识别门禁 ----------------
-    rospy.loginfo(f"[4/6] 图传模式 ({CAM_STATUS_TOPIC}) + 环识别 ({GATE_STATUS_TOPIC})...")
+    rospy.loginfo(f"[4/6] 图传模式 ({C.CAM_STATUS_TOPIC}) + 环识别 ({C.GATE_STATUS_TOPIC})...")
     t_end = rospy.Time.now() + rospy.Duration(3.0)
     while rospy.Time.now() < t_end and gate_in.cam_mode() is None:
         rospy.sleep(0.1)
@@ -2273,41 +2047,41 @@ def preflight(param_get, set_mode, param_pull=None):
                       f"红点 {'有' if st.get('aim') is not None else '没有'}")
         # 桥里的环估计是旧的 (首飞问题 §2: 落地后滤波器只 predict 不 update, 年龄几百秒、
         # σ 上米还在发) → 拒绝。新版 vision_bridge 会自己重置; 老版要重启桥。
-        if age > GATE_STATUS_STALE_S:
-            rospy.logwarn(f"    ★ /gate/status 最新一条是 {age:.1f}s 前收到的 (> {GATE_STATUS_STALE_S:.1f}s) —— "
+        if age > C.GATE_STATUS_STALE_S:
+            rospy.logwarn(f"    ★ /gate/status 最新一条是 {age:.1f}s 前收到的 (> {C.GATE_STATUS_STALE_S:.1f}s) —— "
                           f"地面检测停了 / 桥卡住了? 起飞后找环会一直等")
         t_age = st.get("age_ms")
         if st.get("target") is not None and isinstance(t_age, (int, float)) and \
-                t_age > GATE_PREFLIGHT_TARGET_AGE_MS:
+                t_age > C.GATE_PREFLIGHT_TARGET_AGE_MS:
             rospy.logerr(f"    桥里的环估计已经 {t_age / 1000:.1f}s 没更新 (σ {st.get('sd_cm')} cm) —— "
                          f"旧状态会带进这次飞行。重启桥 (run_vision.py) 或换新版 vision_bridge.py "
                          f"(会自动重置)。拒绝起飞")
             return False
         d0 = st.get("dist")
         if (st.get("target") is not None and isinstance(d0, (int, float))
-                and age < 1.0 and d0 < D_ALIGN_MIN - 0.3):
-            if GATE_MANUAL_START:
+                and age < 1.0 and d0 < C.D_ALIGN_MIN - 0.3):
+            if C.GATE_MANUAL_START:
                 rospy.logwarn(f"    ★ 起飞点离环只有 {d0:.2f} m —— 起飞后先在手动段往后退到 ≥ "
-                              f"{D_ALIGN_MIN:.1f} m 再按 T")
+                              f"{C.D_ALIGN_MIN:.1f} m 再按 T")
             else:
-                rospy.logerr(f"    起飞点离环只有 {d0:.2f} m (< {D_ALIGN_MIN - 0.3:.2f}) —— "
+                rospy.logerr(f"    起飞点离环只有 {d0:.2f} m (< {C.D_ALIGN_MIN - 0.3:.2f}) —— "
                              f"往后挪, 拒绝起飞")
                 return False
-        if st.get("sim") and not (GATE_SHADOW or GATE_ALLOW_SIM_DRIVE):
+        if st.get("sim") and not (C.GATE_SHADOW or C.GATE_ALLOW_SIM_DRIVE):
             rospy.logwarn("    ★ 识别结果标了 sim (地面 gcs_gate --mode 1 / 机上 _gate_sim:=true) —— "
                           "这样的帧不会用来冲刺, 起飞后会一直等不到有效识别。"
                           "要真飞: gate_gcs 地面用 --mode 2; gate (机上检测) 用 run_vision.py gate --drive")
-        if st.get("n") is None and GATE_REQUIRE_NORMAL:
+        if st.get("n") is None and C.GATE_REQUIRE_NORMAL:
             rospy.logerr("    GATE_REQUIRE_NORMAL=True 但识别结果里没有法向 n —— 拒绝起飞")
             return False
         if not preflight_plan(st, age):
             return False
 
-    rospy.loginfo(f"[5/6] Static drift ({STATIC_CHECK_S}s, "
-                  f"xy_std<{STATIC_XY_STD_MAX*100:.0f}cm "
-                  f"z_std<{STATIC_Z_STD_MAX*100:.0f}cm)...")
+    rospy.loginfo(f"[5/6] Static drift ({C.STATIC_CHECK_S}s, "
+                  f"xy_std<{C.STATIC_XY_STD_MAX*100:.0f}cm "
+                  f"z_std<{C.STATIC_Z_STD_MAX*100:.0f}cm)...")
     xs, ys, zs, tilts = [], [], [], []
-    t_end = rospy.Time.now() + rospy.Duration(STATIC_CHECK_S)
+    t_end = rospy.Time.now() + rospy.Duration(C.STATIC_CHECK_S)
     while rospy.Time.now() < t_end:
         if tele.pose:
             p = tele.pose.pose.position
@@ -2317,18 +2091,18 @@ def preflight(param_get, set_mode, param_pull=None):
     if len(xs) < 10:
         rospy.logerr("    not enough samples")
         return False
-    if max(tilts) > STATIC_TILT_MAX_DEG:
+    if max(tilts) > C.STATIC_TILT_MAX_DEG:
         rospy.logerr(f"    ground tilt {max(tilts):.1f}deg")
         return False
     xy_std = math.hypot(statistics.stdev(xs), statistics.stdev(ys))
     z_std = statistics.stdev(zs)
     rospy.loginfo(f"    xy_std={xy_std*100:.2f}cm  z_std={z_std*100:.2f}cm  "
                   f"(z peak-to-peak={((max(zs)-min(zs))*100):.1f}cm)")
-    if xy_std > STATIC_XY_STD_MAX:
-        rospy.logerr(f"    xy_std > {STATIC_XY_STD_MAX*100:.1f}cm")
+    if xy_std > C.STATIC_XY_STD_MAX:
+        rospy.logerr(f"    xy_std > {C.STATIC_XY_STD_MAX*100:.1f}cm")
         return False
-    if z_std > STATIC_Z_STD_MAX:
-        rospy.logerr(f"    z_std > {STATIC_Z_STD_MAX*100:.1f}cm — check VIO stability")
+    if z_std > C.STATIC_Z_STD_MAX:
+        rospy.logerr(f"    z_std > {C.STATIC_Z_STD_MAX*100:.1f}cm — check VIO stability")
         return False
 
     rospy.loginfo("[6/6] PX4 参数 (COM_OBL_ACT / MPC_TILTMAX_AIR / MPC_XY_VEL_MAX)...")
@@ -2347,13 +2121,13 @@ def preflight(param_get, set_mode, param_pull=None):
         rospy.logerr(f"    COM_OBL_ACT={val}, want 0 (Position) or 2 (Land)")
         return False
     tmax = float(vals["MPC_TILTMAX_AIR"])
-    lim = MAX_TILT_DEG - PX4_TILT_MARGIN_DEG
+    lim = C.MAX_TILT_DEG - C.PX4_TILT_MARGIN_DEG
     if tmax > lim + 1e-6:
         rospy.logerr(f"    MPC_TILTMAX_AIR={tmax:.0f}° > {lim:.0f}°: 急刹时 PX4 自己就可能把飞机倾过"
-                     f"脚本的停桨线 {MAX_TILT_DEG:.0f}° —— QGC 里改到 ≤ {lim:.0f}°, 拒绝起飞")
+                     f"脚本的停桨线 {C.MAX_TILT_DEG:.0f}° —— QGC 里改到 ≤ {lim:.0f}°, 拒绝起飞")
         return False
     vmax = float(vals["MPC_XY_VEL_MAX"])
-    v_need = DASH_V
+    v_need = C.DASH_V
     if vmax < 1.1 * v_need:
         rospy.logerr(f"    MPC_XY_VEL_MAX={vmax:.2f} < 1.1×冲刺速度 {1.1 * v_need:.2f}: "
                      f"PX4 会把速度削掉 —— 改参数或降 dash_v, 拒绝起飞")
@@ -2382,16 +2156,16 @@ def preflight(param_get, set_mode, param_pull=None):
 def phase_takeoff():
     """ZHOLD 位置模式爬升。xy 目标锁在 origin。"""
     set_phase("takeoff")
-    target_z = INITIAL_Z + TAKEOFF_HEIGHT
+    target_z = INITIAL_Z + C.TAKEOFF_HEIGHT
     rospy.loginfo(f"[takeoff] ZHOLD xy=origin z={target_z:.2f} "
-                  f"(dz=+{TAKEOFF_HEIGHT}) timeout={TAKEOFF_TIMEOUT}s")
+                  f"(dz=+{C.TAKEOFF_HEIGHT}) timeout={C.TAKEOFF_TIMEOUT}s")
     setpoint.set_zhold_mode(INITIAL_X, INITIAL_Y, target_z, INITIAL_YAW, 0.0, 0.0)
 
-    reach_frames_target = max(1, int(round(TAKEOFF_REACH_S * PHASE_LOOP_HZ)))
-    t_end = rospy.Time.now() + rospy.Duration(TAKEOFF_TIMEOUT)
+    reach_frames_target = max(1, int(round(C.TAKEOFF_REACH_S * C.PHASE_LOOP_HZ)))
+    t_end = rospy.Time.now() + rospy.Duration(C.TAKEOFF_TIMEOUT)
     t_log = rospy.Time.now()
     reach_count = 0
-    rate = rospy.Rate(PHASE_LOOP_HZ)
+    rate = rospy.Rate(C.PHASE_LOOP_HZ)
 
     while rospy.Time.now() < t_end:
         check_abort()
@@ -2401,11 +2175,11 @@ def phase_takeoff():
         zf = tele.z_filtered()
         if zf is not None:
             dz = zf - INITIAL_Z
-            if not in_air[0] and dz > TAKEOFF_LIFTOFF_DZ:
+            if not in_air[0] and dz > C.TAKEOFF_LIFTOFF_DZ:
                 in_air[0] = True
                 rospy.logwarn(f"[takeoff] LIFTOFF DETECTED at dz={dz:.2f}")
 
-            if abs(zf - target_z) < TAKEOFF_REACH_TOL:
+            if abs(zf - target_z) < C.TAKEOFF_REACH_TOL:
                 reach_count += 1
                 if reach_count >= reach_frames_target:
                     rospy.loginfo(f"[takeoff] REACHED z={zf:.2f} "
@@ -2507,9 +2281,9 @@ class GateInput:
             raw = rw is not None
             tsrc = str(st.get("src") or "")
             t_age = st.get("age_ms")
-            if (GATE_DOT_PREFER and st.get("target") is not None and st.get("published", True)
+            if (C.GATE_DOT_PREFER and st.get("target") is not None and st.get("published", True)
                     and tsrc.startswith(("dot_stereo", "dot_ray_plane"))
-                    and isinstance(t_age, (int, float)) and t_age <= GATE_DOT_MAX_AGE_MS):
+                    and isinstance(t_age, (int, float)) and t_age <= C.GATE_DOT_MAX_AGE_MS):
                 raw = False                        # 双目红点: 比 3.5m 外的单目环心准一个量级 → 用桥的融合估计
             if raw:
                 c = tuple(float(v) for v in rw[:3])
@@ -2520,29 +2294,29 @@ class GateInput:
                 c = tuple(float(v) for v in c[:3])
             if st.get("pose", "ok") != "ok":
                 return None, "pose"
-            if st.get("sim") and not (GATE_SHADOW or GATE_ALLOW_SIM_DRIVE):
+            if st.get("sim") and not (C.GATE_SHADOW or C.GATE_ALLOW_SIM_DRIVE):
                 return None, "sim"
             t_cap = float(st.get("t", now))
-            if now - t_cap > GATE_CAP_MAX_AGE:
+            if now - t_cap > C.GATE_CAP_MAX_AGE:
                 return None, "old"
             dist = None if raw else st.get("dist")
             if not isinstance(dist, (int, float)):
                 dist = gp.vnorm(gp.vsub(c, p_now)) if p_now else float("nan")
-            if not (GATE_D_MIN <= dist <= GATE_D_MAX):
+            if not (C.GATE_D_MIN <= dist <= C.GATE_D_MAX):
                 return None, "dist"
             n = st.get("n")
             if n is not None:
                 n = gp.vunit(tuple(float(v) for v in n[:3]))
                 nsd = st.get("n_sd_deg")
-                if isinstance(nsd, (int, float)) and nsd > GATE_N_SD_MAX_DEG:
+                if isinstance(nsd, (int, float)) and nsd > C.GATE_N_SD_MAX_DEG:
                     return None, "n_sd"
                 if p_now is not None:
                     los = gp.vsub(p_now, c)
                     if gp.vdot(los, n) < 0:
                         n = gp.vmul(n, -1.0)      # 约定: 指向进近侧
-                    if gp.ang_deg(los, n) > GATE_VIEW_ANG_MAX:
+                    if gp.ang_deg(los, n) > C.GATE_VIEW_ANG_MAX:
                         return None, "view"
-            elif GATE_REQUIRE_NORMAL:
+            elif C.GATE_REQUIRE_NORMAL:
                 return None, "no_n"
             # σ 拆到靶面 (§1): 进入方向 ≈ −n, 没有法向就用视线方向 (和规划一致)
             d_in = gp.hunit(gp.vmul(n, -1.0)) if n is not None else None
@@ -2555,17 +2329,17 @@ class GateInput:
                 sd_max = max(float(v) for v in sd) if sd else float("nan")
                 sig = (sd_max, sd_max, sd_max)
             sd_lat = max(sig[0], sig[1])
-            if not (sd_lat <= GATE_SD_MAX_CM):
+            if not (sd_lat <= C.GATE_SD_MAX_CM):
                 return None, "sd"
-            lim_al = GATE_SD_ALONG_MAX_CM
+            lim_al = C.GATE_SD_ALONG_MAX_CM
             if raw and dist == dist:
-                lim_al = max(lim_al, GATE_SD_ALONG_PER_M_CM * dist)
+                lim_al = max(lim_al, C.GATE_SD_ALONG_PER_M_CM * dist)
             if not (sig[2] <= lim_al):
                 return None, "sd_along"
             aim = st.get("aim")
             if aim is not None:
                 aim = tuple(float(v) for v in aim[:3])
-                if gp.vnorm(gp.vsub(aim, c)) > R_IN - 0.05:
+                if gp.vnorm(gp.vsub(aim, c)) > C.R_IN - 0.05:
                     aim = None                     # 红点跑到环外 = 红点识别有问题, 按环心瞄
                     self.n_aim_far += 1
             return {"t": t_cap, "recv": now, "c": c, "aim": aim, "n": n, "dist": float(dist),
@@ -2688,11 +2462,11 @@ class GateRun:
         self.n_try = 0           # 第几次 (按 T 开始一次 +1)
         self.last_why = ""       # 上一次放弃的原因 (遥测 gate.why)
         self.pre = None          # 手动段预规划结果 (遥测 gate.pre)
-        self.rate = rospy.Rate(GATE_LOOP_HZ)
+        self.rate = rospy.Rate(C.GATE_LOOP_HZ)
         self.last_t = rospy.Time.now().to_sec()
         self.t_log = 0.0
         self.origin = (INITIAL_X, INITIAL_Y, INITIAL_Z)
-        self.params = gp.params_from_globals(globals())
+        self.params = gp.params_from_globals(vars(C))
 
     # ---------------- 小工具 ----------------
     def pos(self):
@@ -2718,7 +2492,7 @@ class GateRun:
     def yaw_step(self, target, dt):
         """yaw 设定值以 GATE_YAW_RATE 朝 target 走一步。→ 剩余误差 (rad)。"""
         err = wrap_pi(target - self.yaw_sp)
-        step = GATE_YAW_RATE * dt
+        step = C.GATE_YAW_RATE * dt
         self.yaw_sp = wrap_pi(self.yaw_sp + clamp(err, -step, step))
         return wrap_pi(target - tele.yaw_measured())
 
@@ -2810,7 +2584,7 @@ class GateRun:
         try:
             self._telem_and_log(now)
         except Exception as e:
-            rospy.logwarn_throttle(THROTTLE_S, f"[gate] 遥测/日志出错 (不影响飞行): {e}")
+            rospy.logwarn_throttle(C.THROTTLE_S, f"[gate] 遥测/日志出错 (不影响飞行): {e}")
         self.rate.sleep()
         return dt
 
@@ -2833,7 +2607,7 @@ class GateRun:
                 pred = [ah, av]                       # 计划从瞄点穿过
             else:
                 pred = list(off)
-            sd = u.get("sd_cm_xyz") or [GATE_SD_MAX_CM] * 3
+            sd = u.get("sd_cm_xyz") or [C.GATE_SD_MAX_CM] * 3
             hva = u.get("sd_hva_cm") or (list(u["sig"]) if u.get("sig") else None)
             sdh, sdv = (hva[0], hva[1]) if hva else (max(sd), max(sd))
             g.update({
@@ -2842,7 +2616,7 @@ class GateRun:
                     "aim": _l3(u.get("aim") or u["c"]),
                     "sd_cm": _l3(sd), "sd_hva_cm": _l3(hva), "n_sd_deg": _f(u.get("n_spread_deg")),
                     "locked": bool(self.locked), "t_lock": (self.locked or {}).get("t_lock"),
-                    "r_in": R_IN, "r_out": R_OUT, "spread_cm": _f(u.get("spread_cm")),
+                    "r_in": C.R_IN, "r_out": C.R_OUT, "spread_cm": _f(u.get("spread_cm")),
                     "k": u.get("k")},
                 "along": _f(along), "off": _l3(off), "pred_cross": _l3(pred),
                 "pred_sd_cm": [_f(math.hypot(sdh, 5.0)), _f(math.hypot(sdv, 5.0))],
@@ -2861,17 +2635,17 @@ class GateRun:
                          "labels": ["悬停点", "起跑点", "穿越点", "制动终点"],
                          "mode": "dash",
                          "v": _f(P.v), "summary": P.summary(), "dir_why": P.dir_why,
-                         "v_set": _f(DASH_V),
-                         "slow": bool(P.v < DASH_V - 1e-9),
+                         "v_set": _f(C.DASH_V),
+                         "slow": bool(P.v < C.DASH_V - 1e-9),
                          "slow_why": P.slow_why,
                          "need_confirm": bool(P.need_confirm),
                          "v_hit": _f(P.v_hit_nom), "v_hit_worst": _f(P.v_hit_worst),
-                         "virtual": GATE_VIRTUAL_OFFSET > 0}
-            g["brake"] = {"end": _l3(P.E), "dist": _f(P.brake_dist), "acc": _f(BRAKE_ACC),
+                         "virtual": C.GATE_VIRTUAL_OFFSET > 0}
+            g["brake"] = {"end": _l3(P.E), "dist": _f(P.brake_dist), "acc": _f(C.BRAKE_ACC),
                           "s_b": _f(P.traj.s_b), "s_stop": _f(P.s_stop),
-                          "pass_run": _f(PASS_RUN),
+                          "pass_run": _f(C.PASS_RUN),
                           "pass_lag": _f(P.pass_lag), "pass_actual": _f(P.pass_actual),
-                          "wall_left": _f((P.tol or 0.0) + M_BACK)}
+                          "wall_left": _f((P.tol or 0.0) + C.M_BACK)}
         nv, nr, rej = gate_in.counters()
         g["det"] = {"n_valid": nv, "n_rej": nr, "rej": rej}
         if ds:
@@ -2881,10 +2655,10 @@ class GateRun:
         g["why"] = self.last_why        # 上一次放弃的原因 (回手动段后网页提示行显示)
         if self.seg == "manual" and self.pre:
             pr = self.pre
-            g["pre"] = {"ok_full": bool(pr["ok_full"]), "v_set": _f(DASH_V), "v_room": _f(pr["v_room"]),
+            g["pre"] = {"ok_full": bool(pr["ok_full"]), "v_set": _f(C.DASH_V), "v_room": _f(pr["v_room"]),
                         "why": pr["why"], "xy_need": _f(pr["xy_need"]), "d_back_need": _f(pr["d_back_need"])}
         g["land_deferred"] = self.land_deferred
-        g["shadow"] = bool(GATE_SHADOW)
+        g["shadow"] = bool(C.GATE_SHADOW)
         telem_put("gate", g)
 
         # ---- gate.csv
@@ -2940,7 +2714,7 @@ class GateRun:
         """
         self.back_ok = False
         dash_tilt_on[0] = False
-        set_phase("gate", vel=GATE_PRE_VEL_LIM)
+        set_phase("gate", vel=C.GATE_PRE_VEL_LIM)
         self.set_seg("manual", why or "按 T 开始找环/规划")
         if self.keys is None:
             rospy.logwarn("[gate] 没有终端键盘 —— 跳过手动段, 直接找环")
@@ -2969,26 +2743,26 @@ class GateRun:
             if mv is not None:
                 vbx = vby = vz = yr = 0.0
                 if mv == 'w':
-                    vbx = TELEOP_XY_SPEED
+                    vbx = C.TELEOP_XY_SPEED
                 elif mv == 's':
-                    vbx = -TELEOP_XY_SPEED
+                    vbx = -C.TELEOP_XY_SPEED
                 elif mv == 'a':
-                    vby = TELEOP_XY_SPEED
+                    vby = C.TELEOP_XY_SPEED
                 elif mv == 'd':
-                    vby = -TELEOP_XY_SPEED
+                    vby = -C.TELEOP_XY_SPEED
                 elif mv == 'r':
-                    vz = TELEOP_Z_SPEED
+                    vz = C.TELEOP_Z_SPEED
                 elif mv == 'f':
-                    vz = -TELEOP_Z_SPEED
+                    vz = -C.TELEOP_Z_SPEED
                 elif mv == 'q':
-                    yr = TELEOP_YAW_RATE
+                    yr = C.TELEOP_YAW_RATE
                 elif mv == 'e':
-                    yr = -TELEOP_YAW_RATE
+                    yr = -C.TELEOP_YAW_RATE
             idle = now - t_key
-            if idle > TELEOP_DEADMAN:
+            if idle > C.TELEOP_DEADMAN:
                 vbx = vby = vz = yr = 0.0
-            if idle > GATE_MANUAL_TIMEOUT:
-                raise GateStop(f"手动段 {GATE_MANUAL_TIMEOUT:.0f}s 没有按键", retry=False)
+            if idle > C.GATE_MANUAL_TIMEOUT:
+                raise GateStop(f"手动段 {C.GATE_MANUAL_TIMEOUT:.0f}s 没有按键", retry=False)
             cy, sy = math.cos(yaw), math.sin(yaw)
             vx, vy = vbx * cy - vby * sy, vbx * sy + vby * cy
             tx += vx * dt
@@ -2996,10 +2770,10 @@ class GateRun:
             yaw = wrap_pi(yaw + yr * dt)
             ddx, ddy = tx - INITIAL_X, ty - INITIAL_Y
             r = math.hypot(ddx, ddy)
-            if r > TELEOP_XY_MAX:
-                tx, ty = INITIAL_X + ddx * TELEOP_XY_MAX / r, INITIAL_Y + ddy * TELEOP_XY_MAX / r
+            if r > C.TELEOP_XY_MAX:
+                tx, ty = INITIAL_X + ddx * C.TELEOP_XY_MAX / r, INITIAL_Y + ddy * C.TELEOP_XY_MAX / r
                 vx = vy = 0.0
-            tz = INITIAL_Z + clamp(tz + vz * dt - INITIAL_Z, TELEOP_DZ_MIN, TELEOP_DZ_MAX)
+            tz = INITIAL_Z + clamp(tz + vz * dt - INITIAL_Z, C.TELEOP_DZ_MIN, C.TELEOP_DZ_MAX)
             self.yaw_sp = yaw
             setpoint.set_zhold_mode(tx, ty, tz, yaw, vx, vy)
             if now - self.t_log > 1.0:
@@ -3009,9 +2783,9 @@ class GateRun:
                 self._rej_snap, rtxt = gate_in.rej_since(getattr(self, "_rej_snap", None))
                 if lv is not None and now - lv["recv"] < 1.0:
                     dc = math.hypot(lv["c"][0] - pn[0], lv["c"][1] - pn[1])
-                    dmin = gp.d_run_for(DASH_V, self.params)
-                    hint = ("就地起跑" if dmin <= dc <= max(dmin, D_RUN_MAX) else
-                            ("会后退到 %.1fm" % dmin) if dc < dmin else ("会前进到 %.1fm" % max(dmin, D_RUN_MAX)))
+                    dmin = gp.d_run_for(C.DASH_V, self.params)
+                    hint = ("就地起跑" if dmin <= dc <= max(dmin, C.D_RUN_MAX) else
+                            ("会后退到 %.1fm" % dmin) if dc < dmin else ("会前进到 %.1fm" % max(dmin, C.D_RUN_MAX)))
                     seen = f"看到环: 水平 {dc:.2f}m 高差 {lv['c'][2] - pn[2]:+.2f}m ({hint})"
                     seen += "  " + self.manual_precheck(pn, now)
                 else:
@@ -3019,7 +2793,7 @@ class GateRun:
                     self.pre = None
                 rospy.loginfo(f"    [manual] d=({pn[0]-INITIAL_X:+.2f},{pn[1]-INITIAL_Y:+.2f},"
                               f"{pn[2]-INITIAL_Z:+.2f}) yaw={math.degrees(yaw):+.0f}°  {seen}  "
-                              f"(无按键 {idle:.0f}s / {GATE_MANUAL_TIMEOUT:.0f}s)")
+                              f"(无按键 {idle:.0f}s / {C.GATE_MANUAL_TIMEOUT:.0f}s)")
             dt = self.tick()
         setpoint.set_zhold_mode(tx, ty, tz, yaw, 0.0, 0.0)
 
@@ -3039,21 +2813,21 @@ class GateRun:
             aims = [s["aim"] for s in smp if s.get("aim")]
             aim = tuple(gp.median([a[i] for a in aims]) for i in range(3)) if aims else c
             r = gp.preflight_check(aim, c, None, self.origin, self.params, 0.0,
-                                   virtual_offset=GATE_VIRTUAL_OFFSET, p_now=pn)
+                                   virtual_offset=C.GATE_VIRTUAL_OFFSET, p_now=pn)
         except Exception as e:
             return f"(预规划出错: {e})"
         if r["ok_full"]:
-            txt = f"按 {DASH_V:.1f} m/s: ✓ 放得下"
+            txt = f"按 {C.DASH_V:.1f} m/s: ✓ 放得下"
         else:
-            txt = (f"按 {DASH_V:.1f} m/s: ✗ {r['why'] or '不可行'} → 最高 "
+            txt = (f"按 {C.DASH_V:.1f} m/s: ✗ {r['why'] or '不可行'} → 最高 "
                    + (f"{r['v_room']:.1f} m/s" if r["v_room"] is not None else "—")
-                   + (f", 满速要 xy_radius ≥ {r['xy_need']:.1f}" if r["xy_need"] and r["xy_need"] > GATE_XY_MAX else ""))
+                   + (f", 满速要 xy_radius ≥ {r['xy_need']:.1f}" if r["xy_need"] and r["xy_need"] > C.GATE_XY_MAX else ""))
             if not (self.pre or {}).get("_warned"):
                 rospy.logwarn(f"[gate] ★ 预规划 (按 T 之前): {txt}")
                 r["_warned"] = True
             elif self.pre:
                 r["_warned"] = True
-        r.update(_t=now, _txt=txt, v_set=DASH_V)
+        r.update(_t=now, _txt=txt, v_set=C.DASH_V)
         self.pre = r
         return txt
 
@@ -3075,33 +2849,33 @@ class GateRun:
 
     # ---------------- ACQUIRE ----------------
     def acquire(self):
-        self.set_seg("wait", f"悬停识别 (窗口 {HOVER_ACQ:.0f}s, 至少 {GATE_ACQ_MIN_N} 帧)")
-        set_phase("gate", vel=GATE_PRE_VEL_LIM)
+        self.set_seg("wait", f"悬停识别 (窗口 {C.HOVER_ACQ:.0f}s, 至少 {C.GATE_ACQ_MIN_N} 帧)")
+        set_phase("gate", vel=C.GATE_PRE_VEL_LIM)
         t_start = rospy.Time.now().to_sec()
         yaw0 = self.yaw_sp
-        scan = [yaw0 + math.radians(GATE_SCAN_DEG), yaw0 - math.radians(GATE_SCAN_DEG), yaw0]
+        scan = [yaw0 + math.radians(C.GATE_SCAN_DEG), yaw0 - math.radians(C.GATE_SCAN_DEG), yaw0]
         scan_i = None                      # None = 还没开始扫; len(scan) = 扫完了
         hp = (self.p_hover[0], self.p_hover[1], self.z_hold)
         self.p_hover = hp
         dt = 0.0
-        tol = math.radians(GATE_YAW_TOL_DEG)
+        tol = math.radians(C.GATE_YAW_TOL_DEG)
         last_why = "还没看到环"
         rej_snap, _ = gate_in.rej_since(None)
         while True:
             now = rospy.Time.now().to_sec()
             p = self.pos()
             # 只用进入 ACQUIRE 之后收到的帧 (起飞爬升中的帧不算)
-            smp = gate_in.valid_since(max(t_start, now - HOVER_ACQ))
-            fresh = [s for s in smp if now - s["recv"] < GATE_STATUS_MAX_AGE]
+            smp = gate_in.valid_since(max(t_start, now - C.HOVER_ACQ))
+            fresh = [s for s in smp if now - s["recv"] < C.GATE_STATUS_MAX_AGE]
             scanning = False
             if fresh:                      # 看得到: 机头转向环心
                 c = fresh[-1]["c"]
                 target = math.atan2(c[1] - p[1], c[0] - p[0])
-            elif not smp and now - t_start > GATE_ACQ_SCAN_AFTER and (scan_i or 0) < len(scan):
+            elif not smp and now - t_start > C.GATE_ACQ_SCAN_AFTER and (scan_i or 0) < len(scan):
                 if scan_i is None:
                     scan_i = 0
-                    rospy.logwarn(f"[gate] {GATE_ACQ_SCAN_AFTER:.0f}s 没看到环 —— "
-                                  f"±{GATE_SCAN_DEG:.0f}° 慢扫一次")
+                    rospy.logwarn(f"[gate] {C.GATE_ACQ_SCAN_AFTER:.0f}s 没看到环 —— "
+                                  f"±{C.GATE_SCAN_DEG:.0f}° 慢扫一次")
                 target, scanning = scan[scan_i], True
             else:
                 target = self.yaw_sp
@@ -3109,14 +2883,14 @@ class GateRun:
             if scanning and abs(wrap_pi(target - self.yaw_sp)) < 1e-3 and abs(err) < tol:
                 scan_i += 1
             self.hold(hp)
-            if len(smp) >= GATE_ACQ_MIN_N and fresh and abs(err) < math.radians(GATE_YAW_TOL_DEG):
+            if len(smp) >= C.GATE_ACQ_MIN_N and fresh and abs(err) < math.radians(C.GATE_YAW_TOL_DEG):
                 d_los = gp.hunit(gp.vsub(fresh[-1]["c"], p)) or (math.cos(self.yaw_sp), math.sin(self.yaw_sp), 0.0)
                 f = gp.fuse_samples(smp, p, d=d_los)
                 self._raw_sigma(f, smp)
                 sh, sv, sa = f["spread_hva"]
                 if f.get("raw"):                     # 每帧原始环心: 散布本来就大, 看中值的标准误
                     sh, sv, sa = (x * 2.56 / 1.25 for x in f["sig_hva"])
-                if max(sh, sv) <= GATE_ACQ_SPREAD_CM and sa <= 2.0 * GATE_ACQ_SPREAD_CM:
+                if max(sh, sv) <= C.GATE_ACQ_SPREAD_CM and sa <= 2.0 * C.GATE_ACQ_SPREAD_CM:
                     self._sd_fields(f)
                     self.acq = f
                     rospy.loginfo(f"[gate] 粗估: 环心 ({f['c'][0]:+.2f},{f['c'][1]:+.2f},{f['c'][2]:+.2f}) "
@@ -3124,14 +2898,14 @@ class GateRun:
                                   f"法向 {'有' if f.get('n') else '无'}  红点 {'有' if f.get('aim') else '无'}")
                     return
                 last_why = (f"样本离散 横{max(sh, sv):.1f}/深{sa:.1f}cm > "
-                            f"{GATE_ACQ_SPREAD_CM:.0f}/{2 * GATE_ACQ_SPREAD_CM:.0f}cm")
+                            f"{C.GATE_ACQ_SPREAD_CM:.0f}/{2 * C.GATE_ACQ_SPREAD_CM:.0f}cm")
             elif smp:
-                last_why = f"有效帧 {len(smp)}/{GATE_ACQ_MIN_N}" + (
-                    "" if abs(err) < math.radians(GATE_YAW_TOL_DEG) else
+                last_why = f"有效帧 {len(smp)}/{C.GATE_ACQ_MIN_N}" + (
+                    "" if abs(err) < math.radians(C.GATE_YAW_TOL_DEG) else
                     f", 机头还差 {math.degrees(err):+.0f}°")
-            if now - t_start > GATE_ACQ_TIMEOUT:
+            if now - t_start > C.GATE_ACQ_TIMEOUT:
                 nv, nr, rej = gate_in.counters()
-                self.fail(f"{GATE_ACQ_TIMEOUT:.0f}s 内没拿到稳定识别 ({last_why}; "
+                self.fail(f"{C.GATE_ACQ_TIMEOUT:.0f}s 内没拿到稳定识别 ({last_why}; "
                           f"拒绝原因 {', '.join(f'{k}={v}' for k, v in rej.items() if v)})")
             if now - self.t_log > 1.0:
                 self.t_log = now
@@ -3145,7 +2919,7 @@ class GateRun:
     def make_plan(self, est, p_from, label):
         aim = est.get("aim") or est["c"]
         P = gp.plan_dash(aim, est["c"], est.get("n"), p_from, self.origin, self.params,
-                         virtual_offset=GATE_VIRTUAL_OFFSET)
+                         virtual_offset=C.GATE_VIRTUAL_OFFSET)
         if not P.ok:
             self.fail(f"{label}: " + "; ".join(P.errors))
         self.plan = P
@@ -3162,7 +2936,7 @@ class GateRun:
             a_h, a_v = gp.vdot(gp.vsub(P.aim, c0), r_), gp.vdot(gp.vsub(P.aim, c0), u_)
             rospy.loginfo(f"[gate]   靶面 (相对环心, 右/上 cm): 目标 ({t_h*100:+.0f},{t_v*100:+.0f})  "
                           f"机体中心瞄 ({a_h*100:+.0f},{a_v*100:+.0f})  "
-                          f"针尖预计 ({(a_h+NEEDLE_RIGHT)*100:+.0f},{(a_v+NEEDLE_UP)*100:+.0f})"
+                          f"针尖预计 ({(a_h+C.NEEDLE_RIGHT)*100:+.0f},{(a_v+C.NEEDLE_UP)*100:+.0f})"
                           + (f"  ★偏离目标 {P.tool_miss*100:.0f}cm" if P.aim_clamped else ""))
         rospy.loginfo(f"[gate]   起跑点 S=({S[0]:+.2f},{S[1]:+.2f},{S[2]:+.2f})  "
                       f"制动终点 E=({P.E[0]:+.2f},{P.E[1]:+.2f},{P.E[2]:+.2f})  "
@@ -3182,32 +2956,32 @@ class GateRun:
         sp = self.pos()
         t_end = rospy.Time.now().to_sec() + timeout
         reach = 0
-        need = max(1, int(round(0.5 * GATE_LOOP_HZ)))
+        need = max(1, int(round(0.5 * C.GATE_LOOP_HZ)))
         dt = 0.0
         while True:
             now = rospy.Time.now().to_sec()
             p = self.pos()
             d = gp.vsub(S, sp)
             dn = gp.vnorm(d)
-            step = GATE_REPO_V * dt
+            step = C.GATE_REPO_V * dt
             sp = S if dn <= step else gp.vadd(sp, gp.vmul(d, step / max(dn, 1e-9)))
             lead = gp.vsub(sp, p)
             ln = gp.vnorm(lead)
-            if ln > GATE_REPO_LEASH:
-                sp = gp.vadd(p, gp.vmul(lead, GATE_REPO_LEASH / ln))
+            if ln > C.GATE_REPO_LEASH:
+                sp = gp.vadd(p, gp.vmul(lead, C.GATE_REPO_LEASH / ln))
             if yaw_mode == "ring":
                 c = (self.used() or {}).get("c") or P.aim
                 if math.hypot(c[0] - p[0], c[1] - p[1]) > 0.5:
                     self.yaw_step(math.atan2(c[1] - p[1], c[0] - p[0]), dt)
             else:
                 self.yaw_step(yaw_mode, dt)
-            vff = gp.vmul(d, GATE_REPO_V / dn) if dn > step and ln <= GATE_REPO_LEASH else (0.0, 0.0, 0.0)
+            vff = gp.vmul(d, C.GATE_REPO_V / dn) if dn > step and ln <= C.GATE_REPO_LEASH else (0.0, 0.0, 0.0)
             setpoint.set_zhold_mode(sp[0], sp[1], sp[2], self.yaw_sp, vff[0], vff[1])
             x_ring = gp.vdot(gp.vsub(p, P.aim), fwd)
-            if x_ring > REPO_X_MAX + 0.3:
-                self.fail(f"摆位中离环平面只剩 {-x_ring:.2f}m (< {-REPO_X_MAX:.1f}m)")
+            if x_ring > C.REPO_X_MAX + 0.3:
+                self.fail(f"摆位中离环平面只剩 {-x_ring:.2f}m (< {-C.REPO_X_MAX:.1f}m)")
             err = gp.vnorm(gp.vsub(S, p))
-            reach = reach + 1 if (err < GATE_REPO_TOL and sp == S) else 0
+            reach = reach + 1 if (err < C.GATE_REPO_TOL and sp == S) else 0
             if reach >= need:
                 return
             if now > t_end:
@@ -3223,7 +2997,7 @@ class GateRun:
         while True:
             err = self.yaw_step(yaw_target, dt)
             self.hold(hold_p)
-            if abs(err) < math.radians(GATE_YAW_TOL_DEG) and \
+            if abs(err) < math.radians(C.GATE_YAW_TOL_DEG) and \
                     abs(wrap_pi(yaw_target - self.yaw_sp)) < 1e-3:
                 return
             if rospy.Time.now().to_sec() > t_end:
@@ -3232,22 +3006,22 @@ class GateRun:
 
     # ---------------- ALIGN ----------------
     def align(self, hold_p):
-        self.set_seg("align", f"在 {'原地 (影子)' if GATE_SHADOW else '起跑点'} 取样 {HOVER_ALIGN:.0f}s → 锁定")
+        self.set_seg("align", f"在 {'原地 (影子)' if C.GATE_SHADOW else '起跑点'} 取样 {C.HOVER_ALIGN:.0f}s → 锁定")
         t_al = rospy.Time.now().to_sec() + 0.5          # 转头/刹停后先稳 0.5s
         last_why = ""
         while True:
             now = rospy.Time.now().to_sec()
             self.hold(hold_p)
-            if now - t_al >= HOVER_ALIGN:
+            if now - t_al >= C.HOVER_ALIGN:
                 p, v = self.pos(), self.vel()
-                smp = gate_in.valid_since(max(t_al, now - HOVER_ALIGN))
+                smp = gate_in.valid_since(max(t_al, now - C.HOVER_ALIGN))
                 d_in = self.plan.dir if self.plan is not None and self.plan.dir is not None else \
                     (gp.hunit(gp.vsub(smp[-1]["c"], p)) if smp else None)
                 f = gp.fuse_samples(smp, p, d=d_in) if d_in is not None else gp.fuse_samples(smp, p)
                 self._raw_sigma(f, smp)
                 why = []
-                if f["k"] < GATE_ACQ_MIN_N:
-                    why.append(f"有效帧 {f['k']} < {GATE_ACQ_MIN_N}")
+                if f["k"] < C.GATE_ACQ_MIN_N:
+                    why.append(f"有效帧 {f['k']} < {C.GATE_ACQ_MIN_N}")
                 else:
                     # 横向 (h, v) 和深度分开判 (首飞问题 §1)
                     sh, sv, sa = f.get("spread_hva") or (f["spread_cm"],) * 3
@@ -3255,24 +3029,24 @@ class GateRun:
                         # 每帧原始环心: 单帧散布大是正常的 (几 cm ~ 深度十几 cm), 精度看中值的标准误
                         # (下面的 σ 判定已经用了实际散布); 这里只拦散得离谱的 (野值 / 两个解来回跳)
                         sh, sv, sa = sh / 4.0, sv / 4.0, sa / 4.0
-                    if max(sh, sv) > GATE_ALIGN_SPREAD_CM:
-                        why.append(f"环心横向离散 {max(sh, sv):.1f}cm > {GATE_ALIGN_SPREAD_CM:.0f}")
-                    if sa > GATE_ALIGN_SPREAD_ALONG_CM:
-                        why.append(f"环心深度离散 {sa:.1f}cm > {GATE_ALIGN_SPREAD_ALONG_CM:.0f}")
+                    if max(sh, sv) > C.GATE_ALIGN_SPREAD_CM:
+                        why.append(f"环心横向离散 {max(sh, sv):.1f}cm > {C.GATE_ALIGN_SPREAD_CM:.0f}")
+                    if sa > C.GATE_ALIGN_SPREAD_ALONG_CM:
+                        why.append(f"环心深度离散 {sa:.1f}cm > {C.GATE_ALIGN_SPREAD_ALONG_CM:.0f}")
                     ah_, av_, _ = f.get("aim_spread_hva") or (f.get("aim_spread_cm", 0.0),) * 3
-                    if max(ah_, av_) > GATE_ALIGN_SPREAD_CM:
-                        why.append(f"红点横向离散 {max(ah_, av_):.1f}cm > {GATE_ALIGN_SPREAD_CM:.0f}")
+                    if max(ah_, av_) > C.GATE_ALIGN_SPREAD_CM:
+                        why.append(f"红点横向离散 {max(ah_, av_):.1f}cm > {C.GATE_ALIGN_SPREAD_CM:.0f}")
                     if self.acq and self.acq.get("n") and f.get("n"):
                         a = gp.ang_deg(self.acq["n"], f["n"])
-                        if a > GATE_N_AGREE_DEG:
-                            why.append(f"两个视角的法向差 {a:.1f}° > {GATE_N_AGREE_DEG:.0f}° (翻转解?)")
-                    if gp.vnorm(v) > GATE_START_V_MAX:
+                        if a > C.GATE_N_AGREE_DEG:
+                            why.append(f"两个视角的法向差 {a:.1f}° > {C.GATE_N_AGREE_DEG:.0f}° (翻转解?)")
+                    if gp.vnorm(v) > C.GATE_START_V_MAX:
                         why.append(f"飞机还在动 {gp.vnorm(v):.2f}m/s")
                     sg = f.get("sig_hva") or (gp.median([s["sd"] for s in smp]),) * 3
-                    if max(sg[0], sg[1]) > GATE_LOCK_SD_LAT_CM:
-                        why.append(f"识别横向 σ 中位数 {max(sg[0], sg[1]):.1f}cm > {GATE_LOCK_SD_LAT_CM:.0f}")
-                    if sg[2] > GATE_LOCK_SD_ALONG_CM:
-                        why.append(f"识别深度 σ 中位数 {sg[2]:.1f}cm > {GATE_LOCK_SD_ALONG_CM:.0f}")
+                    if max(sg[0], sg[1]) > C.GATE_LOCK_SD_LAT_CM:
+                        why.append(f"识别横向 σ 中位数 {max(sg[0], sg[1]):.1f}cm > {C.GATE_LOCK_SD_LAT_CM:.0f}")
+                    if sg[2] > C.GATE_LOCK_SD_ALONG_CM:
+                        why.append(f"识别深度 σ 中位数 {sg[2]:.1f}cm > {C.GATE_LOCK_SD_ALONG_CM:.0f}")
                 if not why:
                     self._sd_fields(f)
                     f["t_lock"] = now
@@ -3290,8 +3064,8 @@ class GateRun:
                 if now - self.t_log > 1.0:
                     self.t_log = now
                     rospy.loginfo(f"    [align] 还不能锁定: {last_why}")
-                if now - t_al > GATE_ALIGN_MAX_S:
-                    self.fail(f"取样 {GATE_ALIGN_MAX_S:.0f}s 仍不收敛: {last_why}")
+                if now - t_al > C.GATE_ALIGN_MAX_S:
+                    self.fail(f"取样 {C.GATE_ALIGN_MAX_S:.0f}s 仍不收敛: {last_why}")
             self.tick()
 
     # ---------------- COMMIT ----------------
@@ -3300,35 +3074,35 @@ class GateRun:
         self.set_seg("commit", "等确认")
         rospy.logwarn("=" * 64)
         rospy.logwarn(f"[gate] 计划: {P.summary()}")
-        if P.v < DASH_V - 1e-9:
-            rospy.logwarn(f"[gate] ★ 冲刺速度被场地压到 {P.v:.2f} m/s (设定 {DASH_V:.2f}) —— 原因见上面"
+        if P.v < C.DASH_V - 1e-9:
+            rospy.logwarn(f"[gate] ★ 冲刺速度被场地压到 {P.v:.2f} m/s (设定 {C.DASH_V:.2f}) —— 原因见上面"
                           f"'场地限制'那行; 不接受就按 M 回手动段")
-        if GATE_VIRTUAL_OFFSET > 0:
-            rospy.logwarn(f"[gate] ★ 虚拟环: 会停在真纸面前约 {GATE_VIRTUAL_OFFSET - P.s_stop:.2f}m")
+        if C.GATE_VIRTUAL_OFFSET > 0:
+            rospy.logwarn(f"[gate] ★ 虚拟环: 会停在真纸面前约 {C.GATE_VIRTUAL_OFFSET - P.s_stop:.2f}m")
         need_y = bool(P.need_confirm)     # 降速了 → 只认 Y, G 不算
         go_key = 'y' if need_y else 'g'
         if need_y:
-            rospy.logerr(f"[gate] ★★★ 降速: 计划 {P.v:.2f} m/s, 设定 {DASH_V:.2f} m/s —— 按 {DASH_V:.2f} 卡在: {P.slow_why}")
+            rospy.logerr(f"[gate] ★★★ 降速: 计划 {P.v:.2f} m/s, 设定 {C.DASH_V:.2f} m/s —— 按 {C.DASH_V:.2f} 卡在: {P.slow_why}")
             rospy.logerr(f"[gate] ★★★ 接受 {P.v:.2f} m/s 就按 **Y** 冲刺 (G 不算)  |  不接受按 M 回手动段, 挪位置后 T 重来")
-        if GATE_CONFIRM_DASH or need_y:
+        if C.GATE_CONFIRM_DASH or need_y:
             if self.keys is None:
                 self.fail("要按键确认冲刺, 但没有终端键盘")
-            back = "回手动段" if (GATE_ABORT_TO_MANUAL and self.back_ok) else "降落"
+            back = "回手动段" if (C.GATE_ABORT_TO_MANUAL and self.back_ok) else "降落"
             rospy.logwarn(f"[gate] ★★ 按 G 冲刺 (之后不能中止, 只有 X 停桨)  |  M / 方向键 = 不冲了, 回手动段  "
-                          f"|  L = 降落  |  {GATE_CONFIRM_TIMEOUT:.0f}s 不按 = {back}")
+                          f"|  L = 降落  |  {C.GATE_CONFIRM_TIMEOUT:.0f}s 不按 = {back}")
         rospy.logwarn("=" * 64)
-        t_end = rospy.Time.now().to_sec() + GATE_CONFIRM_TIMEOUT
-        while GATE_CONFIRM_DASH or need_y:
+        t_end = rospy.Time.now().to_sec() + C.GATE_CONFIRM_TIMEOUT
+        while C.GATE_CONFIRM_DASH or need_y:
             self.hold(P.S)
             self.tick()
             if go_key in self.flags:
                 rospy.logwarn(f"[gate] {go_key.upper()} → 冲刺 {P.v:.2f} m/s")
                 break
             if need_y and 'g' in self.flags:
-                rospy.logwarn(f"[gate] 这次降速了 ({P.v:.2f} < {DASH_V:.2f} m/s), G 不算 —— 接受就按 Y, 不接受按 M")
+                rospy.logwarn(f"[gate] 这次降速了 ({P.v:.2f} < {C.DASH_V:.2f} m/s), G 不算 —— 接受就按 Y, 不接受按 M")
             now = rospy.Time.now().to_sec()
             if now > t_end:
-                self.fail(f"{GATE_CONFIRM_TIMEOUT:.0f}s 没按 {go_key.upper()}")
+                self.fail(f"{C.GATE_CONFIRM_TIMEOUT:.0f}s 没按 {go_key.upper()}")
             if now - self.t_log > 5.0:
                 self.t_log = now
                 lv = gate_in.latest_valid()
@@ -3336,11 +3110,11 @@ class GateRun:
                     d = gp.vnorm(gp.vsub(lv["c"], self.locked["c"])) * 100
                     rospy.loginfo(f"    [commit] 等 G … 最新识别和锁定值差 {d:.0f}cm")
         # 停稳在起跑点
-        t_end = rospy.Time.now().to_sec() + GATE_START_WAIT
+        t_end = rospy.Time.now().to_sec() + C.GATE_START_WAIT
         while True:
             p, v = self.pos(), self.vel()
             e = gp.vnorm(gp.vsub(p, P.S))
-            if e < GATE_START_TOL and gp.vnorm(v) < GATE_START_V_MAX:
+            if e < C.GATE_START_TOL and gp.vnorm(v) < C.GATE_START_V_MAX:
                 return
             if rospy.Time.now().to_sec() > t_end:
                 self.fail(f"起跑前没停稳: 离 S {e:.2f}m, 速度 {gp.vnorm(v):.2f}m/s")
@@ -3363,10 +3137,10 @@ class GateRun:
         self.back_ok = False
         dash_tilt_on[0] = True                             # 停桨线换成 GATE_DASH_TILT_DEG
         self.t0 = rospy.Time.now().to_sec() + 0.05
-        setpoint.set_traj_mode(sampler, self.t0, yaw_d, GATE_ACC_FF)
+        setpoint.set_traj_mode(sampler, self.t0, yaw_d, C.GATE_ACC_FF)
         self.set_seg("dash", f"t0, {P.v:.2f}m/s, 预计 {tr.T:.2f}s 后停在 s={P.s_stop:+.2f}")
         stuck_since = None
-        t_wait_end = tr.T + 3.0 * T_LAG
+        t_wait_end = tr.T + 3.0 * C.T_LAG
         warned_dev = False
         while True:
             now = rospy.Time.now().to_sec()
@@ -3381,17 +3155,17 @@ class GateRun:
             if not self.passed and s_e > 0.0:
                 self.passed = True
                 rospy.logwarn(f"[gate] 过纸面 (估计) v={v_e:.2f}m/s  t={t:.2f}s")
-            if abs(s_e - s_p) > GATE_DEV_WARN and not warned_dev:
+            if abs(s_e - s_p) > C.GATE_DEV_WARN and not warned_dev:
                 warned_dev = True
                 rospy.logwarn(f"[gate] 估计 s 和规划差 {s_e - s_p:+.2f}m (只记录, 不改时间表)")
             # 卡纸: 机尾还没过纸面就被顶住。两种样子:
             #   ① 还在冲: 实测比规划慢 > DV, 且落后 > DS
             #   ② 规划已经慢下来 (刹车段后半): 落后 > DS 且实测几乎停了
             lag_s = s_p - s_e
-            if GATE_STUCK_ENABLE and t > 0.3 and s_e < L_R and lag_s > GATE_STUCK_DS and \
-                    (v_p - v_e > GATE_STUCK_DV or v_e < GATE_STOP_V):
+            if C.GATE_STUCK_ENABLE and t > 0.3 and s_e < C.L_R and lag_s > C.GATE_STUCK_DS and \
+                    (v_p - v_e > C.GATE_STUCK_DV or v_e < C.GATE_STOP_V):
                 stuck_since = stuck_since if stuck_since is not None else now
-                if now - stuck_since >= GATE_STUCK_HOLD:
+                if now - stuck_since >= C.GATE_STUCK_HOLD:
                     self.lvl = 1
                     self.outcome = "stuck"
                     self.hold(p)
@@ -3400,10 +3174,10 @@ class GateRun:
                     return
             else:
                 stuck_since = None
-            if t >= t_wait_end and math.hypot(v[0], v[1]) < GATE_STOP_V:
+            if t >= t_wait_end and math.hypot(v[0], v[1]) < C.GATE_STOP_V:
                 break
-            if t >= tr.T + GATE_STOP_EXTRA:
-                rospy.logwarn(f"[gate] 轨迹结束 {GATE_STOP_EXTRA:.1f}s 还没停稳 "
+            if t >= tr.T + C.GATE_STOP_EXTRA:
+                rospy.logwarn(f"[gate] 轨迹结束 {C.GATE_STOP_EXTRA:.1f}s 还没停稳 "
                               f"(v={math.hypot(v[0], v[1]):.2f}m/s) —— 照样转悬停")
                 break
             self.tick(dash=True)
@@ -3421,7 +3195,7 @@ def phase_gate(z_hold):
       LAND / 接管 / 手动段超时 → 原地悬停后返回 (降落)。影子模式做完也回手动段。
       FATAL (X 键 / 倾角 / 断链) 照常抛 RuntimeError 给 main 的 cleanup。
     """
-    set_phase("gate", vel=GATE_PRE_VEL_LIM)
+    set_phase("gate", vel=C.GATE_PRE_VEL_LIM)
     run = GateRun(z_hold)
     if sys.stdin.isatty():
         try:
@@ -3432,8 +3206,8 @@ def phase_gate(z_hold):
             run.keys = None
     rospy.loginfo("[gate] 键盘: 手动段 WASD/RF/QE/空格 + T = 开始 | 冲刺前 M 或方向键 = 回手动段 | "
                   "G = 确认冲刺 | L = 降落 | X = 停桨")
-    can_retry = run.keys is not None and GATE_ABORT_TO_MANUAL
-    manual_on = GATE_MANUAL_START
+    can_retry = run.keys is not None and C.GATE_ABORT_TO_MANUAL
+    manual_on = C.GATE_MANUAL_START
     why_manual = ""
     try:
         while True:
@@ -3443,7 +3217,7 @@ def phase_gate(z_hold):
                 run.new_attempt()
                 run.acquire()
                 run.make_plan(run.acq, run.pos(), "粗规划")
-                if GATE_SHADOW:
+                if C.GATE_SHADOW:
                     run.align(run.pos())
                     run.make_plan(run.locked, run.pos(), "锁定后规划 (影子)")
                     run.set_seg("hold", "影子模式: 不摆位不冲刺, 计划已发网页")
@@ -3459,15 +3233,15 @@ def phase_gate(z_hold):
                         continue
                 else:
                     P = run.plan
-                    run.move_to(P.S, "ring", GATE_REPO_TIMEOUT, "摆位")
+                    run.move_to(P.S, "ring", C.GATE_REPO_TIMEOUT, "摆位")
                     run.turn_to(gp.yaw_of(P.dir), P.S, "对正进入方向")
                     run.align(P.S)
                     P2 = run.make_plan(run.locked, run.pos(), "锁定后规划")
                     gap = gp.vnorm(gp.vsub(P2.S, run.pos()))
-                    if gap > GATE_START_TOL:
+                    if gap > C.GATE_START_TOL:
                         if gap > 0.5:
                             rospy.logwarn(f"[gate] 锁定后起跑点挪了 {gap:.2f}m —— 再挪过去 (不重新取样)")
-                        run.move_to(P2.S, gp.yaw_of(P2.dir), GATE_REPO_TIMEOUT, "微调起跑点")
+                        run.move_to(P2.S, gp.yaw_of(P2.dir), C.GATE_REPO_TIMEOUT, "微调起跑点")
                     run.commit()
                     run.dash()
                 break
@@ -3497,9 +3271,9 @@ def phase_gate(z_hold):
             hp = run.pos()
             run.hold(hp)
             if run.seg not in ("abort",):
-                run.set_seg("hold", f"在当前位置悬停 {GATE_HOLD_S:.1f}s 后降落")
+                run.set_seg("hold", f"在当前位置悬停 {C.GATE_HOLD_S:.1f}s 后降落")
             set_phase("gate")                     # 刹停后可能还有残速, 用冲刺档包络
-            t_end = rospy.Time.now().to_sec() + GATE_HOLD_S
+            t_end = rospy.Time.now().to_sec() + C.GATE_HOLD_S
             while rospy.Time.now().to_sec() < t_end and not stop_requested():
                 run.hold(hp)
                 try:
@@ -3527,12 +3301,12 @@ def phase_descend(z_from, yaw_hold, hold_x, hold_y):
     """
     px, py = tele.xy()
     horiz_now = math.hypot(px - INITIAL_X, py - INITIAL_Y)
-    horiz_lim = max(PHASE_ENVELOPE["descend"][0], horiz_now + ENVELOPE_MARGIN)
+    horiz_lim = max(C.PHASE_ENVELOPE["descend"][0], horiz_now + C.ENVELOPE_MARGIN)
     set_phase("descend", horiz=horiz_lim)
 
-    z_target_final = INITIAL_Z + DESCEND_Z_TARGET_DZ
+    z_target_final = INITIAL_Z + C.DESCEND_Z_TARGET_DZ
     rospy.loginfo(f"[descend] ZHOLD ramp z: {z_from:.2f} → {z_target_final:.2f} "
-                  f"({DESCEND_SPEED}m/s), xy=({hold_x:+.2f},{hold_y:+.2f}) "
+                  f"({C.DESCEND_SPEED}m/s), xy=({hold_x:+.2f},{hold_y:+.2f}) "
                   f"包络 {horiz_lim:.2f}m")
 
     # 从"指令高度"和"实际高度"里取低的那个起步。LAND 路径下 z_from 可能
@@ -3541,7 +3315,7 @@ def phase_descend(z_from, yaw_hold, hold_x, hold_y):
     target_z = min(z_from, zf0) if zf0 is not None else z_from
     rate = rospy.Rate(20)
     last = rospy.Time.now()
-    t_end = rospy.Time.now() + rospy.Duration(DESCEND_TIMEOUT)
+    t_end = rospy.Time.now() + rospy.Duration(C.DESCEND_TIMEOUT)
     t_log = rospy.Time.now()
 
     while rospy.Time.now() < t_end:
@@ -3553,7 +3327,7 @@ def phase_descend(z_from, yaw_hold, hold_x, hold_y):
         dt = min((now - last).to_sec(), 0.1)
         last = now
 
-        target_z = max(target_z - DESCEND_SPEED * dt, z_target_final)
+        target_z = max(target_z - C.DESCEND_SPEED * dt, z_target_final)
         setpoint.set_zhold_mode(hold_x, hold_y, target_z, yaw_hold, 0.0, 0.0)
 
         if (now - t_log).to_sec() >= 0.3:
@@ -3565,7 +3339,7 @@ def phase_descend(z_from, yaw_hold, hold_x, hold_y):
 
         if target_z <= z_target_final + 1e-3:
             zf = tele.z_filtered()
-            if zf is not None and abs(zf - z_target_final) < DESCEND_REACH_TOL:
+            if zf is not None and abs(zf - z_target_final) < C.DESCEND_REACH_TOL:
                 rospy.loginfo("[descend] 到达低高度，准备 auto_land")
                 return
         rate.sleep()
@@ -3579,14 +3353,14 @@ def auto_land_timeout():
     descend 超时后可能从高处切 AUTO.LAND, 写死 15s 会在 PX4 还没降完时就超时。
     """
     zf = tele.z_filtered()
-    h = max(0.0, (zf - INITIAL_Z)) if zf is not None else MAX_HEIGHT
-    return max(AUTO_LAND_TIMEOUT, h / AUTO_LAND_SPEED_EST * 1.5 + 10.0)
+    h = max(0.0, (zf - INITIAL_Z)) if zf is not None else C.MAX_HEIGHT
+    return max(C.AUTO_LAND_TIMEOUT, h / C.AUTO_LAND_SPEED_EST * 1.5 + 10.0)
 
 
 def phase_auto_land(set_mode):
     px, py = tele.xy()
     horiz_now = math.hypot(px - INITIAL_X, py - INITIAL_Y)
-    horiz_lim = max(PHASE_ENVELOPE["auto_land"][0], horiz_now + ENVELOPE_MARGIN)
+    horiz_lim = max(C.PHASE_ENVELOPE["auto_land"][0], horiz_now + C.ENVELOPE_MARGIN)
     set_phase("auto_land", horiz=horiz_lim)
 
     # 被接管了就不能再切模式 —— 那是在抢飞手的控制权
@@ -3652,7 +3426,7 @@ def phase_handover():
             keys.__enter__()
         except Exception:
             keys = None
-    rate = rospy.Rate(PHASE_LOOP_HZ)
+    rate = rospy.Rate(C.PHASE_LOOP_HZ)
     t_log = rospy.Time.now()
     try:
         while not rospy.is_shutdown():
@@ -3699,7 +3473,7 @@ def on_ground():
     if ls in (2, 3, 4):                   # IN_AIR / TAKEOFF / LANDING
         return False
     zf = tele.z_filtered()
-    return zf is not None and (zf - INITIAL_Z) < TAKEOFF_LIFTOFF_DZ
+    return zf is not None and (zf - INITIAL_Z) < C.TAKEOFF_LIFTOFF_DZ
 
 
 def cleanup_decision(fatal, takeover_mode, armed, grounded, mode):
@@ -3749,7 +3523,7 @@ def restore_ground_mode(set_mode, grounded):
         rospy.loginfo(f"cleanup: 模式 {st.mode}, 保持不动")
         return st.mode
     tried = []
-    for m in (start_mode[0], PARK_MODE, "AUTO.LAND"):
+    for m in (start_mode[0], C.PARK_MODE, "AUTO.LAND"):
         if not m or m == "OFFBOARD" or m in tried:
             continue
         tried.append(m)
@@ -3769,7 +3543,7 @@ def restore_ground_mode(set_mode, grounded):
             time.sleep(0.05)
         rospy.loginfo(f"cleanup: PX4 没接受 {m}")
     cur = tele.state.mode if tele.state else "?"
-    rospy.logwarn(f"cleanup: 停在 {cur} 切不走 (试过 {', '.join(tried)}) —— 下一次开局会先切 {PARK_MODE}")
+    rospy.logwarn(f"cleanup: 停在 {cur} 切不走 (试过 {', '.join(tried)}) —— 下一次开局会先切 {C.PARK_MODE}")
     return None
 
 
@@ -3789,18 +3563,18 @@ def arm_with_confirm(arm_srv):
     不自动重试: 被拒后现场的人可能已经走到飞机旁边看情况, 这时自动重试一旦成功,
     飞机会立刻解锁并直接进入起飞。等待确认期间 setpoint 照常发布, 模式保持 OFFBOARD。
     """
-    for attempt in range(1, ARM_MAX_TRIES + 1):
+    for attempt in range(1, C.ARM_MAX_TRIES + 1):
         check_abort()
         cur = tele.state.mode if tele.state else "?"
         if cur != "OFFBOARD":
             raise RuntimeError(f"arm 前模式已不是 OFFBOARD (当前 {cur})")
 
         t0 = rospy.Time.now().to_sec()
-        rospy.loginfo(f"[arm] arming (第 {attempt}/{ARM_MAX_TRIES} 次)")
+        rospy.loginfo(f"[arm] arming (第 {attempt}/{C.ARM_MAX_TRIES} 次)")
         r = arm_srv(True)
 
         if r.success:
-            t_end = rospy.Time.now() + rospy.Duration(ARM_TIMEOUT)
+            t_end = rospy.Time.now() + rospy.Duration(C.ARM_TIMEOUT)
             while rospy.Time.now() < t_end:
                 check_abort()
                 if tele.state and tele.state.armed:
@@ -3832,10 +3606,10 @@ def arm_with_confirm(arm_srv):
             rospy.logerr("[arm]   没收到任何飞控消息 —— STATUSTEXT 链路不通, 看不到拒绝原因。"
                          "看 QGC 消息栏, 或在 QGC MAVLink 控制台跑 commander check")
 
-        if attempt >= ARM_MAX_TRIES:
+        if attempt >= C.ARM_MAX_TRIES:
             break
         _flush_stdin()
-        ans = input(f"\n[arm] 确认桨周围无人后按回车重试 ({attempt + 1}/{ARM_MAX_TRIES}), "
+        ans = input(f"\n[arm] 确认桨周围无人后按回车重试 ({attempt + 1}/{C.ARM_MAX_TRIES}), "
                     f"输入 q 回车退出: ").strip().lower()
         if ans == "q":
             break
@@ -3855,7 +3629,7 @@ def single_instance_guard():
         import socket
         import xmlrpc.client
         master = rosgraph.Master("/flight_ctrl_precheck")
-        for name in ("/" + NODE_NAME, "/stage9_track"):
+        for name in ("/" + C.NODE_NAME, "/stage9_track"):
             try:
                 uri = master.lookupNode(name)
             except rosgraph.MasterError:
@@ -3934,7 +3708,7 @@ def main():
     # disable_signals=True: Ctrl+C 不再让 rospy 先把 ROS 关掉, 而是在主线程抛
     # KeyboardInterrupt → 走下面的 except/finally, 这时服务还能调 (切 AUTO.LAND /
     # 还原模式才发得出去)。进程退出前在 __main__ 里 signal_shutdown。
-    rospy.init_node(NODE_NAME, disable_signals=True)
+    rospy.init_node(C.NODE_NAME, disable_signals=True)
     # disable_signals 同时关掉了 rospy 对 SIGTERM 的处理; 让 SIGTERM (kill) 和 Ctrl+C
     # 走同一条路, 否则进程会被直接杀掉、cleanup 一行都不执行。
     def _sigterm(_signum, _frame):
@@ -3956,16 +3730,16 @@ def main():
                      tele.set_estimator_status)
     rospy.Subscriber("/mavros/extended_state", ExtendedState,
                      tele.set_extended_state)
-    rospy.Subscriber(GATE_STATUS_TOPIC, String, gate_in.on_status, queue_size=5)
-    rospy.Subscriber(CAM_STATUS_TOPIC, String, gate_in.on_cam, queue_size=1)
+    rospy.Subscriber(C.GATE_STATUS_TOPIC, String, gate_in.on_status, queue_size=5)
+    rospy.Subscriber(C.CAM_STATUS_TOPIC, String, gate_in.on_cam, queue_size=1)
     rospy.Subscriber("/mavros/statustext/recv", StatusText, statustext_cb, queue_size=50)
 
     pub = rospy.Publisher("/mavros/setpoint_raw/local", PositionTarget,
                           queue_size=10)
-    status_pub = rospy.Publisher(STATUS_TOPIC, String, queue_size=1)
+    status_pub = rospy.Publisher(C.STATUS_TOPIC, String, queue_size=1)
     # 网页监控。遥测线程最先起来 —— preflight 阶段网页就能看到状态。
-    telem_pub = rospy.Publisher(TELEMETRY_TOPIC, String, queue_size=1)
-    config_pub = rospy.Publisher(CONFIG_TOPIC, String, queue_size=1, latch=True)
+    telem_pub = rospy.Publisher(C.TELEMETRY_TOPIC, String, queue_size=1)
+    config_pub = rospy.Publisher(C.CONFIG_TOPIC, String, queue_size=1, latch=True)
     threading.Thread(target=telemetry_loop, args=(telem_pub,), daemon=True).start()
     publish_config(config_pub)
 
@@ -4023,16 +3797,16 @@ def main():
 
     try:
         set_phase("prime")
-        rospy.loginfo(f"[prime] flooding setpoint ({PRIME_SECONDS}s @ "
-                      f"{SP_PUB_HZ}Hz = {int(PRIME_SECONDS*SP_PUB_HZ)} 条)")
-        rospy.sleep(PRIME_SECONDS)
+        rospy.loginfo(f"[prime] flooding setpoint ({C.PRIME_SECONDS}s @ "
+                      f"{C.SP_PUB_HZ}Hz = {int(C.PRIME_SECONDS*C.SP_PUB_HZ)} 条)")
+        rospy.sleep(C.PRIME_SECONDS)
 
         set_phase("offboard_switch")
         rospy.loginfo("[offboard] switching")
         r = set_mode(custom_mode="OFFBOARD")
         if not r.mode_sent:
             raise RuntimeError("SetMode OFFBOARD not sent")
-        t_end = rospy.Time.now() + rospy.Duration(OFFBOARD_TIMEOUT)
+        t_end = rospy.Time.now() + rospy.Duration(C.OFFBOARD_TIMEOUT)
         while rospy.Time.now() < t_end:
             check_abort()
             if tele.state and tele.state.mode == "OFFBOARD":
