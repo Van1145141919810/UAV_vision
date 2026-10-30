@@ -9,3 +9,7 @@ class TwistStamped(object):
     def __init__(self): self.header = Header(); self.twist = _Tw()
 class PointStamped(object):
     def __init__(self): self.header = Header(); self.point = V3()
+class _PoseCov(object):
+    def __init__(self): self.pose = _Pose(); self.covariance = [0.0] * 36
+class PoseWithCovarianceStamped(object):
+    def __init__(self): self.header = Header(); self.pose = _PoseCov()

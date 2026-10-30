@@ -62,7 +62,7 @@ sets = ["--set", "GATE_CONFIRM_DASH=False"]
 if scenario == "shadow":
     sets += ["--set", "GATE_SHADOW=True"]
 if scenario == "virtual":
-    sets += ["--set", "GATE_VIRTUAL_OFFSET=2.0"]
+    sets += ["--set", "GATE_VIRTUAL_OFFSET=2.6"]
 if scenario == "noring":
     sets += ["--set", "GATE_ACQ_TIMEOUT=12"]
 sys.argv = ["stage12_gate.py", "--sites-dir", sites, "--site", "sim"] + sets + extra

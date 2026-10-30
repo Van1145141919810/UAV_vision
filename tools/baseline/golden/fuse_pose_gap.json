@@ -1,0 +1,5767 @@
+{
+ "bad_pkt": false,
+ "n_reset": 0,
+ "status": [
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9693",
+    "0.2161",
+    "1.3484"
+   ],
+   "cov": [
+    "0.04419",
+    "0.004714",
+    "-0.0001939",
+    "0.004714",
+    "0.000529",
+    "-2.07e-05",
+    "-0.0001939",
+    "-2.07e-05",
+    "2.666e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 36,
+    "lr_ok": true,
+    "n_sep": "23.2",
+    "n_src": "mono_mid",
+    "plane_n": 32,
+    "plane_rms": "0.2682",
+    "sat_frac": "0.089",
+    "sq_est": "6.0",
+    "tilt": "0.1",
+    "z_ring": "8.215"
+   },
+   "dist": "8.38",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 36,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8536",
+    "0.2764",
+    "1.409"
+   ],
+   "ring_cov": [
+    "0.06018",
+    "0.00691",
+    "0.0001748",
+    "0.00691",
+    "0.001201",
+    "2.021e-05",
+    "0.0001748",
+    "2.021e-05",
+    "0.0004026"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8536",
+    "0.2764",
+    "1.409"
+   ],
+   "sd_cm": [
+    "21.0",
+    "2.3",
+    "0.5"
+   ],
+   "side": null,
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.0",
+   "target": [
+    "5.9693",
+    "0.2161",
+    "1.3484"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.1511",
+    "0.2372",
+    "1.3479"
+   ],
+   "cov": [
+    "0.02415",
+    "0.002564",
+    "-0.0001051",
+    "0.002564",
+    "0.0002909",
+    "-1.117e-05",
+    "-0.0001051",
+    "-1.117e-05",
+    "1.885e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 50,
+    "lr_ok": true,
+    "n_sep": "10.4",
+    "n_src": "mono_plane",
+    "plane_n": 50,
+    "plane_rms": "0.1611",
+    "sat_frac": "0.08",
+    "sq_est": "6.9",
+    "tilt": "14.6",
+    "z_ring": "8.112"
+   },
+   "dist": "8.563",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 50,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7989",
+    "0.2766",
+    "1.4117"
+   ],
+   "ring_cov": [
+    "0.0586",
+    "0.006757",
+    "0.0002093",
+    "0.006757",
+    "0.001176",
+    "2.43e-05",
+    "0.0002093",
+    "2.43e-05",
+    "0.0003922"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.7465",
+    "0.2769",
+    "1.4142"
+   ],
+   "sd_cm": [
+    "15.5",
+    "1.7",
+    "0.4"
+   ],
+   "side": null,
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.0666666666667",
+   "target": [
+    "6.1511",
+    "0.2372",
+    "1.3479"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0775",
+    "0.2275",
+    "1.35"
+   ],
+   "cov": [
+    "0.01555",
+    "0.001643",
+    "-6.436e-05",
+    "0.001643",
+    "0.0001901",
+    "-6.806e-06",
+    "-6.436e-05",
+    "-6.806e-06",
+    "1.661e-05"
+   ],
+   "diag": {
+    "close_k": 15,
+    "corners": 43,
+    "lr_ok": true,
+    "n_sep": "20.1",
+    "n_src": "mono_mid",
+    "plane_n": 43,
+    "plane_rms": "0.3283",
+    "sat_frac": "0.093",
+    "sq_est": "8.7",
+    "tilt": "0.1",
+    "z_ring": "8.178"
+   },
+   "dist": "8.488",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 43,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8004",
+    "0.2773",
+    "1.4089"
+   ],
+   "ring_cov": [
+    "0.05941",
+    "0.006808",
+    "0.0001342",
+    "0.006808",
+    "0.001182",
+    "1.548e-05",
+    "0.0001342",
+    "1.548e-05",
+    "0.0003972"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8032",
+    "0.2785",
+    "1.4036"
+   ],
+   "sd_cm": [
+    "12.5",
+    "1.4",
+    "0.4"
+   ],
+   "side": null,
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.1333333333333",
+   "target": [
+    "6.0775",
+    "0.2275",
+    "1.35"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.2031",
+    "0.2424",
+    "1.3496"
+   ],
+   "cov": [
+    "0.01244",
+    "0.001321",
+    "-5.135e-05",
+    "0.001321",
+    "0.0001584",
+    "-5.461e-06",
+    "-5.135e-05",
+    "-5.461e-06",
+    "1.807e-05"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 46,
+    "lr_ok": true,
+    "n_sep": "22.5",
+    "n_src": "mono_mid",
+    "plane_n": 45,
+    "plane_rms": "0.2467",
+    "sat_frac": "0.069",
+    "sq_est": "5.4",
+    "tilt": "0.1",
+    "z_ring": "8.219"
+   },
+   "dist": "8.616",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 46,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8138",
+    "0.2782",
+    "1.4099"
+   ],
+   "ring_cov": [
+    "0.06014",
+    "0.006922",
+    "0.0002015",
+    "0.006922",
+    "0.001204",
+    "2.335e-05",
+    "0.0002015",
+    "2.335e-05",
+    "0.0004024"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8534",
+    "0.2808",
+    "1.4127"
+   ],
+   "sd_cm": [
+    "11.2",
+    "1.3",
+    "0.4"
+   ],
+   "side": null,
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.2",
+   "target": [
+    "6.2031",
+    "0.2424",
+    "1.3496"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.103",
+    "0.2301",
+    "1.3494"
+   ],
+   "cov": [
+    "0.009517",
+    "0.001017",
+    "-3.994e-05",
+    "0.001017",
+    "0.0001248",
+    "-4.276e-06",
+    "-3.994e-05",
+    "-4.276e-06",
+    "1.603e-05"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 43,
+    "lr_ok": true,
+    "n_sep": "24.5",
+    "n_src": "mono_mid",
+    "plane_n": 41,
+    "plane_rms": "0.3082",
+    "sat_frac": "0.074",
+    "sq_est": "5.7",
+    "tilt": "0.1",
+    "z_ring": "8.238"
+   },
+   "dist": "8.516",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 43,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8246",
+    "0.2805",
+    "1.4056"
+   ],
+   "ring_cov": [
+    "0.06039",
+    "0.007073",
+    "2.684e-05",
+    "0.007073",
+    "0.001238",
+    "3.164e-06",
+    "2.684e-05",
+    "3.164e-06",
+    "0.0004037"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8668",
+    "0.2898",
+    "1.3887"
+   ],
+   "sd_cm": [
+    "9.8",
+    "1.1",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.2666666666667",
+   "target": [
+    "6.103",
+    "0.2301",
+    "1.3494"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.1118",
+    "0.2319",
+    "1.3482"
+   ],
+   "cov": [
+    "0.007969",
+    "0.0008562",
+    "-3.449e-05",
+    "0.0008562",
+    "0.0001087",
+    "-3.714e-06",
+    "-3.449e-05",
+    "-3.714e-06",
+    "1.666e-05"
+   ],
+   "diag": {
+    "close_k": 15,
+    "corners": 45,
+    "lr_ok": true,
+    "n_sep": "41.4",
+    "n_src": "mono_amb",
+    "plane_n": 44,
+    "plane_rms": "0.2207",
+    "sat_frac": "0.091",
+    "sq_est": "8.8",
+    "tilt": "20.9",
+    "z_ring": "7.912"
+   },
+   "dist": "8.525",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 45,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7737",
+    "0.2696",
+    "1.4004"
+   ],
+   "ring_cov": [
+    "0.05581",
+    "0.006336",
+    "-5.513e-05",
+    "0.006336",
+    "0.001097",
+    "-6.3e-06",
+    "-5.513e-05",
+    "-6.3e-06",
+    "0.0003728"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.5467",
+    "0.2208",
+    "1.3771"
+   ],
+   "sd_cm": [
+    "8.9",
+    "1.0",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.3333333333334",
+   "target": [
+    "6.1118",
+    "0.2319",
+    "1.3482"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.1315",
+    "0.2344",
+    "1.3484"
+   ],
+   "cov": [
+    "0.006906",
+    "0.0007402",
+    "-2.969e-05",
+    "0.0007402",
+    "9.638e-05",
+    "-3.19e-06",
+    "-2.969e-05",
+    "-3.19e-06",
+    "1.698e-05"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 33,
+    "lr_ok": true,
+    "n_sep": "22.5",
+    "n_src": "mono_plane",
+    "plane_n": 31,
+    "plane_rms": "0.2571",
+    "sat_frac": "0.094",
+    "sq_est": "5.4",
+    "tilt": "12.7",
+    "z_ring": "8.194"
+   },
+   "dist": "8.544",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 33,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.781",
+    "0.2704",
+    "1.4017"
+   ],
+   "ring_cov": [
+    "0.05975",
+    "0.006901",
+    "0.0001788",
+    "0.006901",
+    "0.001202",
+    "2.079e-05",
+    "0.0001788",
+    "2.079e-05",
+    "0.0003998"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8227",
+    "0.2749",
+    "1.4097"
+   ],
+   "sd_cm": [
+    "8.3",
+    "1.0",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.4",
+   "target": [
+    "6.1315",
+    "0.2344",
+    "1.3484"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.1018",
+    "0.2298",
+    "1.348"
+   ],
+   "cov": [
+    "0.005973",
+    "0.0006342",
+    "-2.605e-05",
+    "0.0006342",
+    "8.361e-05",
+    "-2.774e-06",
+    "-2.605e-05",
+    "-2.774e-06",
+    "1.619e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 44,
+    "lr_ok": true,
+    "n_sep": "20.6",
+    "n_src": "mono_mid",
+    "plane_n": 42,
+    "plane_rms": "0.1591",
+    "sat_frac": "0.093",
+    "sq_est": "6.0",
+    "tilt": "0.1",
+    "z_ring": "8.214"
+   },
+   "dist": "8.512",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 44,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7909",
+    "0.273",
+    "1.4006"
+   ],
+   "ring_cov": [
+    "0.06029",
+    "0.006979",
+    "5.711e-05",
+    "0.006979",
+    "0.001216",
+    "6.656e-06",
+    "5.711e-05",
+    "6.656e-06",
+    "0.0004029"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8574",
+    "0.2904",
+    "1.3928"
+   ],
+   "sd_cm": [
+    "7.7",
+    "0.9",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.4666666666667",
+   "target": [
+    "6.1018",
+    "0.2298",
+    "1.348"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0871",
+    "0.2291",
+    "1.3477"
+   ],
+   "cov": [
+    "0.005285",
+    "0.0005587",
+    "-2.327e-05",
+    "0.0005587",
+    "7.535e-05",
+    "-2.467e-06",
+    "-2.327e-05",
+    "-2.467e-06",
+    "1.622e-05"
+   ],
+   "diag": {
+    "close_k": 7,
+    "corners": 42,
+    "lr_ok": true,
+    "n_sep": "23.9",
+    "n_src": "mono_mid",
+    "plane_n": 39,
+    "plane_rms": "0.3282",
+    "sat_frac": "0.08",
+    "sq_est": "4.6",
+    "tilt": "0.1",
+    "z_ring": "8.217"
+   },
+   "dist": "8.498",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 42,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7978",
+    "0.2728",
+    "1.4011"
+   ],
+   "ring_cov": [
+    "0.06016",
+    "0.006804",
+    "0.0001488",
+    "0.006804",
+    "0.001176",
+    "1.694e-05",
+    "0.0001488",
+    "1.694e-05",
+    "0.0004021"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8505",
+    "0.2712",
+    "1.4054"
+   ],
+   "sd_cm": [
+    "7.3",
+    "0.9",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.5333333333333",
+   "target": [
+    "6.0871",
+    "0.2291",
+    "1.3477"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.028",
+    "0.2203",
+    "1.3475"
+   ],
+   "cov": [
+    "0.004647",
+    "0.0004905",
+    "-2.071e-05",
+    "0.0004905",
+    "6.719e-05",
+    "-2.194e-06",
+    "-2.071e-05",
+    "-2.194e-06",
+    "1.532e-05"
+   ],
+   "diag": {
+    "close_k": 13,
+    "corners": 34,
+    "lr_ok": true,
+    "n_sep": "35.4",
+    "n_src": "mono_amb",
+    "plane_n": 33,
+    "plane_rms": "0.3216",
+    "sat_frac": "0.096",
+    "sq_est": "7.3",
+    "tilt": "17.8",
+    "z_ring": "8.071"
+   },
+   "dist": "8.439",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 34,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7872",
+    "0.2722",
+    "1.3988"
+   ],
+   "ring_cov": [
+    "0.058",
+    "0.00669",
+    "-3.844e-05",
+    "0.00669",
+    "0.001164",
+    "-4.464e-06",
+    "-3.844e-05",
+    "-4.464e-06",
+    "0.0003875"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.7005",
+    "0.2672",
+    "1.3796"
+   ],
+   "sd_cm": [
+    "6.8",
+    "0.8",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.6",
+   "target": [
+    "6.028",
+    "0.2203",
+    "1.3475"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0117",
+    "0.2189",
+    "1.3472"
+   ],
+   "cov": [
+    "0.004166",
+    "0.0004405",
+    "-1.847e-05",
+    "0.0004405",
+    "6.203e-05",
+    "-1.961e-06",
+    "-1.847e-05",
+    "-1.961e-06",
+    "1.537e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 34,
+    "lr_ok": true,
+    "n_sep": "10.8",
+    "n_src": "mono_plane",
+    "plane_n": 34,
+    "plane_rms": "0.0645",
+    "sat_frac": "0.091",
+    "sq_est": "6.6",
+    "tilt": "9.6",
+    "z_ring": "8.084"
+   },
+   "dist": "8.226",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 34,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7998",
+    "0.2733",
+    "1.3994"
+   ],
+   "ring_cov": [
+    "0.05823",
+    "0.006682",
+    "0.000154",
+    "0.006682",
+    "0.001161",
+    "1.78e-05",
+    "0.000154",
+    "1.78e-05",
+    "0.0003894"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9141",
+    "0.2838",
+    "1.4049"
+   ],
+   "sd_cm": [
+    "6.5",
+    "0.8",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.6666666666666",
+   "target": [
+    "6.0117",
+    "0.2189",
+    "1.3472"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.015",
+    "0.2207",
+    "1.3486"
+   ],
+   "cov": [
+    "0.003772",
+    "0.0003988",
+    "-1.526e-05",
+    "0.0003988",
+    "5.753e-05",
+    "-1.62e-06",
+    "-1.526e-05",
+    "-1.62e-06",
+    "1.525e-05"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 39,
+    "lr_ok": true,
+    "n_sep": "29.6",
+    "n_src": "mono_mid",
+    "plane_n": 37,
+    "plane_rms": "0.1707",
+    "sat_frac": "0.081",
+    "sq_est": "4.7",
+    "tilt": "0.1",
+    "z_ring": "7.698"
+   },
+   "dist": "8.035",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 39,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7935",
+    "0.2749",
+    "1.3992"
+   ],
+   "ring_cov": [
+    "0.05281",
+    "0.006229",
+    "0.0001174",
+    "0.006229",
+    "0.001093",
+    "1.394e-05",
+    "0.0001174",
+    "1.394e-05",
+    "0.0003533"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.7363",
+    "0.2889",
+    "1.3974"
+   ],
+   "sd_cm": [
+    "6.1",
+    "0.8",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.7333333333333",
+   "target": [
+    "6.015",
+    "0.2207",
+    "1.3486"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.003",
+    "0.22",
+    "1.349"
+   ],
+   "cov": [
+    "0.00339",
+    "0.0003577",
+    "-1.272e-05",
+    "0.0003577",
+    "5.222e-05",
+    "-1.347e-06",
+    "-1.272e-05",
+    "-1.347e-06",
+    "1.438e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 62,
+    "lr_ok": true,
+    "n_sep": "23.7",
+    "n_src": "mono_mid",
+    "plane_n": 52,
+    "plane_rms": "0.33",
+    "sat_frac": "0.08",
+    "sq_est": "6.2",
+    "tilt": "0.1",
+    "z_ring": "7.616"
+   },
+   "dist": "7.828",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 62,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7998",
+    "0.2757",
+    "1.4003"
+   ],
+   "ring_cov": [
+    "0.05165",
+    "0.005956",
+    "0.0002245",
+    "0.005956",
+    "0.001036",
+    "2.606e-05",
+    "0.0002245",
+    "2.606e-05",
+    "0.0003461"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8602",
+    "0.2836",
+    "1.4108"
+   ],
+   "sd_cm": [
+    "5.8",
+    "0.7",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.8",
+   "target": [
+    "6.003",
+    "0.22",
+    "1.349"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.011",
+    "0.2207",
+    "1.35"
+   ],
+   "cov": [
+    "0.003079",
+    "0.0003237",
+    "-1.05e-05",
+    "0.0003237",
+    "4.835e-05",
+    "-1.109e-06",
+    "-1.05e-05",
+    "-1.109e-06",
+    "1.421e-05"
+   ],
+   "diag": {
+    "close_k": 15,
+    "corners": 87,
+    "lr_ok": true,
+    "n_sep": "39.4",
+    "n_src": "mono_amb",
+    "plane_n": 60,
+    "plane_rms": "0.26",
+    "sat_frac": "0.1",
+    "sq_est": "8.5",
+    "tilt": "19.9",
+    "z_ring": "7.105"
+   },
+   "dist": "7.64",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 87,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7744",
+    "0.2717",
+    "1.4026"
+   ],
+   "ring_cov": [
+    "0.04488",
+    "0.005098",
+    "0.0002999",
+    "0.005098",
+    "0.0008828",
+    "3.43e-05",
+    "0.0002999",
+    "3.43e-05",
+    "0.0003017"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.5449",
+    "0.2355",
+    "1.4232"
+   ],
+   "sd_cm": [
+    "5.5",
+    "0.7",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.8666666666667",
+   "target": [
+    "6.011",
+    "0.2207",
+    "1.35"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9687",
+    "0.2158",
+    "1.3501"
+   ],
+   "cov": [
+    "0.002727",
+    "0.0002854",
+    "-8.911e-06",
+    "0.0002854",
+    "4.266e-05",
+    "-9.368e-07",
+    "-8.911e-06",
+    "-9.368e-07",
+    "1.269e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 97,
+    "lr_ok": true,
+    "n_sep": "10.4",
+    "n_src": "mono_plane",
+    "plane_n": 72,
+    "plane_rms": "0.1887",
+    "sat_frac": "0.085",
+    "sq_est": "6.1",
+    "tilt": "15.3",
+    "z_ring": "7.191"
+   },
+   "dist": "7.401",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 97,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7794",
+    "0.2709",
+    "1.4038"
+   ],
+   "ring_cov": [
+    "0.04606",
+    "0.005193",
+    "0.0002696",
+    "0.005193",
+    "0.000897",
+    "3.06e-05",
+    "0.0002696",
+    "3.06e-05",
+    "0.0003091"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8298",
+    "0.2629",
+    "1.4164"
+   ],
+   "sd_cm": [
+    "5.2",
+    "0.7",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1000.9333333333333",
+   "target": [
+    "5.9687",
+    "0.2158",
+    "1.3501"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9519",
+    "0.2131",
+    "1.3502"
+   ],
+   "cov": [
+    "0.002446",
+    "0.0002546",
+    "-7.853e-06",
+    "0.0002546",
+    "3.906e-05",
+    "-8.214e-07",
+    "-7.853e-06",
+    "-8.214e-07",
+    "1.245e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 129,
+    "lr_ok": true,
+    "n_sep": "12.3",
+    "n_src": "mono_plane",
+    "plane_n": 119,
+    "plane_rms": "0.1629",
+    "sat_frac": "0.092",
+    "sq_est": "7.1",
+    "tilt": "10.8",
+    "z_ring": "7.035"
+   },
+   "dist": "7.186",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "n": [
+    "-0.95311",
+    "-0.26207",
+    "0.1513"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 129,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7875",
+    "0.2715",
+    "1.4043"
+   ],
+   "ring_cov": [
+    "0.04427",
+    "0.005045",
+    "0.0002258",
+    "0.005045",
+    "0.0008745",
+    "2.591e-05",
+    "0.0002258",
+    "2.591e-05",
+    "0.0002969"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8729",
+    "0.2777",
+    "1.4094"
+   ],
+   "sd_cm": [
+    "4.9",
+    "0.6",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.0",
+   "target": [
+    "5.9519",
+    "0.2131",
+    "1.3502"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9529",
+    "0.2136",
+    "1.3502"
+   ],
+   "cov": [
+    "0.002217",
+    "0.0002298",
+    "-7.157e-06",
+    "0.0002298",
+    "3.626e-05",
+    "-7.46e-07",
+    "-7.157e-06",
+    "-7.46e-07",
+    "1.233e-05"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 158,
+    "lr_ok": true,
+    "n_sep": "11.0",
+    "n_src": "mono_plane",
+    "plane_n": 153,
+    "plane_rms": "0.1497",
+    "sat_frac": "0.083",
+    "sq_est": "5.4",
+    "tilt": "13.1",
+    "z_ring": "6.906"
+   },
+   "dist": "6.988",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "n": [
+    "-0.95385",
+    "-0.25547",
+    "0.15785"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 158,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.7975",
+    "0.2719",
+    "1.4053"
+   ],
+   "ring_cov": [
+    "0.0424",
+    "0.004794",
+    "0.0002624",
+    "0.004794",
+    "0.0008288",
+    "2.987e-05",
+    "0.0002624",
+    "2.987e-05",
+    "0.0002848"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9063",
+    "0.2764",
+    "1.4159"
+   ],
+   "sd_cm": [
+    "4.7",
+    "0.6",
+    "0.4"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.0666666666667",
+   "target": [
+    "5.9529",
+    "0.2136",
+    "1.3502"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9436",
+    "0.2133",
+    "1.35"
+   ],
+   "cov": [
+    "0.001997",
+    "0.0002062",
+    "-6.669e-06",
+    "0.0002062",
+    "3.303e-05",
+    "-6.926e-07",
+    "-6.669e-06",
+    "-6.926e-07",
+    "1.164e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 145,
+    "lr_ok": true,
+    "n_sep": "17.0",
+    "n_src": "mono_mid",
+    "plane_n": 115,
+    "plane_rms": "0.1625",
+    "sat_frac": "0.085",
+    "sq_est": "6.2",
+    "tilt": "0.1",
+    "z_ring": "6.735"
+   },
+   "dist": "6.78",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "n": [
+    "-0.95385",
+    "-0.25547",
+    "0.15785"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 145,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8074",
+    "0.2731",
+    "1.4053"
+   ],
+   "ring_cov": [
+    "0.04031",
+    "0.0046",
+    "0.0001946",
+    "0.0046",
+    "0.0007978",
+    "2.236e-05",
+    "0.0001946",
+    "2.236e-05",
+    "0.0002702"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9183",
+    "0.2861",
+    "1.4055"
+   ],
+   "sd_cm": [
+    "4.5",
+    "0.6",
+    "0.3"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.1333333333333",
+   "target": [
+    "5.9436",
+    "0.2133",
+    "1.35"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9464",
+    "0.2139",
+    "1.3503"
+   ],
+   "cov": [
+    "0.001811",
+    "0.0001861",
+    "-6.057e-06",
+    "0.0001861",
+    "3.058e-05",
+    "-6.264e-07",
+    "-6.057e-06",
+    "-6.264e-07",
+    "1.136e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 159,
+    "lr_ok": true,
+    "n_sep": "9.2",
+    "n_src": "mono_mid",
+    "plane_n": 94,
+    "plane_rms": "0.2281",
+    "sat_frac": "0.08",
+    "sq_est": "6.3",
+    "tilt": "0.1",
+    "z_ring": "6.501"
+   },
+   "dist": "6.584",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "n": [
+    "-0.95385",
+    "-0.25547",
+    "0.15785"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 159,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.814",
+    "0.274",
+    "1.4049"
+   ],
+   "ring_cov": [
+    "0.03772",
+    "0.004312",
+    "0.0001653",
+    "0.004312",
+    "0.0007483",
+    "1.903e-05",
+    "0.0001653",
+    "1.903e-05",
+    "0.0002527"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8882",
+    "0.285",
+    "1.4011"
+   ],
+   "sd_cm": [
+    "4.3",
+    "0.6",
+    "0.3"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.2",
+   "target": [
+    "5.9464",
+    "0.2139",
+    "1.3503"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9511",
+    "0.2148",
+    "1.3501"
+   ],
+   "cov": [
+    "0.001642",
+    "0.000168",
+    "-5.506e-06",
+    "0.000168",
+    "2.819e-05",
+    "-5.67e-07",
+    "-5.506e-06",
+    "-5.67e-07",
+    "1.091e-05"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 169,
+    "lr_ok": true,
+    "n_sep": "19.2",
+    "n_src": "mono_mid",
+    "plane_n": 113,
+    "plane_rms": "0.1285",
+    "sat_frac": "0.099",
+    "sq_est": "5.7",
+    "tilt": "0.1",
+    "z_ring": "6.312"
+   },
+   "dist": "6.391",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "n": [
+    "-0.95385",
+    "-0.25547",
+    "0.15785"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 169,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8199",
+    "0.2755",
+    "1.4055"
+   ],
+   "ring_cov": [
+    "0.03549",
+    "0.00409",
+    "0.0002258",
+    "0.00409",
+    "0.0007116",
+    "2.62e-05",
+    "0.0002258",
+    "2.62e-05",
+    "0.0002385"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.8863",
+    "0.2916",
+    "1.4119"
+   ],
+   "sd_cm": [
+    "4.1",
+    "0.5",
+    "0.3"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.2666666666667",
+   "target": [
+    "5.9511",
+    "0.2148",
+    "1.3501"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "diag": {
+    "close_k": 9,
+    "corners": 168,
+    "lr_ok": true,
+    "n_sep": "22.4",
+    "n_src": "mono_mid",
+    "plane_n": 152,
+    "plane_rms": "0.1173",
+    "sat_frac": "0.09",
+    "sq_est": "5.7",
+    "tilt": "0.1",
+    "z_ring": "6.138"
+   },
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "pose_late(67ms)",
+   "rejected": [],
+   "ring": {
+    "corners": 168,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "sim": false,
+   "skip_ring": false,
+   "stage": "far",
+   "t": "1001.3333333333334",
+   "used": []
+  },
+  {
+   "diag": {
+    "close_k": 13,
+    "corners": 168,
+    "lr_ok": true,
+    "n_sep": "29.3",
+    "n_src": "mono_mid",
+    "plane_n": 143,
+    "plane_rms": "0.1189",
+    "sat_frac": "0.092",
+    "sq_est": "8.1",
+    "tilt": "0.2",
+    "z_ring": "5.813"
+   },
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "pose_late(133ms)",
+   "rejected": [],
+   "ring": {
+    "corners": 168,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "sim": false,
+   "skip_ring": false,
+   "stage": "far",
+   "t": "1001.4",
+   "used": []
+  },
+  {
+   "diag": {
+    "close_k": 11,
+    "corners": 183,
+    "dot_nb": 0,
+    "dot_why": "no_red",
+    "lr_ok": true,
+    "n_sep": "30.8",
+    "n_src": "mono_mid",
+    "plane_n": 101,
+    "plane_rms": "0.1667",
+    "sat_frac": "0.099",
+    "sq_est": "7.1",
+    "tilt": "0.2",
+    "z_ring": "5.544"
+   },
+   "dots": [],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "pose_late(200ms)",
+   "rejected": [],
+   "ring": {
+    "corners": 183,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "sim": false,
+   "skip_ring": false,
+   "stage": "far",
+   "t": "1001.4666666666667",
+   "used": []
+  },
+  {
+   "diag": {
+    "close_k": 11,
+    "corners": 218,
+    "dot_circ": "0.99",
+    "dot_d": "9.0",
+    "dot_fill": "1.15",
+    "dot_nb": 1,
+    "dot_touch": true,
+    "dot_why": "shape",
+    "lr_ok": true,
+    "n_sep": "23.6",
+    "n_src": "mono_plane",
+    "plane_n": 169,
+    "plane_rms": "0.1359",
+    "sat_frac": "0.093",
+    "sq_est": "6.3",
+    "tilt": "12.9",
+    "z_ring": "5.613"
+   },
+   "dots": [],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "pose_late(267ms)",
+   "rejected": [],
+   "ring": {
+    "corners": 218,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "sim": false,
+   "skip_ring": false,
+   "stage": "far",
+   "t": "1001.5333333333333",
+   "used": []
+  },
+  {
+   "diag": {
+    "close_k": 9,
+    "corners": 221,
+    "dot_circ": "0.95",
+    "dot_d": "10.0",
+    "dot_fill": "1.14",
+    "dot_nb": 3,
+    "dot_touch": true,
+    "dot_why": "shape",
+    "lr_ok": true,
+    "n_sep": "21.8",
+    "n_src": "mono_mid",
+    "plane_n": 206,
+    "plane_rms": "0.1061",
+    "sat_frac": "0.083",
+    "sq_est": "5.7",
+    "tilt": "0.2",
+    "z_ring": "5.326"
+   },
+   "dots": [],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "pose_gap(333ms)",
+   "rejected": [],
+   "ring": {
+    "corners": 221,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "sim": false,
+   "skip_ring": false,
+   "stage": "far",
+   "t": "1001.6",
+   "used": []
+  },
+  {
+   "age_ms": 400,
+   "aim": [
+    "5.9511",
+    "0.2148",
+    "1.3501"
+   ],
+   "cov": [
+    "0.001802",
+    "0.000168",
+    "-5.506e-06",
+    "0.000168",
+    "0.0001882",
+    "-5.67e-07",
+    "-5.506e-06",
+    "-5.67e-07",
+    "0.0001709"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 225,
+    "dot_circ": "0.88",
+    "dot_d": "9.7",
+    "dot_fill": "0.98",
+    "dot_nb": 2,
+    "dot_touch": true,
+    "dot_why": "shape",
+    "lr_ok": true,
+    "n_sep": "19.8",
+    "n_src": "mono_plane",
+    "plane_n": 127,
+    "plane_rms": "0.1283",
+    "ring_wait": true,
+    "sat_frac": "0.091",
+    "sq_est": "6.3",
+    "tilt": "10.4",
+    "z_ring": "5.127"
+   },
+   "dist": "5.22",
+   "dots": [],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 225,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8316",
+    "0.2788",
+    "1.4031"
+   ],
+   "ring_cov": [
+    "0.02354",
+    "0.002728",
+    "0.0001362",
+    "0.002728",
+    "0.0004755",
+    "1.589e-05",
+    "0.0001362",
+    "1.589e-05",
+    "0.0001581"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9192",
+    "0.3032",
+    "1.3855"
+   ],
+   "sd_cm": [
+    "4.2",
+    "1.4",
+    "1.3"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.6666666666666",
+   "target": [
+    "5.9511",
+    "0.2148",
+    "1.3501"
+   ],
+   "used": []
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.95",
+    "0.2143",
+    "1.3494"
+   ],
+   "cov": [
+    "0.001377",
+    "0.0001344",
+    "-1.284e-06",
+    "0.0001344",
+    "2.196e-05",
+    "-1.261e-07",
+    "-1.284e-06",
+    "-1.261e-07",
+    "8.758e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 228,
+    "lr_ok": true,
+    "n_sep": "13.4",
+    "n_src": "mono_disp",
+    "plane_n": 180,
+    "plane_rms": "0.1007",
+    "sat_frac": "0.111",
+    "sq_est": "6.5",
+    "tilt": "7.4",
+    "z_ring": "4.935"
+   },
+   "dist": "5.023",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 228,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8442",
+    "0.2815",
+    "1.4021"
+   ],
+   "ring_cov": [
+    "0.02196",
+    "0.00253",
+    "0.0001785",
+    "0.00253",
+    "0.0004401",
+    "2.07e-05",
+    "0.0001785",
+    "2.07e-05",
+    "0.0001482"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9414",
+    "0.303",
+    "1.3944"
+   ],
+   "sd_cm": [
+    "3.7",
+    "0.5",
+    "0.3"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.7333333333333",
+   "target": [
+    "5.95",
+    "0.2143",
+    "1.3494"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9683",
+    "0.2168",
+    "1.3498"
+   ],
+   "cov": [
+    "0.001102",
+    "0.0001068",
+    "-6.774e-07",
+    "0.0001068",
+    "1.745e-05",
+    "-6.603e-08",
+    "-6.774e-07",
+    "-6.603e-08",
+    "7.04e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 223,
+    "lr_ok": true,
+    "n_sep": "15.7",
+    "n_src": "mono_plane",
+    "plane_n": 179,
+    "plane_rms": "0.1008",
+    "sat_frac": "0.102",
+    "sq_est": "5.7",
+    "tilt": "8.1",
+    "z_ring": "4.805"
+   },
+   "dist": "4.844",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 223,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8581",
+    "0.2829",
+    "1.4037"
+   ],
+   "ring_cov": [
+    "0.02052",
+    "0.00231",
+    "0.0002699",
+    "0.00231",
+    "0.0003987",
+    "3.058e-05",
+    "0.0002699",
+    "3.058e-05",
+    "0.0001406"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.97",
+    "0.2942",
+    "1.4163"
+   ],
+   "sd_cm": [
+    "3.3",
+    "0.4",
+    "0.3"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.8",
+   "target": [
+    "5.9683",
+    "0.2168",
+    "1.3498"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9878",
+    "0.2184",
+    "1.351"
+   ],
+   "cov": [
+    "0.0009025",
+    "8.641e-05",
+    "-2.21e-07",
+    "8.641e-05",
+    "1.495e-05",
+    "-2.132e-08",
+    "-2.21e-07",
+    "-2.132e-08",
+    "6.612e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 225,
+    "lr_ok": true,
+    "n_sep": "17.0",
+    "n_src": "mono_mid",
+    "plane_n": 137,
+    "plane_rms": "0.0875",
+    "sat_frac": "0.094",
+    "sq_est": "4.9",
+    "tilt": "0.2",
+    "z_ring": "4.559"
+   },
+   "dist": "4.665",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 225,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.866",
+    "0.2846",
+    "1.4049"
+   ],
+   "ring_cov": [
+    "0.01863",
+    "0.002125",
+    "0.0002521",
+    "0.002125",
+    "0.0003685",
+    "2.895e-05",
+    "0.0002521",
+    "2.895e-05",
+    "0.0001279"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9299",
+    "0.2982",
+    "1.4145"
+   ],
+   "sd_cm": [
+    "3.0",
+    "0.4",
+    "0.3"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.8666666666667",
+   "target": [
+    "5.9878",
+    "0.2184",
+    "1.351"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9887",
+    "0.2187",
+    "1.351"
+   ],
+   "cov": [
+    "0.0007375",
+    "6.982e-05",
+    "-1.61e-07",
+    "6.982e-05",
+    "1.267e-05",
+    "-1.537e-08",
+    "-1.61e-07",
+    "-1.537e-08",
+    "6.009e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 231,
+    "lr_ok": true,
+    "n_sep": "14.4",
+    "n_src": "mono_mid",
+    "plane_n": 212,
+    "plane_rms": "0.0609",
+    "sat_frac": "0.098",
+    "sq_est": "6.3",
+    "tilt": "0.2",
+    "z_ring": "4.411"
+   },
+   "dist": "4.467",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 231,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8761",
+    "0.2848",
+    "1.4052"
+   ],
+   "ring_cov": [
+    "0.01738",
+    "0.001919",
+    "0.0002175",
+    "0.001919",
+    "0.0003294",
+    "2.419e-05",
+    "0.0002175",
+    "2.419e-05",
+    "0.0001187"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.961",
+    "0.2866",
+    "1.4076"
+   ],
+   "sd_cm": [
+    "2.7",
+    "0.4",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1001.9333333333333",
+   "target": [
+    "5.9887",
+    "0.2187",
+    "1.351"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9886",
+    "0.2184",
+    "1.3506"
+   ],
+   "cov": [
+    "0.0006084",
+    "5.681e-05",
+    "-1.713e-07",
+    "5.681e-05",
+    "1.091e-05",
+    "-1.614e-08",
+    "-1.713e-07",
+    "-1.614e-08",
+    "5.558e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 227,
+    "lr_ok": true,
+    "n_sep": "13.4",
+    "n_src": "mono_plane",
+    "plane_n": 126,
+    "plane_rms": "0.0925",
+    "sat_frac": "0.115",
+    "sq_est": "6.4",
+    "tilt": "8.3",
+    "z_ring": "4.211"
+   },
+   "dist": "4.268",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 227,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8831",
+    "0.2864",
+    "1.4027"
+   ],
+   "ring_cov": [
+    "0.01578",
+    "0.001795",
+    "0.0001137",
+    "0.001795",
+    "0.0003109",
+    "1.302e-05",
+    "0.0001137",
+    "1.302e-05",
+    "0.0001062"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9414",
+    "0.3",
+    "1.3823"
+   ],
+   "sd_cm": [
+    "2.5",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1002.0",
+   "target": [
+    "5.9886",
+    "0.2184",
+    "1.3506"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "5.9999",
+    "0.22",
+    "1.3501"
+   ],
+   "cov": [
+    "0.0005113",
+    "4.713e-05",
+    "-1.542e-07",
+    "4.713e-05",
+    "9.644e-06",
+    "-1.436e-08",
+    "-1.542e-07",
+    "-1.436e-08",
+    "5.256e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 231,
+    "lr_ok": true,
+    "n_sep": "18.0",
+    "n_src": "mono_mid",
+    "plane_n": 206,
+    "plane_rms": "0.0622",
+    "sat_frac": "0.11",
+    "sq_est": "6.9",
+    "tilt": "0.3",
+    "z_ring": "4.015"
+   },
+   "dist": "4.081",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 231,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.889",
+    "0.2882",
+    "1.4008"
+   ],
+   "ring_cov": [
+    "0.01434",
+    "0.001638",
+    "0.0001199",
+    "0.001638",
+    "0.0002883",
+    "1.379e-05",
+    "0.0001199",
+    "1.379e-05",
+    "0.000101"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9385",
+    "0.3028",
+    "1.3849"
+   ],
+   "sd_cm": [
+    "2.3",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1002.0666666666667",
+   "target": [
+    "5.9999",
+    "0.22",
+    "1.3501"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.004",
+    "0.2201",
+    "1.3501"
+   ],
+   "cov": [
+    "0.0004283",
+    "3.882e-05",
+    "-6.855e-09",
+    "3.882e-05",
+    "8.335e-06",
+    "-6.287e-10",
+    "-6.855e-09",
+    "-6.287e-10",
+    "4.776e-06"
+   ],
+   "diag": {
+    "close_k": 13,
+    "corners": 225,
+    "lr_ok": true,
+    "n_sep": "13.5",
+    "n_src": "mono_disp",
+    "plane_n": 144,
+    "plane_rms": "0.0575",
+    "sat_frac": "0.11",
+    "sq_est": "7.2",
+    "tilt": "9.6",
+    "z_ring": "3.833"
+   },
+   "dist": "3.888",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 225,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.8958",
+    "0.2898",
+    "1.3984"
+   ],
+   "ring_cov": [
+    "0.01308",
+    "0.001485",
+    "9.626e-05",
+    "0.001485",
+    "0.00027",
+    "1.102e-05",
+    "9.626e-05",
+    "1.102e-05",
+    "0.0001007"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9528",
+    "0.3033",
+    "1.3783"
+   ],
+   "sd_cm": [
+    "2.1",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1002.1333333333333",
+   "target": [
+    "6.004",
+    "0.2201",
+    "1.3501"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0188",
+    "0.2218",
+    "1.3497"
+   ],
+   "cov": [
+    "0.0003638",
+    "3.243e-05",
+    "1.49e-07",
+    "3.243e-05",
+    "7.408e-06",
+    "1.344e-08",
+    "1.49e-07",
+    "1.344e-08",
+    "4.481e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 227,
+    "lr_ok": true,
+    "n_sep": "10.3",
+    "n_src": "mono_disp",
+    "plane_n": 125,
+    "plane_rms": "0.0662",
+    "sat_frac": "0.117",
+    "sq_est": "6.4",
+    "tilt": "5.4",
+    "z_ring": "3.657"
+   },
+   "dist": "3.707",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 227,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9039",
+    "0.2915",
+    "1.3973"
+   ],
+   "ring_cov": [
+    "0.0119",
+    "0.001349",
+    "0.0001299",
+    "0.001349",
+    "0.0002542",
+    "1.485e-05",
+    "0.0001299",
+    "1.485e-05",
+    "0.0001014"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9727",
+    "0.3063",
+    "1.388"
+   ],
+   "sd_cm": [
+    "1.9",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1002.2",
+   "target": [
+    "6.0188",
+    "0.2218",
+    "1.3497"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0229",
+    "0.2219",
+    "1.3499"
+   ],
+   "cov": [
+    "0.0003052",
+    "2.666e-05",
+    "3.865e-07",
+    "2.666e-05",
+    "6.355e-06",
+    "3.421e-08",
+    "3.865e-07",
+    "3.421e-08",
+    "3.996e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 230,
+    "lr_ok": true,
+    "n_sep": "7.8",
+    "n_src": "mono_mid",
+    "plane_n": 199,
+    "plane_rms": "0.0548",
+    "sat_frac": "0.116",
+    "sq_est": "4.7",
+    "tilt": "0.2",
+    "z_ring": "3.456"
+   },
+   "dist": "3.516",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "far",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 230,
+    "ok": true,
+    "partial": false,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9117",
+    "0.293",
+    "1.3963"
+   ],
+   "ring_cov": [
+    "0.01067",
+    "0.001201",
+    "0.0001306",
+    "0.001201",
+    "0.0002366",
+    "1.485e-05",
+    "0.0001306",
+    "1.485e-05",
+    "0.0001016"
+   ],
+   "ring_partial": false,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9763",
+    "0.3056",
+    "1.3878"
+   ],
+   "sd_cm": [
+    "1.7",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "far",
+   "t": "1002.2666666666667",
+   "target": [
+    "6.0229",
+    "0.2219",
+    "1.3499"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.013",
+    "0.2206",
+    "1.3501"
+   ],
+   "cov": [
+    "0.0002513",
+    "2.143e-05",
+    "5.897e-07",
+    "2.143e-05",
+    "5.393e-06",
+    "5.101e-08",
+    "5.897e-07",
+    "5.101e-08",
+    "3.54e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 226,
+    "in_frac": "1.0",
+    "lr_ok": true,
+    "n_sep": "15.7",
+    "n_src": "mono_mid",
+    "plane_n": 186,
+    "plane_rms": "0.0442",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.116",
+    "sq_est": "6.7",
+    "tilt": "0.4",
+    "z_ring": "3.245"
+   },
+   "dist": "3.312",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 226,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9135",
+    "0.2927",
+    "1.3967"
+   ],
+   "ring_cov": [
+    "0.03773",
+    "0.003944",
+    "0.0007762",
+    "0.003944",
+    "0.0008167",
+    "8.2e-05",
+    "0.0007762",
+    "8.2e-05",
+    "0.0004161"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9731",
+    "0.2802",
+    "1.4096"
+   ],
+   "sd_cm": [
+    "1.6",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1002.3333333333334",
+   "target": [
+    "6.013",
+    "0.2206",
+    "1.3501"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0156",
+    "0.2211",
+    "1.3506"
+   ],
+   "cov": [
+    "0.0002093",
+    "1.74e-05",
+    "7.606e-07",
+    "1.74e-05",
+    "5.003e-06",
+    "6.431e-08",
+    "7.606e-07",
+    "6.431e-08",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 207,
+    "in_frac": "0.8",
+    "lr_ok": true,
+    "n_sep": "26.9",
+    "n_src": "mono_mid",
+    "plane_n": 160,
+    "plane_rms": "0.0434",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.113",
+    "sq_est": "7.1",
+    "tilt": "0.7",
+    "z_ring": "2.966"
+   },
+   "dist": "3.12",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 207,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9135",
+    "0.2915",
+    "1.3973"
+   ],
+   "ring_cov": [
+    "0.03189",
+    "0.003133",
+    "0.0007878",
+    "0.003133",
+    "0.0007117",
+    "7.838e-05",
+    "0.0007878",
+    "7.838e-05",
+    "0.0004197"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9125",
+    "0.2581",
+    "1.4139"
+   ],
+   "sd_cm": [
+    "1.4",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1002.4",
+   "target": [
+    "6.0156",
+    "0.2211",
+    "1.3506"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0157",
+    "0.2212",
+    "1.3504"
+   ],
+   "cov": [
+    "0.0001727",
+    "1.391e-05",
+    "8.213e-07",
+    "1.391e-05",
+    "4.676e-06",
+    "6.753e-08",
+    "8.213e-07",
+    "6.753e-08",
+    "3.536e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 190,
+    "in_frac": "0.74",
+    "lr_ok": true,
+    "n_sep": "12.4",
+    "n_src": "mono_mid",
+    "plane_n": 141,
+    "plane_rms": "0.043",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.115",
+    "sq_est": "5.2",
+    "tilt": "0.4",
+    "z_ring": "2.836"
+   },
+   "dist": "2.925",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 190,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.916",
+    "0.2912",
+    "1.3976"
+   ],
+   "ring_cov": [
+    "0.0292",
+    "0.003024",
+    "0.0007034",
+    "0.003024",
+    "0.0007175",
+    "7.386e-05",
+    "0.0007034",
+    "7.386e-05",
+    "0.0004172"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9815",
+    "0.2848",
+    "1.4062"
+   ],
+   "sd_cm": [
+    "1.3",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1002.4666666666667",
+   "target": [
+    "6.0157",
+    "0.2212",
+    "1.3504"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0182",
+    "0.2216",
+    "1.3504"
+   ],
+   "cov": [
+    "0.0001418",
+    "1.101e-05",
+    "8.368e-07",
+    "1.101e-05",
+    "4.409e-06",
+    "6.662e-08",
+    "8.368e-07",
+    "6.662e-08",
+    "3.537e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 172,
+    "in_frac": "0.7",
+    "lr_ok": true,
+    "n_sep": "19.4",
+    "n_src": "mono_mid",
+    "plane_n": 139,
+    "plane_rms": "0.0371",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.121",
+    "sq_est": "6.1",
+    "tilt": "0.7",
+    "z_ring": "2.59"
+   },
+   "dist": "2.732",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 172,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9173",
+    "0.29",
+    "1.3972"
+   ],
+   "ring_cov": [
+    "0.02469",
+    "0.002366",
+    "0.0004954",
+    "0.002366",
+    "0.0006304",
+    "4.825e-05",
+    "0.0004954",
+    "4.825e-05",
+    "0.0004101"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9466",
+    "0.2638",
+    "1.3877"
+   ],
+   "sd_cm": [
+    "1.2",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1002.5333333333333",
+   "target": [
+    "6.0182",
+    "0.2216",
+    "1.3504"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0195",
+    "0.2212",
+    "1.3502"
+   ],
+   "cov": [
+    "9.741e-05",
+    "7.166e-06",
+    "6.588e-07",
+    "7.166e-06",
+    "4.079e-06",
+    "5.029e-08",
+    "6.588e-07",
+    "5.029e-08",
+    "3.537e-06"
+   ],
+   "diag": {
+    "close_k": 13,
+    "corners": 162,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 126,
+    "plane_rms": "0.0298",
+    "sat_frac": "0.12",
+    "sq_est": "7.2",
+    "tilt": "2.4",
+    "z_ring": "2.413"
+   },
+   "dist": "2.537",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 162,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "6.0023",
+    "0.2939",
+    "1.3932"
+   ],
+   "ring_cov": [
+    "0.0001024",
+    "8.143e-06",
+    "1.863e-06",
+    "8.143e-06",
+    "2.586e-05",
+    "1.961e-07",
+    "1.863e-06",
+    "1.961e-07",
+    "2.504e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "6.0104",
+    "0.2943",
+    "1.3928"
+   ],
+   "sd_cm": [
+    "1.0",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1002.6",
+   "target": [
+    "6.0195",
+    "0.2212",
+    "1.3502"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0136",
+    "0.2211",
+    "1.3501"
+   ],
+   "cov": [
+    "7.759e-05",
+    "8.857e-06",
+    "4.547e-07",
+    "8.857e-06",
+    "4.592e-06",
+    "5.436e-08",
+    "4.547e-07",
+    "5.436e-08",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 13,
+    "corners": 188,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 140,
+    "plane_rms": "0.027",
+    "sat_frac": "0.128",
+    "sq_est": "7.5",
+    "tilt": "4.9",
+    "z_ring": "2.485"
+   },
+   "dist": "2.524",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 188,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9998",
+    "0.2963",
+    "1.3994"
+   ],
+   "ring_cov": [
+    "9.405e-05",
+    "1.077e-05",
+    "1.957e-06",
+    "1.077e-05",
+    "2.668e-05",
+    "3.054e-07",
+    "1.957e-06",
+    "3.054e-07",
+    "2.506e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "5.9972",
+    "0.2987",
+    "1.4055"
+   ],
+   "sd_cm": [
+    "0.9",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1002.6666666666666",
+   "target": [
+    "6.0136",
+    "0.2211",
+    "1.3501"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0135",
+    "0.2213",
+    "1.3501"
+   ],
+   "cov": [
+    "7.947e-05",
+    "1.271e-05",
+    "4.612e-07",
+    "1.271e-05",
+    "5.662e-06",
+    "7.721e-08",
+    "4.612e-07",
+    "7.721e-08",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 186,
+    "in_frac": "0.76",
+    "lr_ok": true,
+    "n_sep": "18.7",
+    "n_src": "mono_mid",
+    "plane_n": 144,
+    "plane_rms": "0.033",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.133",
+    "sq_est": "6.3",
+    "tilt": "0.7",
+    "z_ring": "2.46"
+   },
+   "dist": "2.528",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 186,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9997",
+    "0.2964",
+    "1.3993"
+   ],
+   "ring_cov": [
+    "0.02125",
+    "0.004401",
+    "0.0004505",
+    "0.004401",
+    "0.001329",
+    "9.506e-05",
+    "0.0004505",
+    "9.506e-05",
+    "0.0004097"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9679",
+    "0.3088",
+    "1.3878"
+   ],
+   "sd_cm": [
+    "0.9",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1002.7333333333333",
+   "target": [
+    "6.0135",
+    "0.2213",
+    "1.3501"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0104",
+    "0.221",
+    "1.3503"
+   ],
+   "cov": [
+    "6.86e-05",
+    "1.404e-05",
+    "4.026e-07",
+    "1.404e-05",
+    "6.564e-06",
+    "8.69e-08",
+    "4.026e-07",
+    "8.69e-08",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 186,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 155,
+    "plane_rms": "0.0275",
+    "sat_frac": "0.131",
+    "sq_est": "5.8",
+    "tilt": "8.0",
+    "z_ring": "2.43"
+   },
+   "dist": "2.534",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99239",
+    "-0.12223",
+    "0.01475"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 186,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9985",
+    "0.297",
+    "1.4005"
+   ],
+   "ring_cov": [
+    "9.097e-05",
+    "1.671e-05",
+    "1.817e-06",
+    "1.671e-05",
+    "2.923e-05",
+    "4.603e-07",
+    "1.817e-06",
+    "4.603e-07",
+    "2.505e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "5.996",
+    "0.2984",
+    "1.4028"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1002.8",
+   "target": [
+    "6.0104",
+    "0.221",
+    "1.3503"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.01",
+    "0.2208",
+    "1.35"
+   ],
+   "cov": [
+    "6.357e-05",
+    "1.59e-05",
+    "3.654e-07",
+    "1.59e-05",
+    "7.746e-06",
+    "9.68e-08",
+    "3.654e-07",
+    "9.68e-08",
+    "3.534e-06"
+   ],
+   "diag": {
+    "close_k": 13,
+    "corners": 193,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 162,
+    "plane_rms": "0.0293",
+    "sat_frac": "0.14",
+    "sq_est": "8.4",
+    "tilt": "10.4",
+    "z_ring": "2.464"
+   },
+   "dist": "2.549",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99264",
+    "-0.1204",
+    "0.01281"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 193,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9989",
+    "0.2977",
+    "1.4002"
+   ],
+   "ring_cov": [
+    "9.202e-05",
+    "2.029e-05",
+    "1.76e-06",
+    "2.029e-05",
+    "3.114e-05",
+    "5.327e-07",
+    "1.76e-06",
+    "5.327e-07",
+    "2.505e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "6.0002",
+    "0.2995",
+    "1.3994"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1002.8666666666667",
+   "target": [
+    "6.01",
+    "0.2208",
+    "1.35"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0092",
+    "0.2204",
+    "1.35"
+   ],
+   "cov": [
+    "6.05e-05",
+    "1.791e-05",
+    "3.486e-07",
+    "1.791e-05",
+    "9.166e-06",
+    "1.096e-07",
+    "3.486e-07",
+    "1.096e-07",
+    "3.534e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 188,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 158,
+    "plane_rms": "0.029",
+    "sat_frac": "0.127",
+    "sq_est": "6.1",
+    "tilt": "13.0",
+    "z_ring": "2.501"
+   },
+   "dist": "2.568",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.9929",
+    "-0.11881",
+    "0.00653"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 188,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9986",
+    "0.2981",
+    "1.3997"
+   ],
+   "ring_cov": [
+    "9.09e-05",
+    "2.328e-05",
+    "1.69e-06",
+    "2.328e-05",
+    "3.322e-05",
+    "5.971e-07",
+    "1.69e-06",
+    "5.971e-07",
+    "2.504e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "5.9973",
+    "0.2999",
+    "1.3975"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1002.9333333333333",
+   "target": [
+    "6.0092",
+    "0.2204",
+    "1.35"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0088",
+    "0.2201",
+    "1.3502"
+   ],
+   "cov": [
+    "5.811e-05",
+    "1.989e-05",
+    "3.407e-07",
+    "1.989e-05",
+    "1.078e-05",
+    "1.242e-07",
+    "3.407e-07",
+    "1.242e-07",
+    "3.534e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 197,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 167,
+    "plane_rms": "0.0291",
+    "sat_frac": "0.136",
+    "sq_est": "5.7",
+    "tilt": "15.1",
+    "z_ring": "2.549"
+   },
+   "dist": "2.593",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99285",
+    "-0.11923",
+    "0.00642"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 197,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9985",
+    "0.2983",
+    "1.3999"
+   ],
+   "ring_cov": [
+    "8.889e-05",
+    "2.578e-05",
+    "1.749e-06",
+    "2.578e-05",
+    "3.54e-05",
+    "7.059e-07",
+    "1.749e-06",
+    "7.059e-07",
+    "2.505e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "5.9981",
+    "0.2994",
+    "1.4013"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1003.0",
+   "target": [
+    "6.0088",
+    "0.2201",
+    "1.3502"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0087",
+    "0.2201",
+    "1.3501"
+   ],
+   "cov": [
+    "6.456e-05",
+    "2.534e-05",
+    "3.803e-07",
+    "2.534e-05",
+    "1.405e-05",
+    "1.579e-07",
+    "3.803e-07",
+    "1.579e-07",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 13,
+    "corners": 192,
+    "in_frac": "0.78",
+    "lr_ok": true,
+    "n_sep": "33.3",
+    "n_src": "mono_plane",
+    "plane_n": 171,
+    "plane_rms": "0.0316",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.133",
+    "sq_est": "7.9",
+    "tilt": "19.5",
+    "z_ring": "2.53"
+   },
+   "dist": "2.624",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99285",
+    "-0.11923",
+    "0.00642"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 192,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9985",
+    "0.2983",
+    "1.4"
+   ],
+   "ring_cov": [
+    "0.01943",
+    "0.008651",
+    "0.0006164",
+    "0.008651",
+    "0.004332",
+    "0.0002802",
+    "0.0006164",
+    "0.0002802",
+    "0.00042"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9542",
+    "0.2792",
+    "1.4116"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.4",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1003.0666666666667",
+   "target": [
+    "6.0087",
+    "0.2201",
+    "1.3501"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0069",
+    "0.2189",
+    "1.35"
+   ],
+   "cov": [
+    "5.79e-05",
+    "2.533e-05",
+    "3.393e-07",
+    "2.533e-05",
+    "1.534e-05",
+    "1.581e-07",
+    "3.393e-07",
+    "1.581e-07",
+    "3.534e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 193,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 166,
+    "plane_rms": "0.0271",
+    "sat_frac": "0.122",
+    "sq_est": "5.7",
+    "tilt": "20.6",
+    "z_ring": "2.57"
+   },
+   "dist": "2.658",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 193,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9977",
+    "0.2984",
+    "1.4001"
+   ],
+   "ring_cov": [
+    "8.414e-05",
+    "2.998e-05",
+    "1.623e-06",
+    "2.998e-05",
+    "4.02e-05",
+    "8.229e-07",
+    "1.623e-06",
+    "8.229e-07",
+    "2.504e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "5.9932",
+    "0.2985",
+    "1.4006"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.4",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1003.1333333333333",
+   "target": [
+    "6.0069",
+    "0.2189",
+    "1.35"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0096",
+    "0.2206",
+    "1.35"
+   ],
+   "cov": [
+    "6.346e-05",
+    "3.105e-05",
+    "3.747e-07",
+    "3.105e-05",
+    "1.962e-05",
+    "1.941e-07",
+    "3.747e-07",
+    "1.941e-07",
+    "3.534e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 196,
+    "in_frac": "0.79",
+    "lr_ok": true,
+    "n_sep": "39.5",
+    "n_src": "mono_plane",
+    "plane_n": 158,
+    "plane_rms": "0.0301",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.132",
+    "sq_est": "7.1",
+    "tilt": "23.7",
+    "z_ring": "2.558"
+   },
+   "dist": "2.701",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 196,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "ring_cov": [
+    "0.01833",
+    "0.009912",
+    "0.0006935",
+    "0.009912",
+    "0.00588",
+    "0.0003834",
+    "0.0006935",
+    "0.0003834",
+    "0.0004268"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9278",
+    "0.247",
+    "1.4244"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.4",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1003.2",
+   "target": [
+    "6.0096",
+    "0.2206",
+    "1.35"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "cov": [
+    "6.646e-05",
+    "3.588e-05",
+    "3.941e-07",
+    "3.588e-05",
+    "2.399e-05",
+    "2.247e-07",
+    "3.941e-07",
+    "2.247e-07",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 203,
+    "in_frac": "0.8",
+    "lr_ok": true,
+    "n_sep": "42.1",
+    "n_src": "mono_plane",
+    "plane_n": 152,
+    "plane_rms": "0.0357",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.127",
+    "sq_est": "5.6",
+    "tilt": "26.0",
+    "z_ring": "2.625"
+   },
+   "dist": "2.749",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 203,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "ring_cov": [
+    "0.01849",
+    "0.01106",
+    "0.0005599",
+    "0.01106",
+    "0.007164",
+    "0.0003423",
+    "0.0005599",
+    "0.0003423",
+    "0.0004173"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.96",
+    "0.2763",
+    "1.4071"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.5",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1003.2666666666667",
+   "target": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 67,
+   "aim": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "cov": [
+    "9.313e-05",
+    "3.588e-05",
+    "3.941e-07",
+    "3.588e-05",
+    "5.066e-05",
+    "2.247e-07",
+    "3.941e-07",
+    "2.247e-07",
+    "3.02e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "dot_nb": 26,
+    "dot_val": "-259.8",
+    "dot_why": "pair_dy",
+    "rej_cov": "0.17",
+    "rej_hole": "0.15",
+    "rej_onb": "0.27",
+    "rej_px": 147,
+    "rej_w": "1.24",
+    "ring_why": "no_consensus",
+    "sat_frac": "0.068",
+    "sq_est": "6.8"
+   },
+   "dist": "2.749",
+   "dots": [
+    "mono"
+   ],
+   "ground_sim": false,
+   "ground_stage": "terminal",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [
+    "dot_mono_plane"
+   ],
+   "ring": {
+    "corners": 0,
+    "ok": false,
+    "partial": false,
+    "side": null,
+    "src": ""
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "sd_cm": [
+    "1.0",
+    "0.7",
+    "0.5"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "coast",
+   "t": "1003.3333333333334",
+   "target": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "used": []
+  },
+  {
+   "age_ms": 133,
+   "aim": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "cov": [
+    "0.0001198",
+    "3.588e-05",
+    "3.941e-07",
+    "3.588e-05",
+    "7.732e-05",
+    "2.247e-07",
+    "3.941e-07",
+    "2.247e-07",
+    "5.687e-05"
+   ],
+   "diag": {
+    "close_k": 11,
+    "dot_nb": 20,
+    "dot_val": "282.2",
+    "dot_why": "pair_dy",
+    "rej_cov": "0.22",
+    "rej_hole": "0.03",
+    "rej_onb": "0.41",
+    "rej_px": 134,
+    "rej_w": "1.23",
+    "ring_why": "no_consensus",
+    "sat_frac": "0.066",
+    "sq_est": "6.3"
+   },
+   "dist": "2.749",
+   "dots": [],
+   "ground_sim": false,
+   "ground_stage": "search",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 0,
+    "ok": false,
+    "partial": false,
+    "side": null,
+    "src": ""
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "sd_cm": [
+    "1.1",
+    "0.9",
+    "0.8"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "coast",
+   "t": "1003.4",
+   "target": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "used": []
+  },
+  {
+   "age_ms": 200,
+   "aim": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "cov": [
+    "0.0001465",
+    "3.588e-05",
+    "3.941e-07",
+    "3.588e-05",
+    "0.000104",
+    "2.247e-07",
+    "3.941e-07",
+    "2.247e-07",
+    "8.353e-05"
+   ],
+   "diag": {
+    "close_k": 9,
+    "dot_nb": 24,
+    "dot_val": "-19.1",
+    "dot_why": "pair_dy",
+    "ring_why": "no_hypothesis",
+    "sat_frac": "0.072",
+    "sq_est": "5.5"
+   },
+   "dist": "2.749",
+   "dots": [],
+   "ground_sim": false,
+   "ground_stage": "search",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 0,
+    "ok": false,
+    "partial": false,
+    "side": null,
+    "src": ""
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "sd_cm": [
+    "1.2",
+    "1.0",
+    "0.9"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "coast",
+   "t": "1003.4666666666667",
+   "target": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "used": []
+  },
+  {
+   "age_ms": 267,
+   "aim": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "cov": [
+    "0.0001731",
+    "3.588e-05",
+    "3.941e-07",
+    "3.588e-05",
+    "0.0001307",
+    "2.247e-07",
+    "3.941e-07",
+    "2.247e-07",
+    "0.0001102"
+   ],
+   "diag": {
+    "close_k": 11,
+    "dot_nb": 29,
+    "dot_val": "-189.0",
+    "dot_why": "pair_dy",
+    "rej_cov": "0.22",
+    "rej_hole": "0.09",
+    "rej_onb": "0.31",
+    "rej_px": 374,
+    "rej_w": "0.7",
+    "ring_why": "no_consensus",
+    "sat_frac": "0.08",
+    "sq_est": "6.9"
+   },
+   "dist": "2.749",
+   "dots": [],
+   "ground_sim": false,
+   "ground_stage": "search",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 0,
+    "ok": false,
+    "partial": false,
+    "side": null,
+    "src": ""
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "sd_cm": [
+    "1.3",
+    "1.1",
+    "1.0"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "coast",
+   "t": "1003.5333333333333",
+   "target": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "used": []
+  },
+  {
+   "age_ms": 333,
+   "aim": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "cov": [
+    "0.0001998",
+    "3.588e-05",
+    "3.941e-07",
+    "3.588e-05",
+    "0.0001573",
+    "2.247e-07",
+    "3.941e-07",
+    "2.247e-07",
+    "0.0001369"
+   ],
+   "diag": {
+    "close_k": 11,
+    "dot_nb": 24,
+    "dot_val": "-20.2",
+    "dot_why": "pair_dy",
+    "ring_why": "no_hypothesis",
+    "sat_frac": "0.075",
+    "sq_est": "7.1"
+   },
+   "dist": "2.749",
+   "dots": [
+    "mono"
+   ],
+   "ground_sim": false,
+   "ground_stage": "terminal",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [
+    "dot_mono_plane"
+   ],
+   "ring": {
+    "corners": 0,
+    "ok": false,
+    "partial": false,
+    "side": null,
+    "src": ""
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "sd_cm": [
+    "1.4",
+    "1.3",
+    "1.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "coast",
+   "t": "1003.6",
+   "target": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "used": []
+  },
+  {
+   "age_ms": 400,
+   "aim": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "cov": [
+    "0.0002265",
+    "3.588e-05",
+    "3.941e-07",
+    "3.588e-05",
+    "0.000184",
+    "2.247e-07",
+    "3.941e-07",
+    "2.247e-07",
+    "0.0001635"
+   ],
+   "diag": {
+    "close_k": 15,
+    "dot_d": "14.5",
+    "dot_nb": 31,
+    "dot_why": "no_right",
+    "rej_cov": "0.25",
+    "rej_hole": "0.0",
+    "rej_onb": "0.4",
+    "rej_px": 139,
+    "rej_w": "1.3",
+    "ring_why": "no_consensus",
+    "sat_frac": "0.079",
+    "sq_est": "9.0"
+   },
+   "dist": "2.749",
+   "dots": [],
+   "ground_sim": false,
+   "ground_stage": "search",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 0,
+    "ok": false,
+    "partial": false,
+    "side": null,
+    "src": ""
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "sd_cm": [
+    "1.5",
+    "1.4",
+    "1.3"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "coast",
+   "t": "1003.6666666666666",
+   "target": [
+    "6.0117",
+    "0.2217",
+    "1.3499"
+   ],
+   "used": []
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0093",
+    "0.2197",
+    "1.3503"
+   ],
+   "cov": [
+    "0.0001383",
+    "6.909e-05",
+    "8.547e-07",
+    "6.909e-05",
+    "3.943e-05",
+    "4.393e-07",
+    "8.547e-07",
+    "4.393e-07",
+    "3.923e-06"
+   ],
+   "diag": {
+    "close_k": 15,
+    "rej_cov": "0.25",
+    "rej_hole": "0.0",
+    "rej_onb": "0.4",
+    "rej_px": 139,
+    "rej_w": "1.3",
+    "ring_why": "no_consensus",
+    "sat_frac": "0.079",
+    "search_skip": true,
+    "sq_est": "9.0"
+   },
+   "dist": "2.706",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "terminal",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 0,
+    "ok": false,
+    "partial": false,
+    "side": null,
+    "src": ""
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "sd_cm": [
+    "1.2",
+    "0.6",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "terminal",
+   "t": "1003.7333333333333",
+   "target": [
+    "6.0093",
+    "0.2197",
+    "1.3503"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0076",
+    "0.2189",
+    "1.3499"
+   ],
+   "cov": [
+    "0.0001137",
+    "5.153e-05",
+    "6.791e-07",
+    "5.153e-05",
+    "2.765e-05",
+    "3.177e-07",
+    "6.791e-07",
+    "3.177e-07",
+    "3.542e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 193,
+    "in_frac": "0.78",
+    "lr_ok": true,
+    "n_sep": "34.9",
+    "n_src": "mono_plane",
+    "plane_n": 155,
+    "plane_rms": "0.0371",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.135",
+    "sq_est": "6.7",
+    "tilt": "20.5",
+    "z_ring": "2.616"
+   },
+   "dist": "2.664",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 193,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "ring_cov": [
+    "0.02031",
+    "0.009935",
+    "0.0005512",
+    "0.009935",
+    "0.005358",
+    "0.0002751",
+    "0.0005512",
+    "0.0002751",
+    "0.0004153"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9787",
+    "0.2919",
+    "1.4011"
+   ],
+   "sd_cm": [
+    "1.1",
+    "0.5",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1003.8",
+   "target": [
+    "6.0076",
+    "0.2189",
+    "1.3499"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0095",
+    "0.2202",
+    "1.3498"
+   ],
+   "cov": [
+    "0.0001013",
+    "4.089e-05",
+    "5.944e-07",
+    "4.089e-05",
+    "2.063e-05",
+    "2.485e-07",
+    "5.944e-07",
+    "2.485e-07",
+    "3.536e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 189,
+    "in_frac": "0.76",
+    "lr_ok": true,
+    "n_sep": "31.9",
+    "n_src": "mono_plane",
+    "plane_n": 132,
+    "plane_rms": "0.0351",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.122",
+    "sq_est": "5.7",
+    "tilt": "17.9",
+    "z_ring": "2.581"
+   },
+   "dist": "2.63",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 189,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "ring_cov": [
+    "0.0205",
+    "0.009026",
+    "0.0005374",
+    "0.009026",
+    "0.004452",
+    "0.0002412",
+    "0.0005374",
+    "0.0002412",
+    "0.0004144"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.979",
+    "0.2945",
+    "1.3992"
+   ],
+   "sd_cm": [
+    "1.0",
+    "0.5",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1003.8666666666667",
+   "target": [
+    "6.0095",
+    "0.2202",
+    "1.3498"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0083",
+    "0.2199",
+    "1.3496"
+   ],
+   "cov": [
+    "9.401e-05",
+    "3.332e-05",
+    "5.415e-07",
+    "3.332e-05",
+    "1.58e-05",
+    "1.994e-07",
+    "5.415e-07",
+    "1.994e-07",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 190,
+    "in_frac": "0.76",
+    "lr_ok": true,
+    "n_sep": "28.6",
+    "n_src": "mono_plane",
+    "plane_n": 138,
+    "plane_rms": "0.0337",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.126",
+    "sq_est": "6.9",
+    "tilt": "17.1",
+    "z_ring": "2.537"
+   },
+   "dist": "2.597",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99301",
+    "-0.11795",
+    "0.00461"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 190,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9976",
+    "0.2983",
+    "1.4001"
+   ],
+   "ring_cov": [
+    "0.02051",
+    "0.00803",
+    "0.0005697",
+    "0.00803",
+    "0.003606",
+    "0.0002274",
+    "0.0005697",
+    "0.0002274",
+    "0.0004161"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9689",
+    "0.2925",
+    "1.403"
+   ],
+   "sd_cm": [
+    "1.0",
+    "0.4",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1003.9333333333333",
+   "target": [
+    "6.0083",
+    "0.2199",
+    "1.3496"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0028",
+    "0.2181",
+    "1.3499"
+   ],
+   "cov": [
+    "7.594e-05",
+    "2.309e-05",
+    "4.403e-07",
+    "2.309e-05",
+    "1.09e-05",
+    "1.404e-07",
+    "4.403e-07",
+    "1.404e-07",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 188,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 146,
+    "plane_rms": "0.0284",
+    "sat_frac": "0.123",
+    "sq_est": "7.0",
+    "tilt": "14.1",
+    "z_ring": "2.495"
+   },
+   "dist": "2.566",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99339",
+    "-0.11471",
+    "0.005"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 188,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9958",
+    "0.2984",
+    "1.4007"
+   ],
+   "ring_cov": [
+    "9.216e-05",
+    "2.345e-05",
+    "1.904e-06",
+    "2.345e-05",
+    "3.319e-05",
+    "6.647e-07",
+    "1.904e-06",
+    "6.647e-07",
+    "2.505e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "5.9861",
+    "0.2987",
+    "1.4039"
+   ],
+   "sd_cm": [
+    "0.9",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1004.0",
+   "target": [
+    "6.0028",
+    "0.2181",
+    "1.3499"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0089",
+    "0.2204",
+    "1.35"
+   ],
+   "cov": [
+    "7.999e-05",
+    "2.065e-05",
+    "4.665e-07",
+    "2.065e-05",
+    "9.11e-06",
+    "1.26e-07",
+    "4.665e-07",
+    "1.26e-07",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 13,
+    "corners": 185,
+    "in_frac": "0.76",
+    "lr_ok": true,
+    "n_sep": "16.9",
+    "n_src": "mono_plane",
+    "plane_n": 119,
+    "plane_rms": "0.0339",
+    "ring_loc": "mono_partial",
+    "sat_frac": "0.126",
+    "sq_est": "8.1",
+    "tilt": "10.0",
+    "z_ring": "2.509"
+   },
+   "dist": "2.551",
+   "dots": [
+    "stereo"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99339",
+    "-0.11471",
+    "0.005"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 185,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "mono"
+   },
+   "ring_c": [
+    "5.9958",
+    "0.2984",
+    "1.4007"
+   ],
+   "ring_cov": [
+    "0.0212",
+    "0.006225",
+    "0.0004866",
+    "0.006225",
+    "0.002263",
+    "0.0001456",
+    "0.0004866",
+    "0.0001456",
+    "0.0004114"
+   ],
+   "ring_partial": true,
+   "ring_src": "mono",
+   "ring_w": [
+    "5.9854",
+    "0.297",
+    "1.3921"
+   ],
+   "sd_cm": [
+    "0.9",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_stereo",
+   "stage": "near",
+   "t": "1004.0666666666667",
+   "target": [
+    "6.0089",
+    "0.2204",
+    "1.35"
+   ],
+   "used": [
+    "dot_stereo"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0106",
+    "0.2204",
+    "1.35"
+   ],
+   "cov": [
+    "7.177e-05",
+    "1.513e-05",
+    "4.133e-07",
+    "1.513e-05",
+    "6.889e-06",
+    "9.167e-08",
+    "4.133e-07",
+    "9.167e-08",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 9,
+    "corners": 185,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 139,
+    "plane_rms": "0.0296",
+    "sat_frac": "0.133",
+    "sq_est": "5.7",
+    "tilt": "9.2",
+    "z_ring": "2.487"
+   },
+   "dist": "2.537",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99365",
+    "-0.11244",
+    "-0.00357"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 185,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9969",
+    "0.2992",
+    "1.3986"
+   ],
+   "ring_cov": [
+    "9.762e-05",
+    "1.829e-05",
+    "1.466e-06",
+    "1.829e-05",
+    "2.96e-05",
+    "3.691e-07",
+    "1.466e-06",
+    "3.691e-07",
+    "2.503e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "6.0036",
+    "0.3047",
+    "1.3849"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.3",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1004.1333333333333",
+   "target": [
+    "6.0106",
+    "0.2204",
+    "1.35"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0152",
+    "0.2217",
+    "1.3503"
+   ],
+   "cov": [
+    "6.823e-05",
+    "1.127e-05",
+    "3.973e-07",
+    "1.127e-05",
+    "5.496e-06",
+    "6.919e-08",
+    "3.973e-07",
+    "6.919e-08",
+    "3.535e-06"
+   ],
+   "diag": {
+    "close_k": 17,
+    "corners": 190,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 142,
+    "plane_rms": "0.0298",
+    "sat_frac": "0.127",
+    "sq_est": "10.0",
+    "tilt": "5.7",
+    "z_ring": "2.485"
+   },
+   "dist": "2.532",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99332",
+    "-0.1154",
+    "0.00249"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 190,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9994",
+    "0.2988",
+    "1.3992"
+   ],
+   "ring_cov": [
+    "9.876e-05",
+    "1.47e-05",
+    "2.043e-06",
+    "1.47e-05",
+    "2.793e-05",
+    "4.07e-07",
+    "2.043e-06",
+    "4.07e-07",
+    "2.506e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "6.0183",
+    "0.296",
+    "1.4042"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1004.2",
+   "target": [
+    "6.0152",
+    "0.2217",
+    "1.3503"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0131",
+    "0.221",
+    "1.3502"
+   ],
+   "cov": [
+    "6.557e-05",
+    "7.873e-06",
+    "3.751e-07",
+    "7.873e-06",
+    "4.532e-06",
+    "4.76e-08",
+    "3.751e-07",
+    "4.76e-08",
+    "3.534e-06"
+   ],
+   "diag": {
+    "close_k": 13,
+    "corners": 187,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 147,
+    "plane_rms": "0.0275",
+    "sat_frac": "0.131",
+    "sq_est": "7.5",
+    "tilt": "4.3",
+    "z_ring": "2.469"
+   },
+   "dist": "2.525",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99319",
+    "-0.11631",
+    "0.00618"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 187,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9996",
+    "0.2987",
+    "1.3997"
+   ],
+   "ring_cov": [
+    "9.402e-05",
+    "1.062e-05",
+    "1.9e-06",
+    "1.062e-05",
+    "2.663e-05",
+    "2.922e-07",
+    "1.9e-06",
+    "2.922e-07",
+    "2.505e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "6.001",
+    "0.2975",
+    "1.4036"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1004.2666666666667",
+   "target": [
+    "6.0131",
+    "0.221",
+    "1.3502"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  },
+  {
+   "age_ms": 0,
+   "aim": [
+    "6.0126",
+    "0.2209",
+    "1.3502"
+   ],
+   "cov": [
+    "6.538e-05",
+    "4.962e-06",
+    "3.74e-07",
+    "4.962e-06",
+    "3.931e-06",
+    "3.001e-08",
+    "3.74e-07",
+    "3.001e-08",
+    "3.534e-06"
+   ],
+   "diag": {
+    "close_k": 11,
+    "corners": 189,
+    "lr_ok": true,
+    "n_src": "plane",
+    "plane_n": 136,
+    "plane_rms": "0.0292",
+    "sat_frac": "0.136",
+    "sq_est": "6.9",
+    "tilt": "1.5",
+    "z_ring": "2.466"
+   },
+   "dist": "2.526",
+   "dots": [
+    "stereo",
+    "ray_plane"
+   ],
+   "ground_sim": false,
+   "ground_stage": "near",
+   "n": [
+    "-0.99331",
+    "-0.11537",
+    "0.00579"
+   ],
+   "pose": "ok",
+   "published": true,
+   "rejected": [],
+   "ring": {
+    "corners": 189,
+    "ok": true,
+    "partial": true,
+    "side": "front",
+    "src": "stereo"
+   },
+   "ring_c": [
+    "5.9999",
+    "0.2992",
+    "1.3995"
+   ],
+   "ring_cov": [
+    "9.95e-05",
+    "8.141e-06",
+    "1.854e-06",
+    "8.141e-06",
+    "2.589e-05",
+    "2.025e-07",
+    "1.854e-06",
+    "2.025e-07",
+    "2.505e-05"
+   ],
+   "ring_partial": true,
+   "ring_src": "stereo",
+   "ring_w": [
+    "6.0028",
+    "0.3036",
+    "1.3974"
+   ],
+   "sd_cm": [
+    "0.8",
+    "0.2",
+    "0.2"
+   ],
+   "side": "front",
+   "sim": false,
+   "skip_ring": false,
+   "src": "dot_ray_plane",
+   "stage": "near",
+   "t": "1004.3333333333334",
+   "target": [
+    "6.0126",
+    "0.2209",
+    "1.3502"
+   ],
+   "used": [
+    "dot_ray_plane"
+   ]
+  }
+ ],
+ "used": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ]
+}
