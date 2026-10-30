@@ -222,16 +222,6 @@ AIM_TRIM_RIGHT       = 0.0     # m
 AIM_TRIM_UP          = 0.0     # m
 REPO_X_MAX           = -1.5    # m，摆位时飞机必须在环前方至少这么远 (环系 x ≤ 此值)
 GATE_VIRTUAL_OFFSET  = 0.0     # m，> 0 = 虚拟环测试: 环平面往进近侧挪这么多, 真纸面当墙
-GATE_POKE            = False   # True = 戳点模式 (档案 gate_mode=戳点): 慢速抵近红点 → 针戳 → 停留 → 原路退回 S → 降落
-POKE_V               = 1.0     # m/s，戳点抵近速度 (档案 poke_v)
-POKE_GAP             = 0.5     # m，针尖停在离纸面多远 (>0 停在纸前; <0 扎进纸里; 逐步减小来试)
-POKE_DWELL           = 1.5     # s，停到位后停留多久再退 (档案 poke_dwell)
-POKE_RETREAT_V       = 0.4     # m/s，退回速度 (档案 retreat_v)
-POKE_HIT_V           = 0.5     # m/s，戳破/顶开: 针尖碰纸时的速度 (档案 hit_v)。0 = 不戳破, 停在纸前 POKE_GAP
-POKE_CREEP           = 0.25    # m，戳破/顶开: 从纸前多远开始以 POKE_HIT_V 匀速爬行 (吸收纸位置误差; 档案 creep)
-POKE_DEPTH           = 0.10    # m，戳破/顶开: 针尖碰到纸面后再压入多深并刹停 (档案 poke_depth); ≥ POKE_HIT_V²/(2·BRAKE_ACC)
-                               #   模式: POKE_HIT_V>0 且 POKE_GAP ≤ 0 → 戳破/顶开; 否则停在纸前 POKE_GAP (逐级逼近用)
-POKE_STOP_TOL        = 0.10    # m，抵近结束: 离终点这么近且速度 < GATE_STOP_V 算到位
 GATE_ACC_FF          = True    # 冲刺下发加速度前馈 (False = 只给位置+速度)
 
 # =============================================================================
@@ -372,14 +362,11 @@ if _fp is not None:
 # gate: 冲刺段的速度硬限要能容下冲刺速度 (flight_profile 查 ≥ 1.7 × DASH_V);
 #       冲刺前 (识别/摆位) 用 GATE_PRE_VEL_LIM 收紧 (set_phase 动态覆盖)。
 GATE_PRE_VEL_LIM     = max(1.2, VEL_ENVELOPE_RATIO * GATE_REPO_V, VEL_ENVELOPE_RATIO * TELEOP_XY_SPEED)
-# 戳点: 全程慢速, 速度硬限不放开到冲刺档, 只在 GATE_PRE_VEL_LIM 和 2×POKE_V 里取大的
-POKE_VEL_LIM         = max(GATE_PRE_VEL_LIM, VEL_ENVELOPE_RATIO * POKE_V, VEL_ENVELOPE_RATIO * POKE_RETREAT_V)
 TELEOP_XY_MAX        = GATE_XY_MAX            # 手动段水平软限 (相对起飞点); 硬围栏再加 ENVELOPE_MARGIN
 TELEOP_DZ_MAX        = MAX_HEIGHT - 0.5       # 手动段高度上限
 PHASE_ENVELOPE = {
     "takeoff":       (BASE_DRIFT_LIM, 1.0),
-    "gate":          (GATE_XY_MAX + ENVELOPE_MARGIN,
-                      (POKE_VEL_LIM if GATE_POKE else max(1.2, VEL_ENVELOPE_RATIO * DASH_V))),
+    "gate":          (GATE_XY_MAX + ENVELOPE_MARGIN, max(1.2, VEL_ENVELOPE_RATIO * DASH_V)),
     "descend":       (BASE_DRIFT_LIM + 0.20, 0.8),   # 进入时会按实际位置动态放宽
     "auto_land":     (BASE_DRIFT_LIM + 0.40, 1.0),   # 同上
     "_default":      (BASE_DRIFT_LIM + 0.20, 1.0),
@@ -1756,7 +1743,7 @@ def telemetry_loop(tpub):
             tpub.publish(String(json.dumps(build_telemetry(), ensure_ascii=False)))
         except Exception as e:
             rospy.logwarn_throttle(10.0, f"[telemetry] 跳过一帧: {e}")
-        fast = phase_ref[0] == "gate" and sub_mode_ref[0] in ("commit", "dash", "brake", "hold", "approach", "dwell", "retreat")
+        fast = phase_ref[0] == "gate" and sub_mode_ref[0] in ("commit", "dash", "brake", "hold")
         dt = 1.0 / (TELEMETRY_HZ_FAST if fast else TELEMETRY_HZ)
         time.sleep(max(0.0, dt - (time.time() - t0)))
 
@@ -2018,35 +2005,20 @@ def print_config_summary():
         L("  撞击点: 机体中心对准目标 (NEEDLE_* / AIM_TRIM_* 都是 0)")
     L(f"  场地: 环后 {D_BACK:.2f}  起飞点后方 {D_REAR:.2f}  两侧 {D_SIDE:.2f} m  "
       f"水平范围 {GATE_XY_MAX:.2f} m")
-    if GATE_POKE:
-        if POKE_HIT_V > 0 and POKE_GAP <= 0:
-            W(f"  ★ 戳破/顶开模式: {POKE_V:.2f} m/s 抵近 → 纸前 {POKE_CREEP*100:.0f}cm 起 {min(POKE_HIT_V, POKE_V):.2f} m/s 匀速碰纸"
-              f" → 压入 {POKE_DEPTH*100:.0f}cm → 停留 {POKE_DWELL:.1f}s → {POKE_RETREAT_V:.2f} m/s 退回起跑点降落")
-        else:
-            W(f"  ★ 戳点模式 (停在纸前): {POKE_V:.2f} m/s 抵近 → 针尖停在纸{'前' if POKE_GAP >= 0 else '内'} {abs(POKE_GAP)*100:.0f}cm"
-              f" → 停留 {POKE_DWELL:.1f}s → {POKE_RETREAT_V:.2f} m/s 退回起跑点降落")
-        L(f"  戳点: 加 {DASH_ACC:.1f} / 减 {BRAKE_ACC:.1f} m/s²  不查卡纸  停桨线保持 {MAX_TILT_DEG:.0f}°")
-        if GATE_VIRTUAL_OFFSET > 0:
-            W("  ⚠ GATE_VIRTUAL_OFFSET 在戳点模式下被忽略 (虚拟环只用于冲刺)")
-    else:
-        L(f"  冲刺: ≤{DASH_V:.2f} m/s (最低降到 {DASH_V_MIN:.2f})  加 {DASH_ACC:.1f} / 减 {BRAKE_ACC:.1f} m/s²  "
-          f"T_LAG {T_LAG:.2f}s")
-    if GATE_POKE:
-        L(f"  正对进入时: 助跑 {pv['d_align']:.2f} m  刹车起点 s={pv.get('s_brake', float('nan')):+.2f}  "
-          f"停止 s={pv['overshoot']:+.2f}")
-    else:
-        vp = pv.get("v_plan", DASH_V)
-        (W if vp < DASH_V - 1e-9 or pv.get("v_room") is None else L)(
-            f"  正对进入时: {vp:.2f} m/s" + ("" if vp >= DASH_V - 1e-9 else
-                                          f" (环后空间限速; 按 {DASH_V:.2f} 冲要 D_BACK ≥ {pv['d_back_need']:.2f} m)")
-            + f"  助跑 {pv['d_align']:.2f} m")
-        L(f"             过纸冲刺 {PASS_RUN:.2f} m (+滞后补偿 {pv.get('pass_lag', 0):.2f})  "
-          f"刹车起点 s={pv.get('s_brake', float('nan')):+.2f}  停止 s={pv['overshoot']:+.2f}  "
-          f"含超调 {pv.get('brake_over', 0):.2f} m 后机头离墙 {M_BACK + pv['tol']:.2f} m (要求 ≥ {M_BACK:.2f})")
-        L("             场地不够时: " + {0: "不降速, 规划失败回手动段", 1: "降速, 冲刺前要按 Y 确认",
-                                       2: "自动降速"}.get(int(GATE_SLOW_POLICY), "?"))
-        if "v_hit" in pv:
-            L(f"             撞纸 {pv['v_hit']:.2f} m/s (撕纸下限 {V_TEAR_MIN:.2f})  冲刺 {pv['t_dash']:.2f}s")
+    L(f"  冲刺: ≤{DASH_V:.2f} m/s (最低降到 {DASH_V_MIN:.2f})  加 {DASH_ACC:.1f} / 减 {BRAKE_ACC:.1f} m/s²  "
+      f"T_LAG {T_LAG:.2f}s")
+    vp = pv.get("v_plan", DASH_V)
+    (W if vp < DASH_V - 1e-9 or pv.get("v_room") is None else L)(
+        f"  正对进入时: {vp:.2f} m/s" + ("" if vp >= DASH_V - 1e-9 else
+                                      f" (环后空间限速; 按 {DASH_V:.2f} 冲要 D_BACK ≥ {pv['d_back_need']:.2f} m)")
+        + f"  助跑 {pv['d_align']:.2f} m")
+    L(f"             过纸冲刺 {PASS_RUN:.2f} m (+滞后补偿 {pv.get('pass_lag', 0):.2f})  "
+      f"刹车起点 s={pv.get('s_brake', float('nan')):+.2f}  停止 s={pv['overshoot']:+.2f}  "
+      f"含超调 {pv.get('brake_over', 0):.2f} m 后机头离墙 {M_BACK + pv['tol']:.2f} m (要求 ≥ {M_BACK:.2f})")
+    L("             场地不够时: " + {0: "不降速, 规划失败回手动段", 1: "降速, 冲刺前要按 Y 确认",
+                                   2: "自动降速"}.get(int(GATE_SLOW_POLICY), "?"))
+    if "v_hit" in pv:
+        L(f"             撞纸 {pv['v_hit']:.2f} m/s (撕纸下限 {V_TEAR_MIN:.2f})  冲刺 {pv['t_dash']:.2f}s")
     L(f"  识别: 距离 [{GATE_D_MIN:.1f}, {GATE_D_MAX:.1f}] m  单帧σ 横<{GATE_SD_MAX_CM:.0f}/深<{GATE_SD_ALONG_MAX_CM:.0f}cm (环心观测放宽到 {GATE_SD_ALONG_PER_M_CM:.1f}cm×距离)  "
       f"锁定σ 横<{GATE_LOCK_SD_LAT_CM:.0f}/深<{GATE_LOCK_SD_ALONG_CM:.0f}cm  "
       f"锁定离散 横<{GATE_ALIGN_SPREAD_CM:.0f}/深<{GATE_ALIGN_SPREAD_ALONG_CM:.0f}cm  "
@@ -2056,7 +2028,7 @@ def print_config_summary():
         L("  ✓ 影子 GATE_SHADOW=True —— 识别/锁定/规划照做, 不摆位、不冲刺")
     else:
         W("  ✗ 影子 GATE_SHADOW=False —— !!! 锁定后会摆位、冲刺 !!!")
-    if GATE_VIRTUAL_OFFSET > 0 and not GATE_POKE:
+    if GATE_VIRTUAL_OFFSET > 0:
         W(f"  ★ 虚拟环: 环平面前移 {GATE_VIRTUAL_OFFSET:.2f} m, 停在纸前")
     if GATE_CONFIRM_DASH:
         L("  ✓ 冲刺前要按 G 确认")
@@ -2068,8 +2040,7 @@ def print_config_summary():
     for name in ("takeoff", "gate", "descend", "auto_land"):
         h, v = PHASE_ENVELOPE[name]
         L(f"  包络 {name:<10s} 水平<{h:.2f}m  速度<{v:.2f}m/s")
-    L(f"  冲刺前 gate 段速度包络收紧到 {GATE_PRE_VEL_LIM:.2f} m/s" +
-      (f" (戳点段 {POKE_VEL_LIM:.2f} m/s)" if GATE_POKE else ""))
+    L(f"  冲刺前 gate 段速度包络收紧到 {GATE_PRE_VEL_LIM:.2f} m/s")
     L(f"  高度硬顶 {MAX_HEIGHT:.2f}m  倾角停桨 {MAX_TILT_DEG:.0f}° (持续 {FATAL_CONFIRM_S:.2f}s)  "
       f"冲刺段 {GATE_DASH_TILT_DEG:.0f}° (持续 {GATE_DASH_TILT_CONFIRM_S:.2f}s)")
     if _SITE_REPORT:
@@ -2156,10 +2127,8 @@ def preflight_plan(st, age):
     放得下 → 打印一行; 放不下 → 说清楚卡在哪、要按设定速度冲需要改成多少, 让操作员选
       c = 照样起飞 (allow_slow 是"确认"/"是" 时空中会降到能飞的速度; "否" 时空中会规划失败)
       q = 退出去改档案
-    看不到环 / 戳点模式 / 识别太旧 → 跳过 (返回 True)。返回 False = 操作员选了退出。
+    看不到环 / 识别太旧 → 跳过 (返回 True)。返回 False = 操作员选了退出。
     """
-    if GATE_POKE:
-        return True
     try:
         rw = st.get("ring_w") or st.get("target")
         if rw is None or age > 1.0:
@@ -2405,10 +2374,10 @@ def preflight(param_get, set_mode, param_pull=None):
                      f"脚本的停桨线 {MAX_TILT_DEG:.0f}° —— QGC 里改到 ≤ {lim:.0f}°, 拒绝起飞")
         return False
     vmax = float(vals["MPC_XY_VEL_MAX"])
-    v_need = POKE_V if GATE_POKE else DASH_V
+    v_need = DASH_V
     if vmax < 1.1 * v_need:
-        rospy.logerr(f"    MPC_XY_VEL_MAX={vmax:.2f} < 1.1×{'戳点' if GATE_POKE else '冲刺'}速度 {1.1 * v_need:.2f}: "
-                     f"PX4 会把速度削掉 —— 改参数或降 {'poke_v' if GATE_POKE else 'dash_v'}, 拒绝起飞")
+        rospy.logerr(f"    MPC_XY_VEL_MAX={vmax:.2f} < 1.1×冲刺速度 {1.1 * v_need:.2f}: "
+                     f"PX4 会把速度削掉 —— 改参数或降 dash_v, 拒绝起飞")
         return False
     rospy.loginfo(f"    COM_OBL_ACT={val} MPC_TILTMAX_AIR={tmax:.0f}° MPC_XY_VEL_MAX={vmax:.1f} OK")
     try:
@@ -2901,7 +2870,7 @@ class GateRun:
                 "ttc": _f(ttc), "v_along_meas": _f(v_al),
             })
         ds = self.dash_state
-        g["v_along_cmd"] = _f(ds[2]) if ds and self.seg in ("dash", "brake", "approach", "retreat") else 0.0
+        g["v_along_cmd"] = _f(ds[2]) if ds and self.seg in ("dash", "brake") else 0.0
         lv = gate_in.latest_valid()
         g["gate_age"] = _f(now - lv["t"]) if lv else None
         if self.plan is not None and self.plan.ok:
@@ -2910,21 +2879,20 @@ class GateRun:
                            "abort_ok": self.seg in ("manual", "wait", "align", "commit", "abort")}
             g["plan"] = {"seq": self.plan_seq,
                          "pts": [_l3(self.p_hover), _l3(P.S), _l3(P.aim), _l3(P.E)],
-                         "labels": ["悬停点", "起跑点", "穿越点", "戳点终点" if GATE_POKE else "制动终点"],
-                         "mode": "poke" if GATE_POKE else "dash",
-                         "poke_gap": _f(POKE_GAP) if GATE_POKE else None,
+                         "labels": ["悬停点", "起跑点", "穿越点", "制动终点"],
+                         "mode": "dash",
                          "v": _f(P.v), "summary": P.summary(), "dir_why": P.dir_why,
-                         "v_set": None if GATE_POKE else _f(DASH_V),
-                         "slow": bool(not GATE_POKE and P.v < DASH_V - 1e-9),
-                         "slow_why": P.slow_why if not GATE_POKE else "",
-                         "need_confirm": bool(not GATE_POKE and P.need_confirm),
+                         "v_set": _f(DASH_V),
+                         "slow": bool(P.v < DASH_V - 1e-9),
+                         "slow_why": P.slow_why,
+                         "need_confirm": bool(P.need_confirm),
                          "v_hit": _f(P.v_hit_nom), "v_hit_worst": _f(P.v_hit_worst),
                          "virtual": GATE_VIRTUAL_OFFSET > 0}
             g["brake"] = {"end": _l3(P.E), "dist": _f(P.brake_dist), "acc": _f(BRAKE_ACC),
                           "s_b": _f(P.traj.s_b), "s_stop": _f(P.s_stop),
-                          "pass_run": None if GATE_POKE else _f(PASS_RUN),
+                          "pass_run": _f(PASS_RUN),
                           "pass_lag": _f(P.pass_lag), "pass_actual": _f(P.pass_actual),
-                          "wall_left": None if GATE_POKE else _f((P.tol or 0.0) + M_BACK)}
+                          "wall_left": _f((P.tol or 0.0) + M_BACK)}
         nv, nr, rej = gate_in.counters()
         g["det"] = {"n_valid": nv, "n_rej": nr, "rej": rej}
         if ds:
@@ -3062,7 +3030,7 @@ class GateRun:
                 self._rej_snap, rtxt = gate_in.rej_since(getattr(self, "_rej_snap", None))
                 if lv is not None and now - lv["recv"] < 1.0:
                     dc = math.hypot(lv["c"][0] - pn[0], lv["c"][1] - pn[1])
-                    dmin = gp.d_run_for(POKE_V if GATE_POKE else DASH_V, self.params)
+                    dmin = gp.d_run_for(DASH_V, self.params)
                     hint = ("就地起跑" if dmin <= dc <= max(dmin, D_RUN_MAX) else
                             ("会后退到 %.1fm" % dmin) if dc < dmin else ("会前进到 %.1fm" % max(dmin, D_RUN_MAX)))
                     seen = f"看到环: 水平 {dc:.2f}m 高差 {lv['c'][2] - pn[2]:+.2f}m ({hint})"
@@ -3082,8 +3050,6 @@ class GateRun:
         按 T 之前就知道 设定速度放不放得下 / 瞄点高度在不在带内, 不用 T 了才发现。
         → 一段日志文字; 结果放进 self.pre (遥测 gate.pre, 网页提示行显示)。
         """
-        if GATE_POKE:
-            return ""
         if self.pre is not None and now - self.pre.get("_t", 0) < 2.0:
             return self.pre.get("_txt", "")
         smp = gate_in.valid_since(now - 1.0)
@@ -3199,11 +3165,8 @@ class GateRun:
     # ---------------- PLAN ----------------
     def make_plan(self, est, p_from, label):
         aim = est.get("aim") or est["c"]
-        if GATE_POKE:
-            P = gp.plan_poke(aim, est["c"], est.get("n"), p_from, self.origin, self.params)
-        else:
-            P = gp.plan_dash(aim, est["c"], est.get("n"), p_from, self.origin, self.params,
-                             virtual_offset=GATE_VIRTUAL_OFFSET)
+        P = gp.plan_dash(aim, est["c"], est.get("n"), p_from, self.origin, self.params,
+                         virtual_offset=GATE_VIRTUAL_OFFSET)
         if not P.ok:
             self.fail(f"{label}: " + "; ".join(P.errors))
         self.plan = P
@@ -3223,7 +3186,7 @@ class GateRun:
                           f"针尖预计 ({(a_h+NEEDLE_RIGHT)*100:+.0f},{(a_v+NEEDLE_UP)*100:+.0f})"
                           + (f"  ★偏离目标 {P.tool_miss*100:.0f}cm" if P.aim_clamped else ""))
         rospy.loginfo(f"[gate]   起跑点 S=({S[0]:+.2f},{S[1]:+.2f},{S[2]:+.2f})  "
-                      f"{'针尖终点(机体中心)' if GATE_POKE else '制动终点'} E=({P.E[0]:+.2f},{P.E[1]:+.2f},{P.E[2]:+.2f})  "
+                      f"制动终点 E=({P.E[0]:+.2f},{P.E[1]:+.2f},{P.E[2]:+.2f})  "
                       f"进入方向 {math.degrees(gp.yaw_of(P.dir)):+.0f}°")
         return P
 
@@ -3358,19 +3321,12 @@ class GateRun:
         self.set_seg("commit", "等确认")
         rospy.logwarn("=" * 64)
         rospy.logwarn(f"[gate] 计划: {P.summary()}")
-        if not GATE_POKE and P.v < DASH_V - 1e-9:
+        if P.v < DASH_V - 1e-9:
             rospy.logwarn(f"[gate] ★ 冲刺速度被场地压到 {P.v:.2f} m/s (设定 {DASH_V:.2f}) —— 原因见上面"
                           f"'场地限制'那行; 不接受就按 M 回手动段")
-        if GATE_POKE:
-            if P.pierce:
-                rospy.logwarn(f"[gate] ★ 戳破/顶开: {POKE_V:.2f}m/s 抵近, 纸前 {POKE_CREEP*100:.0f}cm 起降到 {P.hit_v:.2f}m/s 匀速碰纸, "
-                              f"压入 {POKE_DEPTH*100:.0f}cm 后刹停, 停留 {POKE_DWELL:.1f}s, 再以 {POKE_RETREAT_V:.2f}m/s 退回起跑点降落")
-            else:
-                rospy.logwarn(f"[gate] ★ 戳点: {POKE_V:.2f}m/s 抵近, 针尖停在纸{'前' if POKE_GAP >= 0 else '内'} "
-                              f"{abs(POKE_GAP)*100:.0f}cm, 停留 {POKE_DWELL:.1f}s, 再以 {POKE_RETREAT_V:.2f}m/s 退回起跑点降落")
-        elif GATE_VIRTUAL_OFFSET > 0:
+        if GATE_VIRTUAL_OFFSET > 0:
             rospy.logwarn(f"[gate] ★ 虚拟环: 会停在真纸面前约 {GATE_VIRTUAL_OFFSET - P.s_stop:.2f}m")
-        need_y = bool(not GATE_POKE and P.need_confirm)     # 降速了 → 只认 Y, G 不算
+        need_y = bool(P.need_confirm)     # 降速了 → 只认 Y, G 不算
         go_key = 'y' if need_y else 'g'
         if need_y:
             rospy.logerr(f"[gate] ★★★ 降速: 计划 {P.v:.2f} m/s, 设定 {DASH_V:.2f} m/s —— 按 {DASH_V:.2f} 卡在: {P.slow_why}")
@@ -3379,19 +3335,15 @@ class GateRun:
             if self.keys is None:
                 self.fail("要按键确认冲刺, 但没有终端键盘")
             back = "回手动段" if (GATE_ABORT_TO_MANUAL and self.back_ok) else "降落"
-            if GATE_POKE:
-                rospy.logwarn(f"[gate] ★★ 按 G 开始戳点 (途中 M / 方向键 = 立刻退回起跑点, L = 原地降落, X = 停桨)  |  "
-                              f"M / 方向键 (现在) = 不去了, 回手动段  |  {GATE_CONFIRM_TIMEOUT:.0f}s 不按 = {back}")
-            else:
-                rospy.logwarn(f"[gate] ★★ 按 G 冲刺 (之后不能中止, 只有 X 停桨)  |  M / 方向键 = 不冲了, 回手动段  "
-                              f"|  L = 降落  |  {GATE_CONFIRM_TIMEOUT:.0f}s 不按 = {back}")
+            rospy.logwarn(f"[gate] ★★ 按 G 冲刺 (之后不能中止, 只有 X 停桨)  |  M / 方向键 = 不冲了, 回手动段  "
+                          f"|  L = 降落  |  {GATE_CONFIRM_TIMEOUT:.0f}s 不按 = {back}")
         rospy.logwarn("=" * 64)
         t_end = rospy.Time.now().to_sec() + GATE_CONFIRM_TIMEOUT
         while GATE_CONFIRM_DASH or need_y:
             self.hold(P.S)
             self.tick()
             if go_key in self.flags:
-                rospy.logwarn(f"[gate] {go_key.upper()} → " + ("戳点" if GATE_POKE else f"冲刺 {P.v:.2f} m/s"))
+                rospy.logwarn(f"[gate] {go_key.upper()} → 冲刺 {P.v:.2f} m/s")
                 break
             if need_y and 'g' in self.flags:
                 rospy.logwarn(f"[gate] 这次降速了 ({P.v:.2f} < {DASH_V:.2f} m/s), G 不算 —— 接受就按 Y, 不接受按 M")
@@ -3480,120 +3432,6 @@ class GateRun:
         rospy.logwarn(f"[gate] 刹停: 规划停在 s={P.s_stop:+.2f}, 估计 s={s_e:+.2f} "
                       f"(差 {s_e - P.s_stop:+.2f}m)  过纸面={'是' if self.passed else '否'}")
 
-    # ---------------- POKE (戳点模式) ----------------
-    def _traj_run(self, tr, sampler, seg, label, yaw_d, t_extra, tol=None):
-        """
-        跑一段时间参数化轨迹 (抵近 / 退回共用)。tick(dash=False): LAND / 接管 → GateStop (原地悬停降落)。
-        M / 方向键 (仅抵近段有意义) → 返回 "pin" (调用方就地停住再退回)。
-        返回 "done" 或 "pin"。
-        """
-        self.t0 = rospy.Time.now().to_sec() + 0.05
-        setpoint.set_traj_mode(sampler, self.t0, yaw_d, GATE_ACC_FF)
-        self.set_seg(seg, label)
-        P = self.plan
-        aim, d = P.aim, P.dir
-        while True:
-            now = rospy.Time.now().to_sec()
-            t = now - self.t0
-            s_p, v_p, _ = tr.at(t)
-            p, v = self.pos(), self.vel()
-            s_e = gp.vdot(gp.vsub(p, aim), d)
-            v_e = gp.vdot(v, d)
-            self.dash_state = (t, s_p, v_p, s_e, v_e)
-            tol_ = POKE_STOP_TOL + 0.1 if tol is None else tol
-            if t >= tr.T and math.hypot(v[0], v[1]) < GATE_STOP_V and abs(s_e - tr.s_stop) < tol_:
-                return "done"
-            if t >= tr.T + GATE_STOP_EXTRA + t_extra:
-                rospy.logwarn(f"[gate] {seg}: 轨迹结束 {GATE_STOP_EXTRA:.1f}s 还没到位 "
-                              f"(s={s_e:+.2f} 目标 {tr.s_stop:+.2f}, v={math.hypot(v[0], v[1]):.2f}) —— 继续下一段")
-                return "done"
-            self.tick()
-            if seg == "approach" and ('m' in self.flags or self.move is not None):
-                return "pin"
-
-    def poke(self):
-        """
-        戳点: G 之后 抵近 (POKE_V) → 停在 s_stop → 停留 POKE_DWELL → 以 POKE_RETREAT_V 退回 S。
-        之后和冲刺一样: phase_gate 收尾在当前位置悬停 → 下降 → AUTO.LAND (降落点 ≈ 起跑点 S)。
-        停桨线保持 MAX_TILT_DEG (dash_tilt_on 不开); 不查卡纸 (顶住纸面就是预期的)。
-        """
-        P = self.plan
-        aim, d = P.aim, P.dir
-        yaw_d = gp.yaw_of(d)
-        self.yaw_sp = yaw_d
-        self.back_ok = False                               # 开始戳了, M 的含义变成"立刻退回"
-        set_phase("gate")                                  # 戳点包络 (PHASE_ENVELOPE["gate"] 已按 POKE_V 算)
-        self.outcome = "poke"
-
-        def sampler_in(t):
-            s, v, a = P.traj.at(t)
-            return gp.vadd(aim, gp.vmul(d, s)), gp.vmul(d, v), gp.vmul(d, a)
-
-        if P.pierce:
-            lab = (f"{P.v:.2f}m/s 抵近 → 纸前 {POKE_CREEP*100:.0f}cm 起 {P.hit_v:.2f}m/s 爬行碰纸 → 压入 {POKE_DEPTH*100:.0f}cm, "
-                   f"预计 {P.traj.T:.1f}s")
-            tol_in = 0.6                                   # 纸挡住时飞机落后设定点是预期的, 只要停稳就算到位
-        else:
-            lab = (f"{P.v:.2f}m/s 抵近, 预计 {P.traj.T:.1f}s 后针尖停在纸{'前' if POKE_GAP >= 0 else '内'} "
-                   f"{abs(POKE_GAP)*100:.0f}cm")
-            tol_in = None
-        r = self._traj_run(P.traj, sampler_in, "approach", lab, yaw_d, 0.0, tol_in)
-        p = self.pos()
-        s_e = gp.vdot(gp.vsub(p, aim), d)
-        if r == "pin":
-            rospy.logwarn(f"[gate] 操作员中止抵近 (s={s_e:+.2f}) —— 就地停住后退回起跑点")
-            self.outcome = "poke_abort"
-            t_end = rospy.Time.now().to_sec() + 0.5
-            while rospy.Time.now().to_sec() < t_end:
-                self.hold(self.pos())
-                self.tick()
-        else:
-            self.passed = s_e > -L_F + 0.01                # "passed" 在戳点模式里 = 针尖已到纸面
-            rospy.logwarn(f"[gate] 到位: 规划 s={P.s_stop:+.2f}, 估计 s={s_e:+.2f} "
-                          f"(差 {s_e - P.s_stop:+.2f}m)  针尖到纸面={'是' if self.passed else '否'}")
-            if P.pierce:
-                # 顶开效果: 实际压入多深 (纸松时被推凹 → 估计 s 落后于规划 s)。录像 + 这一行一起看
-                rospy.logwarn(f"[gate] 压入: 实际 {max(0.0, s_e + L_F)*100:.0f}cm / 规划 {POKE_DEPTH*100:.0f}cm "
-                              f"(落后 {max(0.0, P.s_stop - s_e)*100:.0f}cm = 纸挡住了)")
-            self.set_seg("dwell", f"停留 {POKE_DWELL:.1f}s")
-            hp = self.pos()
-            t_end = rospy.Time.now().to_sec() + POKE_DWELL
-            while rospy.Time.now().to_sec() < t_end:
-                self.hold(hp)
-                self.tick()
-                if 'm' in self.flags or self.move is not None:
-                    rospy.logwarn("[gate] 操作员提前结束停留 —— 退回")
-                    break
-            self.outcome = "poke_done"
-        # ---- 退回: 从当前沿线位置 s_e 走到 −d_run ----
-        p = self.pos()
-        s_now = gp.vdot(gp.vsub(p, aim), d)
-        s_back = -P.d_run
-        if s_now - s_back < 0.05:
-            rospy.logwarn("[gate] 已经在起跑点附近, 不用退回")
-            return
-        back = gp.Mirror(gp.Traj1D(-s_now, -s_back, POKE_RETREAT_V, gp.RETREAT_ACC, gp.RETREAT_DEC))
-
-        def sampler_out(t):
-            s, v, a = back.at(t)
-            return gp.vadd(aim, gp.vmul(d, s)), gp.vmul(d, v), gp.vmul(d, a)
-
-        self._traj_run(_BackAdapter(back, s_back), sampler_out, "retreat",
-                       f"{POKE_RETREAT_V:.2f}m/s 沿原线退回起跑点 (还有 {s_now - s_back:.2f}m), 预计 {back.T:.1f}s",
-                       yaw_d, 1.0)
-        pe = self.pos()
-        rospy.logwarn(f"[gate] 退回完成: 离起跑点 {gp.vnorm(gp.vsub(pe, P.S)):.2f}m —— 悬停后在这里降落")
-
-
-class _BackAdapter(object):
-    """_traj_run 只要 T / at / s_stop: 把退回轨迹包一层, s_stop = 退回终点 (沿线坐标)。"""
-
-    def __init__(self, back, s_end):
-        self.back, self.s_stop, self.T = back, s_end, back.T
-
-    def at(self, t):
-        return self.back.at(t)
-
 
 def phase_gate(z_hold):
     """
@@ -3652,10 +3490,7 @@ def phase_gate(z_hold):
                             rospy.logwarn(f"[gate] 锁定后起跑点挪了 {gap:.2f}m —— 再挪过去 (不重新取样)")
                         run.move_to(P2.S, gp.yaw_of(P2.dir), GATE_REPO_TIMEOUT, "微调起跑点")
                     run.commit()
-                    if GATE_POKE:
-                        run.poke()
-                    else:
-                        run.dash()
+                    run.dash()
                 break
             except GateStop as e:
                 back = isinstance(e, GateBack)
@@ -3684,7 +3519,7 @@ def phase_gate(z_hold):
             run.hold(hp)
             if run.seg not in ("abort",):
                 run.set_seg("hold", f"在当前位置悬停 {GATE_HOLD_S:.1f}s 后降落")
-            set_phase("gate")                     # 刹停后可能还有残速, 用本模式的包络 (戳点: 慢速档)
+            set_phase("gate")                     # 刹停后可能还有残速, 用冲刺档包络
             t_end = rospy.Time.now().to_sec() + GATE_HOLD_S
             while rospy.Time.now().to_sec() < t_end and not stop_requested():
                 run.hold(hp)

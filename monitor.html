@@ -787,11 +787,6 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
       起跑点是动态的：离环在 [最小助跑, <code>run_max</code>] 之间就地起跑，近了后退、远了前进。
       冲刺前锁不住 / 不可行 / 没按 G，或者按 <b>M</b> / 任一方向键 → 回手动段，可以再按 T；L = 降落。
       冲刺中只有 X（停桨）立即生效，L / 断连等刹停后再降。
-      <b>戳点模式</b>（档案 <code>gate_mode = 戳点</code>）：同样摆位锁定、按 G 之后以 <code>poke_v</code>（默认 1 m/s）慢速抵近红点，
-      针尖停在纸前 <code>poke_gap</code> 米（逐级减小：0.5 → 0.2 → 0.05，不碰纸），停留后沿原线退回起跑点降落。
-      <code>poke_gap = 0</code> 且 <code>hit_v</code> &gt; 0（默认 0.5 m/s）= <b>戳破 / 顶开</b>：纸前 <code>creep</code>（0.25 m）起降到 <code>hit_v</code> 匀速碰纸，
-      压入 <code>poke_depth</code>（0.10 m）后刹停，停留、退回；纸是松的时先用它看能不能顶开。
-      途中 M / 方向键 = 立刻停住并退回，L = 原地降落。针尖长度并进机头长 <code>l_f</code>。
       测试顺序：<code>set.GATE_SHADOW = True</code>（影子：不摆位不冲刺）→ <code>set.GATE_VIRTUAL_OFFSET = 2.0</code>
       （虚拟环：真冲刺，停在纸前）→ 正式。视觉链路用 <code>python3 run_vision.py gate_gcs</code>（模式必须写）。
       网页按档案的任务选脚本：穿环 → 编号最大的 <code>stageNN_gate.py</code>，跟踪 → <code>stageNN_track.py</code>；
@@ -939,7 +934,7 @@ const FLYING = new Set(["takeoff","hover","teleop","track","return_home","descen
 Object.assign(PHASE, {gate: "穿环", gate_wait: "等待识别", gate_align: "对准", gate_commit: "提交",
   gate_dash: "冲刺", gate_brake: "制动", gate_hold: "过环悬停"});
 const SEG = {manual: "手动", wait: "等待识别", align: "对准", commit: "提交", dash: "冲刺", brake: "制动",
-  hold: "过环悬停", abort: "中止", approach: "抵近", dwell: "戳点停留", retreat: "退回"};
+  hold: "过环悬停", abort: "中止"};
 const isGatePhase = ph => typeof ph === "string" && (ph === "gate" || ph.startsWith("gate_"));
 const isFlying = ph => FLYING.has(ph) || isGatePhase(ph);
 
@@ -1330,12 +1325,7 @@ function updateHint(t) {
     // 穿环段: 文字只说"现在处于哪一段 / 还能不能中止", 具体按键以飞行终端里的提示为准
     const g = t.gate || {}, cm = g.commit || {}, seg = g.seg;
     const segTxt = SEG[seg] || seg || PHASE[t.phase] || t.phase;
-    if (seg === "approach" || seg === "dwell" || seg === "retreat") {
-      cls = "warn";
-      txt = seg === "approach" ? "戳点 · 慢速抵近红点 —— M / 方向键 = 立刻停住并退回起跑点   L = 原地降落   X = 停桨"
-          : seg === "dwell" ? "戳点 · 针尖到位，停留中 —— 时间到自动退回（M / 方向键 = 立刻退回）   L = 原地降落   X = 停桨"
-          : "戳点 · 沿原线退回起跑点，随后原地降落   ·   L = 原地降落   X = 停桨";
-    } else if (cm.passed || (cm.abort_ok === false)) {
+    if (cm.passed || (cm.abort_ok === false)) {
       cls = "warn";
       txt = `穿环 · ${segTxt} · ★ 已过提交点: 不再中止, 只剩 X 停桨` +
             (t.shadow ? "（影子模式: 指令不下发）" : "");
@@ -1361,9 +1351,7 @@ function updateHint(t) {
       const pl = g.plan || {};
       if (pl.need_confirm) txt = `穿环 · ★ 降速：计划 ${fx(pl.v, 1)} m/s（设定 ${fx(pl.v_set, 1)}，${pl.slow_why || "场地限速"}）—— ` +
           `接受就在飞行终端按 Y 冲刺（G 不算）   ·   不接受按 M 回手动段   L = 降落   X = 停桨`;
-      else txt = (((t.gate || {}).plan || {}).mode === "poke"
-              ? "穿环 · 已锁定，等确认 —— ★ 在飞行终端按 G 开始戳点（途中 M 可退回）   ·   M = 不去了，回手动   L = 降落   X = 停桨"
-              : `穿环 · 已锁定，等确认（${gateSpeedTxt(t.gate || {}, gateCfg() || {})}）—— ★ 在飞行终端按 G 冲刺（之后不能中止）   ·   M = 不冲了，回手动   L = 降落   X = 停桨`) +
+      else txt = `穿环 · 已锁定，等确认（${gateSpeedTxt(t.gate || {}, gateCfg() || {})}）—— ★ 在飞行终端按 G 冲刺（之后不能中止）   ·   M = 不冲了，回手动   L = 降落   X = 停桨` +
             (t.shadow ? "（影子模式）" : "");
     } else {
       cls = t.shadow ? "info" : "ok";
@@ -2022,7 +2010,6 @@ function renderTrack(t, tr) {
 function gateSpeedTxt(tg, gc) {
   const set = tg && tg.plan && nz(tg.plan.v_set) ? tg.plan.v_set : nz(P().DASH_V) ? P().DASH_V : gc.dash_v;
   const pl = tg && tg.plan && nz(tg.plan.v) ? tg.plan.v : null;
-  if (tg && tg.plan && tg.plan.mode === "poke") return nz(pl) ? `戳点 ${fx(pl, 1)} m/s` : "";
   if (nz(pl)) return pl < set - 1e-6 ? `★ 降速：计划 ${fx(pl, 1)} m/s（设定 ${fx(set, 1)}，${tg.plan.slow_why || "场地限速"}）` : `计划 ${fx(pl, 1)} m/s`;
   if (nz(gc.v_plan) && nz(set) && gc.v_plan < set - 1e-6) return `预计 ${fx(gc.v_plan, 1)} m/s（环后空间限速，设定 ${fx(set, 1)}）`;
   return nz(set) ? `冲刺 ${fx(set, 1)} m/s` : "";
@@ -2420,9 +2407,6 @@ const DEFAULT_OF = {   // 旋钮 → 从默认 dry-run 结果里取"默认值"�
   t_lag: r => r.params.T_LAG, e_along: r => r.params.E_ALONG, v_tear_min: r => r.params.V_TEAR_MIN,
   entry_ang_max: r => r.params.ENTRY_ANG_MAX, d_straight: r => r.params.D_STRAIGHT,
   run_max: r => r.params.D_RUN_MAX,
-  poke_v: r => r.params.POKE_V, poke_gap: r => r.params.POKE_GAP, poke_dwell: r => r.params.POKE_DWELL,
-  retreat_v: r => r.params.POKE_RETREAT_V, hit_v: r => r.params.POKE_HIT_V,
-  poke_depth: r => r.params.POKE_DEPTH, creep: r => r.params.POKE_CREEP,
 };
 // ★2026-10-19 表单按任务显示旋钮: 旋钮表的 tasks 字段 (没有 = 两种任务都用)。
 //   任务 = 表单里选的「任务」旋钮; 没选就是飞行脚本自己的任务 (默认 dry-run 的 task)。
@@ -2618,10 +2602,9 @@ function renderPreview(r) {
   // 开关
   const sw = d && d.switches ? d.switches : null;
   $("#pv-sw").innerHTML = !sw ? "" : isGate ? [
-    `<span class="sw ${sw.GATE_SHADOW ? "okk" : "danger"}">${sw.GATE_SHADOW ? "影子模式（不摆位不冲刺）" : sw.GATE_POKE ? "实飞：锁定后会抵近戳点" : "实飞：锁定后会冲刺"}</span>`,
-    !sw.GATE_POKE ? `<span class="sw ${sw.GATE_SLOW_POLICY === 2 ? "danger" : "okk"}">${
-      {0: "场地不够：不降速（回手动段）", 1: "场地不够：降速要按 Y 确认", 2: "场地不够：自动降速"}[sw.GATE_SLOW_POLICY ?? 1]}</span>` : "",
-    sw.GATE_POKE ? `<span class="sw info">${sw.POKE_HIT_V > 0 && sw.POKE_GAP <= 0 ? `戳破 / 顶开：${fx(sw.POKE_HIT_V, 2)} m/s 碰纸，压入 ${fx(sw.POKE_DEPTH * 100, 0)} cm` : `戳点：针尖停在纸前 ${fx(sw.POKE_GAP * 100, 0)} cm`}，完成后退回起跑点降落</span>` : "",
+    `<span class="sw ${sw.GATE_SHADOW ? "okk" : "danger"}">${sw.GATE_SHADOW ? "影子模式（不摆位不冲刺）" : "实飞：锁定后会冲刺"}</span>`,
+    `<span class="sw ${sw.GATE_SLOW_POLICY === 2 ? "danger" : "okk"}">${
+      {0: "场地不够：不降速（回手动段）", 1: "场地不够：降速要按 Y 确认", 2: "场地不够：自动降速"}[sw.GATE_SLOW_POLICY ?? 1]}</span>`,
     nz(sw.GATE_VIRTUAL_OFFSET) && sw.GATE_VIRTUAL_OFFSET > 0
       ? `<span class="sw info">虚拟环：前移 ${fx(sw.GATE_VIRTUAL_OFFSET, 1)} m，停在纸前</span>` : "",
     `<span class="sw ${sw.GATE_CONFIRM_DASH ? "okk" : "danger"}">${sw.GATE_CONFIRM_DASH ? "冲刺前按 G" : "锁定后直接冲刺"}</span>`,
@@ -2660,7 +2643,7 @@ function renderPreview(r) {
                    (m ? ` → <b class="warn">实际 ≤ ${fx(m[1])} m/s（瓶颈：${esc(m[0])}）</b>` : ""));
       })() : "",
       d.gate ? row("穿环", [
-        d.gate.mode === "poke" ? `戳点 ${fx(d.gate.poke_v, 1)} m/s` : nz(d.gate.dash_v) ? `冲刺 ${fx(d.gate.dash_v, 1)} m/s` : "",
+        nz(d.gate.dash_v) ? `冲刺 ${fx(d.gate.dash_v, 1)} m/s` : "",
         nz(d.gate.brake_acc) ? `制动 ${fx(d.gate.brake_acc, 1)} m/s²` : "",
         nz(d.gate.brake_dist) ? `制动距离 ${fx(d.gate.brake_dist)} m` : "",
         nz(d.gate.d_align) ? `对准距离 ${fx(d.gate.d_align, 1)} m` : "",
@@ -2684,27 +2667,18 @@ function gateEnvRows(d, row) {
     row("水平", `范围 ${fx(d.xy_soft)} · 硬围栏 ${fx(d.xy_hard)} · 起降 ${fx(d.base_drift)} m`),
     row("场地", `环后 ${fx(st.D_BACK)} · 起飞点后方 ${fx(st.D_REAR)} · 两侧 ${fx(st.D_SIDE)} m`),
     row("机体", `机头 ${fx(st.L_F)} · 机尾 ${fx(st.L_R)} · 半宽 ${fx(st.W_HALF)} m → 瞄点离环心 ≤ ${fx(g.r_safe)} m`),
-    ...(g.mode === "poke" ? [
-      row(g.pierce ? "戳破 / 顶开" : "戳点", `${fx(g.poke_v, 1)} m/s 抵近 · 加 ${fx(g.dash_acc, 1)} / 减 ${fx(g.brake_acc, 1)} m/s² · 去程 ${fx(g.t_dash, 1)} s`),
-      g.pierce
-        ? row("碰纸", `纸前 ${fx(g.poke_creep * 100, 0)} cm 起以 ${fx(g.poke_hit_v, 2)} m/s 匀速爬行 · 碰纸后压入 ${fx(g.poke_depth * 100, 0)} cm 刹停 · 起跑点距纸 ${fx(g.d_align)} m · 停留 ${fx((d.switches || {}).POKE_DWELL, 1)} s`)
-        : row("针尖终点", `起跑点距纸 ${fx(g.d_align)} m · 针尖离纸 ${fx(g.poke_gap * 100, 0)} cm（>0 在纸前，<0 扎进纸）· 停留 ${fx((d.switches || {}).POKE_DWELL, 1)} s`),
-      row("退回", `${fx(g.poke_retreat_v, 1)} m/s 沿原线回起跑点 · 用时 ${fx(g.t_back, 1)} s · 降落点 ≈ 起跑点`),
-      row("速度硬限", `gate ${fx(pe.gate && pe.gate[1])} m/s（戳点全程不放开到冲刺档）`),
-    ] : [
-      row("冲刺", (nz(g.v_plan) && g.v_plan < g.dash_v - 1e-9
-          ? `<b class="warn">${fx(g.v_plan, 1)} m/s</b>（环后空间限速，设定 ${fx(g.dash_v, 1)}）`
-          : `${fx(g.dash_v, 1)} m/s`) +
-          ` · 加 ${fx(g.dash_acc, 1)} / 减 ${fx(g.brake_acc, 1)} m/s² · 用时 ${fx(g.t_dash)} s`),
-      nz(g.pass_run) ? row("过纸冲刺", `机头碰纸后再冲 ${fx(g.pass_run)} m 才刹车（+滞后补偿 ${fx(g.pass_lag)} m）`) : "",
-      row("助跑 / 刹车", `起跑点距纸 ${fx(g.d_align)} m · 刹车起点 s=${fx(g.s_brake)} · 停止 s=${fx(g.overshoot)} m`),
-      nz(g.back_margin) ? row("环后墙", (nz(g.brake_over) ? `含刹车超调 ${fx(g.brake_over)} m 后` : "") +
-          `机头离墙 ${fx(g.back_margin + g.tol)} m（要求 ≥ ${fx(g.back_margin)}）` +
-          (nz(g.d_back_need) ? ` · 按 ${fx(g.dash_v, 1)} m/s 冲要环后空间 ≥ ${fx(g.d_back_need)} m` : ""))
-        : row("刹停窗口", Array.isArray(g.stop_window) ? `${fx(g.stop_window[0])}~${fx(g.stop_window[1])}，±${fx(g.tol)}` : "—"),
-      row("撞纸速度", `${fx(g.v_hit)} m/s`),
-      row("速度硬限", `gate ${fx(pe.gate && pe.gate[1])} m/s（冲刺前自动收紧）`),
-    ]),
+    row("冲刺", (nz(g.v_plan) && g.v_plan < g.dash_v - 1e-9
+        ? `<b class="warn">${fx(g.v_plan, 1)} m/s</b>（环后空间限速，设定 ${fx(g.dash_v, 1)}）`
+        : `${fx(g.dash_v, 1)} m/s`) +
+        ` · 加 ${fx(g.dash_acc, 1)} / 减 ${fx(g.brake_acc, 1)} m/s² · 用时 ${fx(g.t_dash)} s`),
+    nz(g.pass_run) ? row("过纸冲刺", `机头碰纸后再冲 ${fx(g.pass_run)} m 才刹车（+滞后补偿 ${fx(g.pass_lag)} m）`) : "",
+    row("助跑 / 刹车", `起跑点距纸 ${fx(g.d_align)} m · 刹车起点 s=${fx(g.s_brake)} · 停止 s=${fx(g.overshoot)} m`),
+    nz(g.back_margin) ? row("环后墙", (nz(g.brake_over) ? `含刹车超调 ${fx(g.brake_over)} m 后` : "") +
+        `机头离墙 ${fx(g.back_margin + g.tol)} m（要求 ≥ ${fx(g.back_margin)}）` +
+        (nz(g.d_back_need) ? ` · 按 ${fx(g.dash_v, 1)} m/s 冲要环后空间 ≥ ${fx(g.d_back_need)} m` : ""))
+      : row("刹停窗口", Array.isArray(g.stop_window) ? `${fx(g.stop_window[0])}~${fx(g.stop_window[1])}，±${fx(g.tol)}` : "—"),
+    row("撞纸速度", `${fx(g.v_hit)} m/s`),
+    row("速度硬限", `gate ${fx(pe.gate && pe.gate[1])} m/s（冲刺前自动收紧）`),
     ch.length ? row("速度上限链", ch.map(x => `${esc(x[0])} ${fx(x[1])}`).join(" · ") +
                     (m ? ` → <b class="warn">实际 ≤ ${fx(m[1])} m/s（瓶颈：${esc(m[0])}）</b>` : "")) : "",
     row("时间", `起飞 ${fx(t.TAKEOFF_TIMEOUT, 0)} · 降落 ${fx(t.DESCEND_TIMEOUT, 0)} s`),

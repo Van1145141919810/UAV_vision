@@ -20,7 +20,12 @@ import _util  # noqa: E402
 
 SITES = os.path.join(_compat.HERE, "sites")
 # 有意改变行为的用例 → {用例名: 原因}。只在 golden 里留旧输出供对照, 不参与比较。
-EXPECT_CHANGED = {}
+EXPECT_CHANGED = {
+    # 第 1a 步 (删戳点): 有意改变
+    "poke": "gate_mode = 戳点 → 报错拒绝 (不能悄悄当冲刺飞)",
+    "dash_mode": "gate_mode = 冲刺 → 警告并忽略; 其余输出应和 sim 类档案一致",
+    "typo": "未知键报错里的'允许的键'列表少了戳点旋钮",
+}
 
 
 def cases():

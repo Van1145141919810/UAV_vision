@@ -174,32 +174,6 @@ KNOBS = [
          help="跟踪段时长；手动段时长按它推导"),
 
     # ---------------- 穿环 (stage12) ----------------
-    dict(key="gate_mode", tasks=["gate"], type="choice", unit="", label="穿环模式", group="穿环",
-         choices=["冲刺", "戳点"],
-         help="冲刺 = 高速撞破纸面; 戳点 = 慢速抵近红点, 针尖戳一下, 停留后沿原线退回起跑点降落 "
-              "(针尖长度并进机头长 l_f; 不填 = 冲刺)"),
-    dict(key="poke_v", tasks=["gate"], type="float", unit="m/s", label="戳点速度", group="穿环",
-         min=0.2, max=2.5, warn_hi=(1.5, "超过 1.5 m/s: 戳点本意是慢速抵近, 先用 ≤1 m/s 验证"),
-         help="戳点模式的抵近速度 (默认 1.0); 只在 穿环模式=戳点 时生效"),
-    dict(key="poke_gap", tasks=["gate"], type="float", unit="m", label="针尖离纸距离", group="穿环",
-         min=0.0, max=2.0,
-         help="> 0 = 针尖停在纸前这么远 (不碰纸, 用来逐级逼近: 0.5 → 0.2 → 0.05); "
-              "= 0 且 接触速度 > 0 → 戳破/顶开模式 (慢速碰纸并压入)。首飞从 0.5 开始"),
-    dict(key="hit_v", tasks=["gate"], type="float", unit="m/s", label="接触速度", group="穿环",
-         min=0.0, max=1.5, warn_hi=(1.0, "接触速度 > 1 m/s: 戳破本意是慢速碰纸, 先从 0.3~0.5 试"),
-         help="戳破/顶开: 针尖碰纸时的速度 (匀速爬行, 默认 0.5)。0 = 不碰纸, 停在 针尖离纸距离 处。"
-              "只在 针尖离纸距离 = 0 时生效"),
-    dict(key="poke_depth", tasks=["gate"], type="float", unit="m", label="压入深度", group="穿环",
-         min=0.01, max=0.6, warn_hi=(0.15, "压入 > 15 cm: 纸被顶开后可能贴到护桨 / 螺旋桨, 确认针露出的长度够"),
-         help="戳破/顶开: 针尖碰到纸面后再前进多深并刹停 (默认 0.10)。必须 ≥ 接触速度²/(2×制动减速度) "
-              "(0.5 m/s → 5 cm); 针露出长度要大于它 + 纸位置误差 (深度 σ 最大 10 cm)"),
-    dict(key="creep", tasks=["gate"], adv=True, type="float", unit="m", label="爬行距离", group="穿环",
-         min=0.0, max=1.0, help="戳破/顶开: 从纸前多远开始以接触速度匀速爬行 (默认 0.25), 吸收纸位置误差。"
-                                "太长 = 在纸前桨风里停留久, 太短 = 纸比预计近时来不及降速"),
-    dict(key="poke_dwell", tasks=["gate"], adv=True, type="float", unit="s", label="戳点停留", group="穿环",
-         min=0.0, max=10.0, help="针尖到位后停留多久再退回"),
-    dict(key="retreat_v", tasks=["gate"], adv=True, type="float", unit="m/s", label="退回速度", group="穿环",
-         min=0.1, max=1.5, help="戳完后沿原线退回起跑点的速度 (默认 0.4)"),
     dict(key="dash_v", tasks=["gate"], type="float", unit="m/s", label="冲刺速度", group="穿环",
          min=0.8, max=4.0, warn_hi=(3.0, "超过 3 m/s: 先在 T3 虚拟环逐级验证过再用"),
          help="冲刺巡航速度上限; 场地放不下时起飞后自动降速 (每次 0.3, 最低 1.2)"),
@@ -218,8 +192,7 @@ KNOBS = [
          min=0.6, max=50.0,
          help="环心 → 左右两侧最近障碍的距离 (取小的那边)"),
     dict(key="l_f", tasks=["gate"], type="float", unit="m", label="机头长", group="机体",
-         min=0.05, max=1.0, help="机体中心 → 机头最前端, 实测。冲刺: 只算机身 (含护桨, 不含针); "
-                                 "戳点: 量到针尖"),
+         min=0.05, max=1.0, help="机体中心 → 机头最前端 (含护桨, 不含针), 实测"),
     dict(key="l_r", tasks=["gate"], type="float", unit="m", label="机尾长", group="机体",
          min=0.05, max=1.0, help="机体中心 → 机尾最后端 (含护桨), 实测"),
     dict(key="w_half", tasks=["gate"], type="float", unit="m", label="半宽", group="机体",
@@ -257,6 +230,44 @@ KNOBS = [
 ]
 KNOB_INDEX = {k["key"]: k for k in KNOBS}
 
+# ★2026-10-30 删掉的旋钮 (戳点模式)。老档案里还有 → **警告并忽略** (列出来), 不拒绝起飞。
+#   例外: gate_mode = 戳点 必须报错 —— 不能把一份戳点档案悄悄当冲刺飞。
+REMOVED_KNOBS = {
+    "gate_mode": "穿环模式",
+    "poke_v": "戳点速度", "poke_gap": "针尖离纸距离", "hit_v": "接触速度", "poke_depth": "压入深度",
+    "creep": "爬行距离", "poke_dwell": "戳点停留", "retreat_v": "退回速度",
+}
+# 同理: 档案里的 set.<参数> 指向已删除的参数 → 警告并忽略; set.GATE_POKE = True → 报错
+REMOVED_SET_PREFIX = ("POKE_",)
+REMOVED_SET_KEYS = ("GATE_POKE",)
+
+
+def _removed_knob(path, ln, k, v, errs, notes):
+    """已删除的旋钮。→ True = 处理过了 (调用方 continue)。"""
+    if k not in REMOVED_KNOBS:
+        return False
+    if k == "gate_mode" and v.strip() != "冲刺":
+        errs.append("%s:%d gate_mode = %s: 戳点模式已删除 (2026-10-30) —— 这份档案不能当冲刺飞。"
+                    "要冲刺就把 gate_mode 这一行删掉" % (path, ln, v.strip()))
+    elif notes is not None:
+        notes.append("%s:%d 旋钮 %s (%s) 已删除, 忽略这一行" % (path, ln, k, REMOVED_KNOBS[k]))
+    return True
+
+
+def _removed_set(path, ln, pk, v, errs, notes):
+    if pk in REMOVED_SET_KEYS:
+        if v.strip() not in ("False", "false", "0", "0.0"):
+            errs.append("%s:%d set.%s = %s: 戳点模式已删除 (2026-10-30) —— 这份档案不能当冲刺飞。"
+                        "要冲刺就把这一行删掉" % (path, ln, pk, v.strip()))
+        elif notes is not None:
+            notes.append("%s:%d set.%s 已删除, 忽略这一行" % (path, ln, pk))
+        return True
+    if pk.startswith(REMOVED_SET_PREFIX):
+        if notes is not None:
+            notes.append("%s:%d set.%s 是已删除的戳点参数, 忽略这一行" % (path, ln, pk))
+        return True
+    return False
+
 # 穿环旋钮 → 参数 (一对一)
 GATE_KNOB_PARAM = {
     "dash_v": "DASH_V", "d_back": "D_BACK", "d_rear": "D_REAR", "d_side": "D_SIDE",
@@ -264,9 +275,6 @@ GATE_KNOB_PARAM = {
     "brake_acc": "BRAKE_ACC", "t_lag": "T_LAG", "e_along": "E_ALONG",
     "v_tear_min": "V_TEAR_MIN", "entry_ang_max": "ENTRY_ANG_MAX", "d_straight": "D_STRAIGHT",
     "run_max": "D_RUN_MAX",
-    "poke_v": "POKE_V", "poke_gap": "POKE_GAP", "poke_dwell": "POKE_DWELL",
-    "retreat_v": "POKE_RETREAT_V", "hit_v": "POKE_HIT_V", "poke_depth": "POKE_DEPTH",
-    "creep": "POKE_CREEP",
     "pass_run": "PASS_RUN", "back_margin": "M_BACK", "brake_over": "BRAKE_OVER_T",
 }
 
@@ -333,8 +341,6 @@ _STANDALONE_DEFAULTS = {
     "DASH_V_MIN": 1.2, "D_BACK": 2.0, "D_REAR": 2.0, "D_SIDE": 2.0,
     "L_F": 0.28, "L_R": 0.28, "W_HALF": 0.28, "PASS_RUN": 1.0, "M_BACK": 0.3,
     "BRAKE_OVER_T": 0.3, "GATE_SLOW_POLICY": 1,
-    "GATE_POKE": False, "POKE_V": 1.0, "POKE_GAP": 0.5, "POKE_DWELL": 1.5, "POKE_RETREAT_V": 0.4,
-    "POKE_HIT_V": 0.5, "POKE_CREEP": 0.25, "POKE_DEPTH": 0.10,
 }
 
 # ★ 2026-10-09(2): 必须为正数的参数。--set 能把它们改成 0 或负数, 而 stage11 的
@@ -356,7 +362,6 @@ POSITIVE_PARAMS = (
     "L_F", "L_R", "W_HALF", "R_IN", "D_BACK", "D_REAR", "D_SIDE", "GATE_XY_MAX",
     "GATE_REPO_V", "GATE_YAW_RATE", "GATE_HOLD_S", "HOVER_ACQ", "HOVER_ALIGN",
     "GATE_STATUS_MAX_AGE", "GATE_LOG_HZ",
-    "POKE_V", "POKE_RETREAT_V", "POKE_DEPTH",
     "PASS_RUN", "M_BACK",
 )
 
@@ -421,10 +426,11 @@ def _fmt(v):
 # =============================================================================
 # 档案解析 / 写回
 # =============================================================================
-def parse_conf_text(text, path="<text>"):
+def parse_conf_text(text, path="<text>", notes=None):
     """
     返回 (knobs: dict, sets: list["KEY=VALUE"], errors: list)。
     未知键 / 重复键 / 非有限数字 → 报错（不静默）。
+    已删除的旋钮 (REMOVED_KNOBS) → 说明追加到 notes (给了的话), 不算错误; gate_mode = 戳点 例外, 报错。
 
     ★ 2026-10-09(2):
       · 数字必须是有限值。旧版 float("nan") 能通过 —— nan 和任何数比较都是 False,
@@ -456,10 +462,14 @@ def parse_conf_text(text, path="<text>"):
                 errs.append("%s:%d set.%s 重复出现 —— 不知道该信哪一个" % (path, ln, pk))
                 continue
             set_keys.add(pk)
+            if _removed_set(path, ln, pk, v, errs, notes):
+                continue
             sets.append("%s=%s" % (pk, v))
             continue
 
         spec = KNOB_INDEX.get(k)
+        if spec is None and _removed_knob(path, ln, k, v, errs, notes):
+            continue
         if spec is None:
             errs.append("%s:%d **未知键 %r** —— 拼错了不会静默生效，这里直接报错。"
                         "允许的键: %s (以及 set.参数名)"
@@ -513,13 +523,13 @@ def format_conf(knobs, header=None, sets=None):
     return "\n".join(L) + "\n"
 
 
-def load_site(name, sites_dir):
-    """返回 (knobs, sets, path, errors)。★ 2026-10-09(2) 多了 sets。"""
+def load_site(name, sites_dir, notes=None):
+    """返回 (knobs, sets, path, errors)。★ 2026-10-09(2) 多了 sets。notes: 见 parse_conf_text"""
     path = os.path.join(os.path.expanduser(sites_dir), name + ".conf")
     if not os.path.exists(path):
         return None, [], path, ["档案不存在: %s" % path]
     with open(path, encoding="utf-8") as f:
-        knobs, sets, errs = parse_conf_text(f.read(), path)
+        knobs, sets, errs = parse_conf_text(f.read(), path, notes)
     return knobs, sets, path, errs
 
 
@@ -641,12 +651,6 @@ def _build_gate_overrides(knobs, view):
     if knobs.get("allow_slow") is not None:
         ov["GATE_SLOW_POLICY"] = {"否": 0, "确认": 1, "是": 2}[knobs["allow_slow"]]
         rep.append("场地不够时降速: %s" % knobs["allow_slow"])
-    gm = knobs.get("gate_mode")
-    if gm is not None:
-        ov["GATE_POKE"] = (gm == "戳点")
-        rep.append("穿环模式 %s" % gm)
-    if ov.get("GATE_POKE") and cur("GATE_VIRTUAL_OFFSET"):
-        warns.append("戳点模式下虚拟环 GATE_VIRTUAL_OFFSET 不生效 (只用于冲刺)")
     if "DASH_V" in ov and ov["DASH_V"] < cur("DASH_V_MIN"):
         ov["DASH_V_MIN"] = ov["DASH_V"]          # 冲刺速度本身比降速下限还低: 不降速
     miss = [k for k in ("d_back", "d_rear", "d_side", "l_f", "l_r", "w_half")
@@ -902,7 +906,7 @@ def setup(argv, g, default_sites_dir=None):
 
     knobs, conf_sets = {}, []
     if opts["site"]:
-        knobs, conf_sets, path, errs = load_site(opts["site"], sites_dir)
+        knobs, conf_sets, path, errs = load_site(opts["site"], sites_dir, report["warnings"])
         report["src"] = path
         if errs:
             report["errors"] += errs
@@ -1164,40 +1168,13 @@ def _check_gate(g):
         E.append("起降阶段水平限制(最大 %.2f m)比水平硬围栏 %.2f m 还大" % (base + 0.40, hard))
 
     # ---------------- 冲刺 ----------------
-    poke = bool(get("GATE_POKE"))
     v, vmin = g["DASH_V"], g["DASH_V_MIN"]
-    if poke:
-        v = g["POKE_V"]                           # 戳点: 速度包络 / 校验按戳点速度
-        if g["POKE_RETREAT_V"] > g["POKE_V"] + 1e-9:
-            W.append("退回速度 %.2f > 抵近速度 %.2f: 退回应该比抵近更慢更稳" % (g["POKE_RETREAT_V"], g["POKE_V"]))
-        pierce = g.get("POKE_HIT_V", 0) > 0 and g["POKE_GAP"] <= 1e-9
-        if g["POKE_GAP"] < 0:
-            W.append("POKE_GAP=%.2f m < 0: 戳破模式下负值被忽略 (深度由 POKE_DEPTH 定)" % g["POKE_GAP"])
-        if pierce:
-            hv = min(g["POKE_HIT_V"], g["POKE_V"])
-            need = hv * hv / (2.0 * g["BRAKE_ACC"])
-            if g["POKE_DEPTH"] < need - 1e-9:
-                E.append("压入深度 POKE_DEPTH=%.0fcm 小于从接触速度 %.2f m/s 刹停所需 %.0fcm: 加大深度或降低接触速度"
-                         % (g["POKE_DEPTH"] * 100, hv, need * 100))
-            if g["POKE_HIT_V"] > g["POKE_V"] + 1e-9:
-                W.append("接触速度 %.2f > 抵近速度 %.2f: 实际接触速度按抵近速度算" % (g["POKE_HIT_V"], g["POKE_V"]))
-            W.append("戳破/顶开: %.2f m/s 抵近, 纸前 %.0f cm 起 %.2f m/s 匀速爬行碰纸, 压入 %.0f cm 后刹停, 停留 %.1fs, "
-                     "%.2f m/s 退回起跑点降落。针尖长度并进 L_F (=机体中心→针尖) 现在 %.2f m; 针露出长度要 > 压入深度 + 纸位置误差 (≤10cm)"
-                     % (g["POKE_V"], g["POKE_CREEP"] * 100, hv, g["POKE_DEPTH"] * 100,
-                        g.get("POKE_DWELL", 1.5), g["POKE_RETREAT_V"], g["L_F"]))
-        else:
-            W.append("戳点模式 (停在纸前): %.2f m/s 抵近, 针尖停在纸%s %.0f cm, 停留 %.1fs, %.2f m/s 退回起跑点降落。"
-                     "要碰纸: 把 针尖离纸距离 设 0 且 接触速度 > 0。针尖长度请并进机头长 L_F (=机体中心→针尖), 现在 L_F=%.2f m"
-                     % (g["POKE_V"], "前" if g["POKE_GAP"] >= 0 else "内", abs(g["POKE_GAP"]) * 100,
-                        g.get("POKE_DWELL", 1.5), g["POKE_RETREAT_V"], g["L_F"]))
-        if (get("GATE_VIRTUAL_OFFSET") or 0) > 0:
-            W.append("戳点模式下 GATE_VIRTUAL_OFFSET 不生效 (虚拟环只用于冲刺)")
-    if vmin > v + 1e-9 and not poke:
+    if vmin > v + 1e-9:
         E.append("DASH_V_MIN=%.2f > DASH_V=%.2f" % (vmin, v))
-    if g["V_TEAR_MIN"] > vmin + 1e-9 and not poke:
+    if g["V_TEAR_MIN"] > vmin + 1e-9:
         W.append("撕纸最低速度 %.2f > 降速下限 %.2f: 场地逼得降速时会先因为撞纸速度不够而放弃"
                  % (g["V_TEAR_MIN"], vmin))
-    if not poke and g.get("M_BACK", 0.3) < 0.1:
+    if g.get("M_BACK", 0.3) < 0.1:
         E.append("环后墙余量 M_BACK=%.2f m < 0.1 m" % g["M_BACK"])
     tilt_plan = math.degrees(math.atan(max(g["DASH_ACC"], g["BRAKE_ACC"]) / 9.81))
     if tilt_plan > g["MAX_TILT_DEG"] - 10.0:
@@ -1218,48 +1195,45 @@ def _check_gate(g):
         if gp.r_safe(gp.params_from_globals(g)) <= 0.0:
             E.append("半宽 %.2f m: 机体放不进内环 (内半径 %.2f, 留 %.2f 余量)"
                      % (g["W_HALF"], g["R_IN"], g["AIM_MARGIN"]))
-        if not poke:
-            # ★2026-10-21 刹车点 = 机头过纸 PASS_RUN 之后 (+滞后补偿)。环后空间决定能冲多快
-            gpp = gp.params_from_globals(g)
-            vmin_need = gp.dash_stop(g["DASH_V_MIN"], gpp)["d_back_need"]
-            pol = int(get("GATE_SLOW_POLICY", 1))
-            slow_ok = pol >= 1
-            if pv.get("v_room") is None:
-                E.append("环后空间 D_BACK=%.2f m 不够: 过纸冲刺 %.2f m + 刹车超调, 降到 %.2f m/s 也要 ≥ %.2f m "
-                         "—— 加大环后空间, 或减小 pass_run (过纸冲刺) / back_margin (环后墙余量)"
-                         % (g["D_BACK"], g["PASS_RUN"], g["DASH_V_MIN"], vmin_need))
-            elif pv["v_room"] < g["DASH_V"] - 1e-9:
-                msg = ("环后空间 D_BACK=%.2f m 只够冲 %.2f m/s, 设定 %.2f。按设定速度冲需要 D_BACK ≥ %.2f m"
-                       % (g["D_BACK"], pv["v_room"], g["DASH_V"], pv["d_back_need"]))
-                if pol == 2:
-                    W.append(msg + " (allow_slow = 是: 起飞后会自动降到 %.2f)" % pv["v_room"])
-                elif pol == 1:
-                    W.append(msg + " (allow_slow = 确认: 起飞后降到 %.2f, 冲刺前要按 Y 确认)" % pv["v_room"])
+        # ★2026-10-21 刹车点 = 机头过纸 PASS_RUN 之后 (+滞后补偿)。环后空间决定能冲多快
+        gpp = gp.params_from_globals(g)
+        vmin_need = gp.dash_stop(g["DASH_V_MIN"], gpp)["d_back_need"]
+        pol = int(get("GATE_SLOW_POLICY", 1))
+        slow_ok = pol >= 1
+        if pv.get("v_room") is None:
+            E.append("环后空间 D_BACK=%.2f m 不够: 过纸冲刺 %.2f m + 刹车超调, 降到 %.2f m/s 也要 ≥ %.2f m "
+                     "—— 加大环后空间, 或减小 pass_run (过纸冲刺) / back_margin (环后墙余量)"
+                     % (g["D_BACK"], g["PASS_RUN"], g["DASH_V_MIN"], vmin_need))
+        elif pv["v_room"] < g["DASH_V"] - 1e-9:
+            msg = ("环后空间 D_BACK=%.2f m 只够冲 %.2f m/s, 设定 %.2f。按设定速度冲需要 D_BACK ≥ %.2f m"
+                   % (g["D_BACK"], pv["v_room"], g["DASH_V"], pv["d_back_need"]))
+            if pol == 2:
+                W.append(msg + " (allow_slow = 是: 起飞后会自动降到 %.2f)" % pv["v_room"])
+            elif pol == 1:
+                W.append(msg + " (allow_slow = 确认: 起飞后降到 %.2f, 冲刺前要按 Y 确认)" % pv["v_room"])
+            else:
+                E.append(msg + " —— 不允许降速 (allow_slow = 否): 把 dash_v 改成 %.2f, "
+                               "或加大环后空间, 或 allow_slow = 确认" % pv["v_room"])
+        ps = gp.pass_short(gpp)
+        if ps:
+            W.append(ps)
+        vo = get("GATE_VIRTUAL_OFFSET") or 0
+        if vo > 0:
+            vv = gp.dash_v_room(gpp, d_back=vo)
+            if vv is None:
+                E.append("虚拟环偏移 %.2f m (真纸面当墙) 放不下冲刺: 降到 %.2f m/s 也要偏移 ≥ %.2f m"
+                         % (vo, g["DASH_V_MIN"], vmin_need))
+            else:
+                if vv >= g["DASH_V"] - 1e-9:
+                    W.append("虚拟环偏移 %.2f m 够按 %.2f m/s 冲" % (vo, g["DASH_V"]))
+                elif slow_ok:
+                    W.append("虚拟环偏移 %.2f m 只够冲 %.2f m/s (会降速%s)"
+                             % (vo, vv, ", 冲刺前按 Y 确认" if pol == 1 else ""))
                 else:
-                    E.append(msg + " —— 不允许降速 (allow_slow = 否): 把 dash_v 改成 %.2f, "
-                                   "或加大环后空间, 或 allow_slow = 确认" % pv["v_room"])
-            ps = gp.pass_short(gpp)
-            if ps:
-                W.append(ps)
-            vo = get("GATE_VIRTUAL_OFFSET") or 0
-            if vo > 0:
-                vv = gp.dash_v_room(gpp, d_back=vo)
-                if vv is None:
-                    E.append("虚拟环偏移 %.2f m (真纸面当墙) 放不下冲刺: 降到 %.2f m/s 也要偏移 ≥ %.2f m"
-                             % (vo, g["DASH_V_MIN"], vmin_need))
-                else:
-                    if vv >= g["DASH_V"] - 1e-9:
-                        W.append("虚拟环偏移 %.2f m 够按 %.2f m/s 冲" % (vo, g["DASH_V"]))
-                    elif slow_ok:
-                        W.append("虚拟环偏移 %.2f m 只够冲 %.2f m/s (会降速%s)"
-                                 % (vo, vv, ", 冲刺前按 Y 确认" if pol == 1 else ""))
-                    else:
-                        E.append("虚拟环偏移 %.2f m 只够冲 %.2f m/s, 设定 %.2f 且不允许自动降速 —— "
-                                 "加大偏移, 或 dash_v 改成 %.2f" % (vo, vv, g["DASH_V"], vv))
+                    E.append("虚拟环偏移 %.2f m 只够冲 %.2f m/s, 设定 %.2f 且不允许自动降速 —— "
+                             "加大偏移, 或 dash_v 改成 %.2f" % (vo, vv, g["DASH_V"], vv))
         if pv.get("error"):
-            E.append("%s轨迹放不下: %s" % ("戳点" if poke else "冲刺", pv["error"]))
-        elif poke:
-            pass                                   # 戳点: 终点由 POKE_GAP 决定, 没有撕纸速度 / 刹停窗口
+            E.append("%s轨迹放不下: %s" % ("冲刺", pv["error"]))
         elif pv["v_hit_worst"] < g["V_TEAR_MIN"] - 1e-3:     # 滞后模型渐近到 v, 留数值余量
             W.append("正对进入时最坏撞纸速度 %.2f < 撕纸下限 %.2f m/s —— 起飞后的规划会拒绝"
                      % (pv["v_hit_worst"], g["V_TEAR_MIN"]))
@@ -1267,7 +1241,7 @@ def _check_gate(g):
     if isinstance(pe, dict) and "gate" in pe:
         if pe["gate"][1] < 1.7 * v:
             E.append("gate 速度包络 %.2f m/s < 1.7×%s速度 %.2f m/s：一%s就会触发缓降"
-                     % (pe["gate"][1], "戳点" if poke else "冲刺", 1.7 * v, "走" if poke else "冲刺"))
+                     % (pe["gate"][1], "冲刺", 1.7 * v, "冲刺"))
     elif isinstance(pe, dict):
         E.append("PHASE_ENVELOPE 里没有 gate —— 冲刺会落到默认包络 (1 m/s) 一冲就缓降")
 
@@ -1276,7 +1250,7 @@ def _check_gate(g):
         W.append("GATE_ALLOW_SIM_DRIVE=True —— 标了 sim 的识别结果也能驱动冲刺！只在台架测试时用")
     if get("GATE_SHADOW"):
         W.append("GATE_SHADOW=True: 影子模式 —— 识别、锁定、规划照做, 不摆位、不冲刺; 做完回手动段 (可换位置再 T), L 降落")
-    if (get("GATE_VIRTUAL_OFFSET") or 0) > 0 and not poke:
+    if (get("GATE_VIRTUAL_OFFSET") or 0) > 0:
         W.append("虚拟环 GATE_VIRTUAL_OFFSET=%.2f m: 真冲刺, 停在纸前 (T3 测试)"
                  % g["GATE_VIRTUAL_OFFSET"])
     if not get("GATE_CONFIRM_DASH", True):
@@ -1302,11 +1276,7 @@ def _derived_gate(g):
     gate = {"r_in": g["R_IN"], "r_out": g.get("R_OUT", 0.8), "dot_d": g.get("DOT_D", 0.11)}
     gate.update(pv)
     env_v = (pe.get("gate") or [None, None])[1]
-    if g.get("GATE_POKE"):
-        chain = [["POKE_V", g["POKE_V"]]]
-        gate["mode"] = "poke"
-    else:
-        chain = [["DASH_V", g["DASH_V"]]]
+    chain = [["DASH_V", g["DASH_V"]]]
     if env_v:
         chain.append(["gate 速度硬限 ÷1.7", env_v / 1.7])
     lo, hi = g["GATE_Z_MIN_DZ"], g["GATE_Z_MAX_DZ"]
@@ -1326,13 +1296,12 @@ def _derived_gate(g):
         "timeouts": {k: g[k] for k in ("TAKEOFF_TIMEOUT", "DESCEND_TIMEOUT")
                      if k in g},
         "speeds": {k: g[k] for k in ("DASH_V", "DASH_ACC", "BRAKE_ACC", "GATE_REPO_V",
-                                     "DESCEND_SPEED", "POKE_V", "POKE_RETREAT_V") if k in g},
+                                     "DESCEND_SPEED") if k in g},
         "safety": {p: g.get(p) for p, _, _, _, _ in SAFETY_RULES + GATE_SAFETY_RULES},
         "switches": {k: g.get(k) for k in ("GATE_SHADOW", "GATE_ALLOW_SIM_DRIVE",
                                            "GATE_CONFIRM_DASH", "GATE_VIRTUAL_OFFSET",
                                            "GATE_REQUIRE_NORMAL", "GATE_MANUAL_START",
-                                           "GATE_ABORT_TO_MANUAL", "GATE_POKE", "POKE_GAP",
-                                           "POKE_DWELL", "POKE_HIT_V", "POKE_CREEP", "POKE_DEPTH",
+                                           "GATE_ABORT_TO_MANUAL",
                                            "GATE_SLOW_POLICY")},
         "site": {k: g.get(k) for k in ("D_BACK", "D_REAR", "D_SIDE", "L_F", "L_R", "W_HALF",
                                        "D_RUN_MAX", "PASS_RUN", "M_BACK")},
@@ -1555,23 +1524,7 @@ def _gate_lines(g, d):
              % (st.get("D_BACK"), st.get("D_REAR"), st.get("D_SIDE")))
     L.append("机体          机头 %.2f m  机尾 %.2f m  半宽 %.2f m  → 瞄点离环心 ≤ %.2f m"
              % (st.get("L_F"), st.get("L_R"), st.get("W_HALF"), gt.get("r_safe", float("nan"))))
-    if gt.get("mode") == "poke":
-        if gt.get("pierce"):
-            L.append("戳破(正对)    %.2f m/s 抵近 → 纸前 %.0f cm 起 %.2f m/s 匀速碰纸 → 压入 %.0f cm  加 %.1f / 减 %.1f m/s²  助跑 %.2f m"
-                     "  停留 %.1fs  退回 %.2f m/s"
-                     % (gt["poke_v"], gt["poke_creep"] * 100, gt["poke_hit_v"], gt["poke_depth"] * 100, gt["dash_acc"],
-                        gt["brake_acc"], gt["d_align"], (d.get("switches") or {}).get("POKE_DWELL") or 0.0,
-                        gt["poke_retreat_v"]))
-        else:
-            L.append("戳点(正对)    %.2f m/s 抵近  加 %.1f / 减 %.1f m/s²  助跑 %.2f m  终点 s=%+.2f (针尖离纸 %+.0f cm)"
-                     "  停留 %.1fs  退回 %.2f m/s"
-                     % (gt["poke_v"], gt["dash_acc"], gt["brake_acc"], gt["d_align"], gt["overshoot"],
-                        gt["poke_gap"] * 100, (d.get("switches") or {}).get("POKE_DWELL") or 0.0,
-                        gt["poke_retreat_v"]))
-        L.append("              去程 %.1f s  退回 %.1f s   降落点 ≈ 起跑点   (起飞后按环实际位置重算)"
-                 % (gt.get("t_dash", float("nan")), gt.get("t_back", float("nan"))))
-        L.append(_start_line(gt))
-    elif "s_brake" in gt:
+    if "s_brake" in gt:
         vp = gt.get("v_plan", gt["dash_v"])
         L.append("冲刺(正对)    %.2f m/s%s  加 %.1f / 减 %.1f m/s²  助跑 %.2f m  用时 %.2f s"
                  % (vp, ("" if abs(vp - gt["dash_v"]) < 1e-9 else

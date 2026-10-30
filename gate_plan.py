@@ -157,8 +157,6 @@ class Params(object):
         "D_BACK", "D_REAR", "D_SIDE", "GATE_XY_MAX", "REPO_X_MAX",
         "GATE_Z_MIN_DZ", "GATE_Z_MAX_DZ", "D_RUN_MAX",
         "H_HALF", "NEEDLE_RIGHT", "NEEDLE_UP", "AIM_TRIM_RIGHT", "AIM_TRIM_UP",
-        # ★2026-10-20 戳点模式 (针戳红点, 不穿环): L_F 此时 = 机体中心 → 针尖
-        "GATE_POKE", "POKE_V", "POKE_GAP", "POKE_RETREAT_V", "POKE_HIT_V", "POKE_CREEP", "POKE_DEPTH",
     )
 
     def __init__(self, **kw):
@@ -227,32 +225,8 @@ def pass_short(p):
 
 
 def d_run_for(v, p):
-    """助跑距离: 加速段 + 稳定直线段, 但不小于 D_ALIGN_MIN (起跑点要看得到整个环)。
-    戳点模式 (GATE_POKE): 按轨迹实际需要的长度算, 见 poke_d_min。"""
-    if getattr(p, "GATE_POKE", False):
-        return poke_d_min(v, p)
+    """助跑距离: 加速段 + 稳定直线段, 但不小于 D_ALIGN_MIN (起跑点要看得到整个环)。"""
     return max(v * v / (2.0 * p.DASH_ACC) + p.D_STRAIGHT, p.D_ALIGN_MIN)
-
-
-def poke_pierce(p):
-    """戳破 / 顶开模式: 有接触速度 (POKE_HIT_V>0) 且 POKE_GAP ≤ 0。否则是"停在纸前"的老戳点。"""
-    return p.POKE_HIT_V > 1e-9 and p.POKE_GAP <= 1e-9
-
-
-def poke_hit_v(p, v=None):
-    """实际接触速度: 不高于巡航速度。"""
-    return min(p.POKE_HIT_V, p.POKE_V if v is None else v)
-
-
-def poke_d_min(v, p):
-    """戳点最小助跑 (机体中心离纸面): 加速 + 减速 (+ 爬行) 放得下, 且不小于 D_ALIGN_MIN。"""
-    acc_d = v * v / (2.0 * p.DASH_ACC)
-    if poke_pierce(p):
-        h = poke_hit_v(p, v)
-        need = acc_d + (v * v - h * h) / (2.0 * p.BRAKE_ACC) + p.POKE_CREEP + p.L_F + 0.1
-    else:
-        need = acc_d + v * v / (2.0 * p.BRAKE_ACC) + p.L_F + max(p.POKE_GAP, 0.0) + 0.1
-    return max(need, p.D_ALIGN_MIN)
 
 
 def r_safe(p):
@@ -307,87 +281,6 @@ class Traj1D(object):
 
     def v_at_s(self, s):
         return self.at(self.t_of_s(s))[1]
-
-
-class TrajPoke(object):
-    """
-    戳破 / 顶开用的五段轨迹 (s 是机体中心沿进入方向的坐标, 纸面 s=0):
-      加速 (acc) → 巡航 v → 减速 (dec) 到接触速度 h → 以 h 匀速爬行 → 过接触点 s_c 后继续压入 → 刹停在 s_end。
-    爬行段从 s_c0 = s_c − creep 开始: 纸的实际位置有 ±10cm 的误差, 爬行段让接触速度恒为 h, 不受误差影响。
-    字段名沿用 Traj1D: s0 / s_stop / v / T / t1 / t2 (t2 = 爬行结束 / 开始最后刹车) / s_b (最后刹车起点)。
-    """
-
-    def __init__(self, s0, s_c, depth, v, h, acc, dec, creep):
-        h = min(h, v)
-        self.s0, self.v, self.h, self.acc, self.dec = s0, v, h, acc, dec
-        self.s_c = s_c
-        self.s_stop = s_c + depth
-        self.s_c0 = s_c - creep
-        self.s_b = self.s_stop - h * h / (2.0 * dec)       # 最后刹车起点 (从 h 刹到 0)
-        if self.s_b < s_c - 1e-9:
-            raise ValueError("压入深度 %.0fcm 小于从接触速度 %.2fm/s 刹停所需 %.0fcm: 加大 POKE_DEPTH 或降低 POKE_HIT_V"
-                             % (depth * 100, h, h * h / (2.0 * dec) * 100))
-        self.t1 = v / acc
-        self.s1 = s0 + v * v / (2.0 * acc)                  # 加速完
-        self.s_d0 = self.s_c0 - (v * v - h * h) / (2.0 * dec)   # 开始减速到 h
-        if self.s_d0 < self.s1 - 1e-9:
-            raise ValueError("轨迹放不下: 加速段终点 %.2f 已经过了减速起点 %.2f (加大助跑 / 降低 POKE_V / 缩短 POKE_CREEP)"
-                             % (self.s1, self.s_d0))
-        self.t_cruise = (self.s_d0 - self.s1) / v
-        self.t_d = (v - h) / dec
-        self.t_creep = (self.s_b - self.s_c0) / h if h > 1e-9 else 0.0
-        self.ta = self.t1
-        self.tb = self.ta + self.t_cruise
-        self.tc = self.tb + self.t_d
-        self.t2 = self.tc + self.t_creep
-        self.T = self.t2 + h / dec
-
-    def at(self, t):
-        if t <= 0.0:
-            return self.s0, 0.0, 0.0
-        if t < self.ta:
-            return self.s0 + 0.5 * self.acc * t * t, self.acc * t, self.acc
-        if t < self.tb:
-            return self.s1 + self.v * (t - self.ta), self.v, 0.0
-        if t < self.tc:
-            u = t - self.tb
-            return self.s_d0 + self.v * u - 0.5 * self.dec * u * u, self.v - self.dec * u, -self.dec
-        if t < self.t2:
-            return self.s_c0 + self.h * (t - self.tc), self.h, 0.0
-        if t < self.T:
-            u = t - self.t2
-            return self.s_b + self.h * u - 0.5 * self.dec * u * u, self.h - self.dec * u, -self.dec
-        return self.s_stop, 0.0, 0.0
-
-
-def make_poke_traj(d_run, v, p):
-    """按参数造去程轨迹: 戳破 → TrajPoke; 停在纸前 → Traj1D。"""
-    if poke_pierce(p):
-        return TrajPoke(-d_run, -p.L_F, p.POKE_DEPTH, v, poke_hit_v(p, v), p.DASH_ACC, p.BRAKE_ACC, p.POKE_CREEP)
-    return Traj1D(-d_run, poke_end_s(p), v, p.DASH_ACC, p.BRAKE_ACC)
-
-
-class Mirror(object):
-    """
-    把 Traj1D 在 s 轴上翻转 (s → −s): 戳完退回用。内部轨迹 u 从 u0 走到 u1 (u = −s),
-    对外 at(t) 给的是 s 的 (位置, 速度, 加速度)。T / t2 / s_b 等沿用内部轨迹的字段名。
-    """
-
-    def __init__(self, tr):
-        self.tr = tr
-        self.T, self.t1, self.t2, self.v = tr.T, tr.t1, tr.t2, tr.v
-
-    @property
-    def s0(self):
-        return -self.tr.s0
-
-    @property
-    def s_stop(self):
-        return -self.tr.s_stop
-
-    def at(self, t):
-        s, v, a = self.tr.at(t)
-        return -s, -v, -a
 
 
 def simulate_lag(traj, tau, dt=0.002):
@@ -512,27 +405,10 @@ class Plan(object):
         self.veh_stop = None        # 滞后模型下飞机实际停在哪 (s)
         self.traj = None
         self.speed_chain = []
-        self.mode = "dash"           # "dash" 冲刺穿环 / "poke" 针戳红点后原路退回
-        self.traj_back = None        # poke: 退回起跑点的轨迹 (Mirror, s 从 s_stop 回到 −d_run)
-        self.tip_gap = None        # poke: 到终点时针尖离纸面多远 (负 = 扎进去)
-        self.pierce = False        # poke: 戳破 / 顶开模式
-        self.hit_v = None          # poke 戳破: 接触速度
 
     def summary(self):
         if not self.ok:
             return "不可行: " + "; ".join(self.errors)
-        if self.mode == "poke" and self.pierce:
-            return ("戳破 v=%.2fm/s 助跑 %.2fm [%s] 接触 %.2fm/s 压入 %.0fcm 终点 s=%+.2f 去程 %.1fs 退回 %.1fs  方向 %s"
-                    % (self.v, self.d_run, self.start_how, self.hit_v,
-                       (self.s_stop - self.traj.s_c) * 100, self.s_stop, self.traj.T, self.traj_back.T,
-                       self.dir_why))
-        if self.mode == "poke":
-            return ("戳点 v=%.2fm/s 助跑 %.2fm [%s] 终点 s=%+.2f (针尖%s纸面 %.0fcm) "
-                    "接触速度 %.2f/最坏 %.2f m/s 去程 %.1fs 退回 %.1fs  方向 %s"
-                    % (self.v, self.d_run, self.start_how, self.s_stop,
-                       "离" if self.tip_gap >= 0 else "扎进", abs(self.tip_gap) * 100,
-                       self.v_hit_nom, self.v_hit_worst, self.traj.T, self.traj_back.T,
-                       self.dir_why))
         return ("v=%.2fm/s 助跑 %.2fm [%s] 过纸冲刺 %.2fm (补偿 %.2f) 刹车起点 s=%+.2f 停止 s=%+.2f "
                 "(+超调 %.2f, 离墙再富余 %.2fm) 撞纸 %.2f m/s 用时 %.2fs  方向 %s"
                 % (self.v, self.d_run, self.start_how, self.pass_actual, self.pass_lag,
@@ -778,153 +654,11 @@ def preflight_check(aim, c, n, origin, p, takeoff_h, virtual_offset=0.0, p_now=N
     return out
 
 
-RETREAT_ACC = 0.5       # m/s²，退回时的起步加速度 (小: 别把纸拽走 / 别把针别在纸里)
-RETREAT_DEC = 0.8       # m/s²，退回时的刹车
-
-
-def poke_end_s(p):
-    """
-    戳点终点 (机体中心的 s)。L_F = 中心 → 针尖; 针尖碰到纸面时机体中心在 s = −L_F。
-      停在纸前 (老戳点): 针尖在纸面前方 POKE_GAP (负 = 扎进去 |POKE_GAP|)
-      戳破 / 顶开 (poke_pierce): 针尖接触点再往里 POKE_DEPTH
-    """
-    if poke_pierce(p):
-        return -p.L_F + p.POKE_DEPTH
-    return -p.L_F - p.POKE_GAP
-
-
-def plan_poke(aim, c, n, p_now, origin, p):
-    """
-    戳点: 慢速直线飞到"针尖离纸 POKE_GAP"处, 停留, 再沿原直线退回起跑点 S。
-    和 plan_dash 共用: 进入方向 (entry_dir) / 撞击点偏移 (NEEDLE_*, AIM_TRIM_*) / 起跑点 (start_options) /
-    场地检查。不同: ① 终点 = 纸前 POKE_GAP, 没有"刹停窗口 / 撕纸速度 / D_BACK"那套;
-    ② 不穿环, 所以不做 clamp_aim (机身不用过环), 红点离环心多远都按红点瞄; ③ 多一条退回轨迹 traj_back。
-    速度只用 POKE_V (不自动降速): 场地放不下就直接报不可行。
-    """
-    P = Plan()
-    P.mode = "poke"
-    P.aim_tool = aim
-    d, P.dir_why = entry_dir(aim, n, p_now, p.ENTRY_ANG_MAX)
-    if d is None:
-        P.errors.append("算不出进入方向 (飞机正在瞄点正上/正下方?)")
-        return P
-    P.dir = d
-    right, up, _ = entry_axes(d)
-    off_r = p.NEEDLE_RIGHT - p.AIM_TRIM_RIGHT
-    off_u = p.NEEDLE_UP - p.AIM_TRIM_UP
-    if abs(off_r) > 1e-9 or abs(off_u) > 1e-9:
-        aim = vsub(aim, vadd(vmul(right, off_r), vmul(up, off_u)))
-        P.notes.append("撞击点: 机体中心瞄在目标 右 %+.0f / 上 %+.0f cm (针尖 右 %+.0f 上 %+.0f, "
-                       "经验修正 右 %+.0f 上 %+.0f)"
-                       % (-off_r * 100 + 0.0, -off_u * 100 + 0.0, p.NEEDLE_RIGHT * 100, p.NEEDLE_UP * 100,
-                          p.AIM_TRIM_RIGHT * 100, p.AIM_TRIM_UP * 100))
-    P.aim = aim
-    v = p.POKE_V
-    P.s_stop = poke_end_s(p)
-    P.tip_gap = p.POKE_GAP
-    P.s_lo = P.s_hi = P.s_stop
-    P.tol = 0.0
-    if poke_pierce(p):
-        P.warnings.append("戳破/顶开: 以 %.2fm/s 压入纸面 %.0fcm 后停 (针露出长度要大于这个深度 + 纸位置误差, 否则机头 / 护桨会顶纸)"
-                          % (poke_hit_v(p, p.POKE_V), p.POKE_DEPTH * 100))
-        if p.POKE_DEPTH > 0.15:
-            P.warnings.append("压入深度 %.0fcm 较大: 纸被顶开后可能贴到护桨 / 螺旋桨上" % (p.POKE_DEPTH * 100))
-    elif p.POKE_GAP < -0.10:
-        P.warnings.append("扎入深度 %.0fcm: 位置设定点比纸面深这么多, 针被纸挡住时飞机会持续往前顶"
-                          % (-p.POKE_GAP * 100))
-
-    dz = aim[2] - origin[2]
-    if not (p.GATE_Z_MIN_DZ <= dz <= p.GATE_Z_MAX_DZ):
-        P.errors.append("瞄点高度 dz=%.2fm 不在 [%.2f, %.2f] (相对起飞点)"
-                        % (dz, p.GATE_Z_MIN_DZ, p.GATE_Z_MAX_DZ))
-        return P
-
-    fwd, rgt = _ring_frame(d, n)
-    x_origin = vdot(vsub(origin, aim), fwd)
-    x_rear_lim = x_origin - p.D_REAR + p.M_WALL + p.L_R
-    y_lim = p.D_SIDE - p.W_HALF - p.M_WALL
-    dist_now = -vdot(vsub(p_now, aim), d)
-    errs = []
-    for d_run, how in start_options(dist_now, v, p):
-        errs = []
-        S = vadd(aim, vmul(d, -d_run))
-        E = vadd(aim, vmul(d, P.s_stop))
-        try:
-            tr = make_poke_traj(d_run, v, p)
-            back = Mirror(Traj1D(-P.s_stop, d_run, p.POKE_RETREAT_V, RETREAT_ACC, RETREAT_DEC))
-        except ValueError as e:
-            errs.append(str(e))
-            continue_ = True
-        else:
-            continue_ = False
-        for nm, q in (("起跑点 S", S), ("终点 E", E)):
-            xq, yq = vdot(vsub(q, aim), fwd), vdot(vsub(q, aim), rgt)
-            if abs(yq) > y_lim + 1e-9:
-                errs.append("%s 横向 %.2fm 超出两侧余量 %.2fm (D_SIDE)" % (nm, abs(yq), y_lim))
-            if xq < x_rear_lim - 1e-9:
-                errs.append("%s 在起飞点后方 %.2fm, 超出后方空地 (D_REAR=%.2f)"
-                            % (nm, x_origin - xq, p.D_REAR))
-            r0 = math.hypot(q[0] - origin[0], q[1] - origin[1])
-            if r0 > p.GATE_XY_MAX:
-                errs.append("%s 离起飞点 %.2fm > 水平范围 %.2fm" % (nm, r0, p.GATE_XY_MAX))
-        x_now = vdot(vsub(p_now, aim), fwd)
-        if x_now > p.REPO_X_MAX:
-            errs.append("飞机现在离环平面只有 %.2fm (要 ≥ %.2fm 才允许摆位)" % (-x_now, -p.REPO_X_MAX))
-        if errs or continue_:
-            continue
-        sim = simulate_lag(tr, p.T_LAG)
-        P.v, P.d_run, P.S, P.E, P.traj, P.traj_back = v, d_run, S, E, tr, back
-        P.d_run_min, P.start_how = d_run_for(v, p), how
-        P.v_hit_nom = v_at_vehicle_s(sim, -p.L_F)
-        P.v_hit_worst = v_at_vehicle_s(sim, -p.L_F + p.E_ALONG)
-        P.veh_stop = sim[-1][1]
-        P.brake_dist = v * p.T_LAG + v * v / (2.0 * p.BRAKE_ACC)
-        P.speed_chain = [["POKE_V", p.POKE_V]]
-        P.pierce = poke_pierce(p)
-        if P.pierce:
-            P.speed_chain.append(["POKE_HIT_V", poke_hit_v(p, v)])
-            P.hit_v = poke_hit_v(p, v)
-            P.v_hit_nom = P.v_hit_worst = P.hit_v        # 爬行段匀速: 接触速度 = hit_v (±滞后 ≈ 0)
-        elif p.POKE_GAP < 0 and P.v_hit_nom < 0.3:
-            P.warnings.append("扎入时接触速度只有 %.2f m/s —— 针可能戳不透纸 (改用戳破模式: POKE_GAP=0 且 POKE_HIT_V>0)"
-                              % P.v_hit_nom)
-        P.ok = True
-        return P
-    P.errors = ["戳点不可行: " + "; ".join(errs)]
-    return P
-
-
 def static_preview(p):
     """
     不知道环在哪时 (dry-run / 配置页) 的派生量: 只用速度和场地参数,
     假设正对进入。→ dict, 字段对应 INTERFACE §4 的 derived.gate。
     """
-    if p.GATE_POKE:
-        v = p.POKE_V
-        d_run = d_run_for(v, p)
-        s_stop = poke_end_s(p)
-        pierce = poke_pierce(p)
-        out = {"mode": "poke", "dash_v": v, "poke_v": v, "poke_gap": p.POKE_GAP,
-               "poke_retreat_v": p.POKE_RETREAT_V, "pierce": pierce,
-               "poke_hit_v": poke_hit_v(p, v) if pierce else 0.0,
-               "poke_creep": p.POKE_CREEP if pierce else 0.0,
-               "poke_depth": p.POKE_DEPTH if pierce else 0.0,
-               "dash_acc": p.DASH_ACC, "brake_acc": p.BRAKE_ACC,
-               "brake_dist": v * p.T_LAG + v * v / (2.0 * p.BRAKE_ACC),
-               "d_align": d_run, "d_commit": d_run, "d_run_max": max(d_run, p.D_RUN_MAX),
-               "overshoot": s_stop, "stop_window": [s_stop, s_stop], "tol": 0.0,
-               "r_safe": r_safe(p)}
-        try:
-            tr = make_poke_traj(d_run, v, p)
-            back = Traj1D(-s_stop, d_run, p.POKE_RETREAT_V, RETREAT_ACC, RETREAT_DEC)
-            sim = simulate_lag(tr, p.T_LAG)
-            out.update(s_brake=tr.s_b, t_dash=tr.T, t_back=back.T,
-                       v_hit=poke_hit_v(p, v) if pierce else v_at_vehicle_s(sim, -p.L_F),
-                       v_hit_worst=poke_hit_v(p, v) if pierce else v_at_vehicle_s(sim, -p.L_F + p.E_ALONG),
-                       veh_stop=sim[-1][1])
-        except ValueError as e:
-            out["error"] = str(e)
-        return out
     # 冲刺: 按场地允许的最高速度预览 (DASH_V 放不下时就是规划会降到的那一档)
     v_room = dash_v_room(p)
     v = v_room if v_room is not None else p.DASH_V
@@ -1024,8 +758,6 @@ DEFAULTS = dict(
     D_BACK=2.0, D_REAR=2.0, D_SIDE=2.0, GATE_XY_MAX=8.0, REPO_X_MAX=-1.5,
     GATE_Z_MIN_DZ=0.5, GATE_Z_MAX_DZ=3.0, D_RUN_MAX=4.0,
     H_HALF=0.11, NEEDLE_RIGHT=0.0, NEEDLE_UP=0.0, AIM_TRIM_RIGHT=0.0, AIM_TRIM_UP=0.0,
-    GATE_POKE=False, POKE_V=1.0, POKE_GAP=0.5, POKE_RETREAT_V=0.4,
-    POKE_HIT_V=0.5, POKE_CREEP=0.25, POKE_DEPTH=0.10,
 )
 
 if __name__ == "__main__":
@@ -1056,12 +788,3 @@ if __name__ == "__main__":
     print("虚拟环 2m   %s" % P.summary())
     for w in P.notes + P.warnings:
         print("     · " + w)
-    print()
-    pp = p.copy(GATE_POKE=True)
-    for gap in (0.5, 0.2, 0.0, -0.05):
-        P = plan_poke(aim, c, n, (0.0, 0.0, 1.5), origin, pp.copy(POKE_GAP=gap))
-        print("戳点 gap=%+.2f  %s" % (gap, P.summary()))
-        for w in P.notes + P.warnings:
-            print("     · " + w)
-    print("戳点静态预览:", {k: (round(v, 3) if isinstance(v, float) else v)
-                       for k, v in static_preview(pp).items()})
