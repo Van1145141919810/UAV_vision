@@ -23,8 +23,7 @@ from vb09.flight import config as C
 
 from vb09.flight.ctx import F
 from vb09.flight.ctx import _f, all_params, get_envelope
-from vb09.flight.setpoint import SetpointState
-from vb09.flight.telemetry import rpy_deg_from_quat
+from vb09.flight.devices import SetpointState, rpy_deg_from_quat
 
 
 csv_lock_main = threading.Lock()

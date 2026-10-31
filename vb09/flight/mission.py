@@ -16,10 +16,9 @@ from vb09.flight import config as C
 
 from vb09.flight.ctx import F
 from vb09.flight.ctx import _f, check_abort, request_abort, request_land, set_phase, stop_requested, telem_put, tilt_limit
-from vb09.flight.keys import KeyReader
 from vb09.flight.log import gate_queue
 from vb09.flight.steps.base import StepBack, StepFail
-from vb09.flight.telemetry import clamp, tilt_deg_from_quat, wrap_pi
+from vb09.flight.devices import KeyReader, clamp, tilt_deg_from_quat, wrap_pi
 
 
 # =============================================================================

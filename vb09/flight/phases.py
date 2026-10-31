@@ -16,7 +16,7 @@ from vb09.flight import config as C
 
 from vb09.flight.ctx import F
 from vb09.flight.ctx import _MAV_RESULT, check_abort, fcu_texts_since, request_abort, set_phase
-from vb09.flight.keys import KeyReader, _flush_stdin
+from vb09.flight.devices import KeyReader, _flush_stdin
 from vb09.flight.log import timing_queue, timing_queue_lock
 
 

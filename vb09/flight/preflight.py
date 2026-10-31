@@ -17,8 +17,7 @@ from vb09.flight import config as C
 
 from vb09.flight.ctx import F
 from vb09.flight.ctx import _f, cells_from_voltage, telem_put
-from vb09.flight.keys import _flush_stdin
-from vb09.flight.telemetry import tilt_deg_from_quat, yaw_from_quat
+from vb09.flight.devices import _flush_stdin, tilt_deg_from_quat, yaw_from_quat
 
 
 # =============================================================================

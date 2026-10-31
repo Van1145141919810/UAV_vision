@@ -99,16 +99,15 @@ from vb09.monitor.fake import FAKE_CAM, start_fake_gate  # noqa: E402
 from vb09.monitor.launcher import (NAME_RE, _tilde, default_config, dry_run, launcher_status,  # noqa: E402
                                    normalize_knobs, normalize_sets, regen_launcher, save_site, script_cmd,
                                    temp_launcher)
-from vb09.monitor.logs import list_logs, read_log  # noqa: E402
 from vb09.monitor.ros import start_ros  # noqa: E402
-from vb09.monitor.store import STORE  # noqa: E402
+from vb09.monitor.store import STORE, list_logs, read_log  # noqa: E402
 
 # 网页 (2026-10-30 第 5 步: monitor.html 拆成 vb09/web/ 下的几个静态文件)。只服务这张白名单里的文件。
 WEB_DIR = os.path.join(HERE, "vb09", "web")
 _JS = "application/javascript; charset=utf-8"
 WEB_FILES = {"monitor.css": "text/css; charset=utf-8", "core.js": _JS, "kinds/ring.js": _JS, "live.js": _JS,
              "views/monitor.js": _JS, "views/detail.js": _JS, "views/checks.js": _JS, "views/config.js": _JS,
-             "views/help.js": _JS, "views/cam.js": _JS, "ui.js": _JS, "views/replay.js": _JS, "main.js": _JS}
+             "views/help.js": _JS, "views/cam.js": _JS, "views/replay.js": _JS, "main.js": _JS}
 
 
 # =============================================================================

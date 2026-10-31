@@ -15,7 +15,7 @@ import gate_plan as gp
 from vb09.common.target import Lock
 from vb09.flight import config as C
 from vb09.flight.steps.base import Step
-from vb09.flight.telemetry import wrap_pi
+from vb09.flight.devices import wrap_pi
 
 
 class Acquire(Step):

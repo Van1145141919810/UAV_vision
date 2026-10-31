@@ -75,9 +75,8 @@ F = FlightContext()
 
 def bind_defaults():
     """入口在 import 完成后调用一次: 建遥测 / setpoint / 环识别接收器 (以前是 stage12 的模块级实例)。"""
-    from vb09.flight.setpoint import SetpointState
+    from vb09.flight.devices import SetpointState, Telemetry
     from vb09.flight.target_in import GateInput
-    from vb09.flight.telemetry import Telemetry
     if F.tele is None:
         F.tele = Telemetry()
     if F.setpoint is None:

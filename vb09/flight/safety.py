@@ -14,7 +14,7 @@ from vb09.flight import config as C
 
 from vb09.flight.ctx import F
 from vb09.flight.ctx import _f, allowed_modes, get_envelope, request_abort, request_land, telem_put, tilt_limit
-from vb09.flight.telemetry import tilt_deg_from_quat
+from vb09.flight.devices import tilt_deg_from_quat
 
 
 # =============================================================================
