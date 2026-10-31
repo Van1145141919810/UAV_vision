@@ -2,6 +2,7 @@
 
 基线：存档 `VB09_gate_archive_2026-10-30.zip`（git 第一个提交 f2f4b38）。重构计划见项目文档 `claude/PLAN_refactor_v2.md`，
 每一步一个提交（`git log`）。接口约定：`docs/INTERFACE_gate.md`（v2，按代码实际行为写）。
+**开发指南（加模式 / 步骤 / 目标 / 参数 / 网页时改哪里）：`docs/DEV_GUIDE.md`**。
 系统说明：docs/VB09_gate_system_guide.pdf（在线版 https://claude.ai/artifact/TCw68ZtrMRDnAPFB3ethyi，重构前写的）。
 
 ## 入口（根目录，都很薄）
