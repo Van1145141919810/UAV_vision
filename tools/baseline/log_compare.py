@@ -19,7 +19,7 @@ SPLIT = re.compile(r"(?=\d+\.\d\d [IWEF] )")
 # 已知的不确定性 (同一份代码多跑几次也会变, 已核对): 起跑点正好在 D_RUN_MAX 边界上时 "就地起跑"/"前进到"
 #   来回跳; z 掉高事件看仿真时序; 多线程同时 print 会把两行粘在一起 (按时间戳前缀拆开)
 NOISE = [(re.compile(r"\[(就地起跑|前进到|后退到)[^\]]*\]"), "[<起跑>]")]
-SKIP = re.compile(r"^\[zdrop\]")
+SKIP = re.compile(r"^\[zdrop\]|GATE_SHADOW = True 是旧写法")   # 后者: 4.5 有意新增的提示
 
 
 def templates(root, sc):
@@ -32,7 +32,7 @@ def templates(root, sc):
         raw += [x for x in SPLIT.split(ln) if x]
     for ln in raw:
         m = LINE.match(ln)
-        if not m or SKIP.match(m.group(2)):
+        if not m or SKIP.search(m.group(2)):
             continue
         msg = m.group(2)
         for rx, rep in NOISE:
@@ -56,6 +56,8 @@ def main():
     try:
         shutil.rmtree(os.path.join(wt, "sim"))
         shutil.copytree(os.path.join(_compat.ROOT, "sim"), os.path.join(wt, "sim"))
+        if not os.path.exists(os.path.join(wt, "stage14_mission.py")):     # 改名之前的提交
+            os.symlink("stage12_gate.py", os.path.join(wt, "stage14_mission.py"))
         for sc in scs:
             a, b = templates(wt, sc), templates(_compat.ROOT, sc)
             if a == b:

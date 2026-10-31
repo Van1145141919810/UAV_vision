@@ -1146,7 +1146,7 @@ def _gate_lines(g, d):
     gt = d.get("gate") or {}
     pe = d.get("phase_envelope") or {}
     L = []
-    L.append("任务          穿环 (stage12)")
+    L.append("任务          穿环 (模式见下面 开关 / 档案 mode)")
     L.append("高度          瞄点带 [%.2f, %.2f] m   起飞 %.2f m   安全硬顶 %.2f m"
              % (d["z_band"][0], d["z_band"][1], d["takeoff_height"], d["max_height"]))
     L.append("水平          范围 %.2f m / 硬围栏 %.2f m / 起降漂移 %.2f m"

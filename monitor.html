@@ -750,7 +750,7 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
         冲刺急刹时 PX4 自己就可能把飞机倾过这条线，冲之前先改。按 G 之后到刹停悬停结束，停桨线换成
         <code>GATE_DASH_TILT_DEG</code>（默认 45° 持续 0.3 s），撞纸的短时大倾角不会停桨。</li>
     </ul>
-    <p><b>飞行脚本 stage12_gate.py</b>（同目录还要有 <code>gate_plan.py</code>）：档案里写 <code>task = 穿环</code>，
+    <p><b>飞行脚本 stage14_mission.py</b>（原 stage12_gate.py；同目录还要有 <code>gate_plan.py</code> 和 <code>vb09/</code>）：档案里写 <code>task = 穿环</code>，
       流程：起飞 → <b>手动段</b>
       （WASD 平移 / R F 升降 / Q E 转向 / 空格悬停，把飞机开到想起跑的地方）→ <b>按 T</b> 找环 → 规划 →
       摆到起跑点 → 取样锁定 → <b>在飞行终端按 G</b> 冲刺 → 刹停 → 原地降落。
@@ -759,7 +759,7 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
       冲刺中只有 X（停桨）立即生效，L / 断连等刹停后再降。
       测试顺序：<code>set.GATE_SHADOW = True</code>（影子：不摆位不冲刺）→ <code>set.GATE_VIRTUAL_OFFSET = 2.0</code>
       （虚拟环：真冲刺，停在纸前）→ 正式。视觉链路用 <code>python3 run_vision.py gate_gcs</code>（模式必须写）。
-      网页用编号最大的 <code>stageNN_gate.py</code>。</p>
+      档案 <code>mode = 冲刺 / 影子</code> 选任务模式（旧写法 <code>set.GATE_SHADOW = True</code> 等同于影子）。网页用编号最大的 <code>stageNN_mission.py</code>。</p>
     <p class="sub">各字段的含义、坐标约定（靶面 h/v、法向朝向）、bridge / 地面程序 / 新飞行脚本各要补什么，见同目录
       <code>INTERFACE_gate.md</code>。缺字段时网页会降级显示，机况检查「环识别」一行会说缺了什么。</p>
   </div>

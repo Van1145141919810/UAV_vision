@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-stage12_gate.py 离线仿真: 桩 rospy + 一个粗糙的 PX4 位置环 + 假识别 (延迟/噪声) + 纸。
+stage14_mission.py (原 stage12_gate.py) 离线仿真: 桩 rospy + 一个粗糙的 PX4 位置环 + 假识别 (延迟/噪声) + 纸。
   python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring  [--set K=V ...]
 不是飞行动力学仿真 —— 只用来跑通状态机、检查时间表/停止点/遥测字段和日志。
 """
@@ -65,7 +65,7 @@ if scenario == "virtual":
     sets += ["--set", "GATE_VIRTUAL_OFFSET=2.6"]
 if scenario == "noring":
     sets += ["--set", "GATE_ACQ_TIMEOUT=12"]
-sys.argv = ["stage12_gate.py", "--sites-dir", sites, "--site", "sim"] + sets + extra
+sys.argv = ["stage14_mission.py", "--sites-dir", sites, "--site", "sim"] + sets + extra
 
 
 # ---------------- 飞机 ----------------
@@ -312,7 +312,7 @@ def sim_loop():
 
 
 rospy.PRINT[0] = os.environ.get("SIM_QUIET") != "1"
-import stage12_gate as S                          # noqa: E402  (档案 setup 在 import 时)
+import stage14_mission as S                       # noqa: E402  (档案 setup 在 import 时)
 threading.Thread(target=sim_loop, daemon=True).start()
 t_start = time.time()
 rc = S.main()

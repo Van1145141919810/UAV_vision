@@ -96,6 +96,7 @@ def _drop_json(x):
 
 
 def _drop_txt(s):
+    s = s.replace("穿环 (stage12)", "穿环 (模式见下面 开关 / 档案 mode)")      # 4.6 改名后的措辞
     return "\n".join(ln for ln in s.splitlines() if "戳" not in ln and "POKE" not in ln)
 
 

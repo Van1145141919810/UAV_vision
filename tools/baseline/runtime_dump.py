@@ -61,6 +61,21 @@ def run(root):
     return out
 
 
+def _intended(g, n):
+    """有意的改动 (逐条写明), 比较前两边都抹掉:
+      4.5  旧写法 GATE_SHADOW = True 多一条"等同于 mode = 影子"的警告
+      4.6  包络核对表的 "任务 穿环 (stage12)" 改了措辞"""
+    def fix(x):
+        if isinstance(x, str):
+            return x.replace("穿环 (stage12)", "穿环 (模式见下面 开关 / 档案 mode)")
+        if isinstance(x, list):
+            return [fix(v) for v in x if not (isinstance(v, str) and "是旧写法, 现在等同于 mode = 影子" in v)]
+        if isinstance(x, dict):
+            return {k: fix(v) for k, v in x.items()}
+        return x
+    return fix(g), fix(n)
+
+
 def main():
     if "--write-from" in sys.argv:
         rev = sys.argv[sys.argv.index("--write-from") + 1]
@@ -69,6 +84,8 @@ def main():
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
             shutil.rmtree(os.path.join(wt, "sim"))
+            if not os.path.exists(os.path.join(wt, "stage14_mission.py")):     # 改名之前的提交
+                os.symlink("stage12_gate.py", os.path.join(wt, "stage14_mission.py"))
             res = run(wt)          # 用当前的 sim (带 config dump), 跑旧代码
         finally:
             subprocess.call(["git", "worktree", "remove", "--force", wt], cwd=_compat.ROOT)
@@ -79,7 +96,7 @@ def main():
     with open(_util.golden_path("runtime.json")) as f:
         rev = json.load(f).get("_rev")
     res["_rev"] = rev
-    ok = _util.report("runtime", *_util.save_or_compare("runtime.json", res, False))
+    ok = _util.report("runtime", *_util.save_or_compare("runtime.json", res, False, drop=_intended))
     return 0 if ok else 1
 
 

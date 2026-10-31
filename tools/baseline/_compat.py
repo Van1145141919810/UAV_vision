@@ -81,9 +81,10 @@ def flight_module():
         f.write(SITE_CONF)
     os.environ["HOME"] = tempfile.mkdtemp()
     argv = sys.argv
-    sys.argv = ["stage12_gate.py", "--sites-dir", d, "--site", "bl"]
+    name = os.path.basename(entry())[:-3]
+    sys.argv = [name + ".py", "--sites-dir", d, "--site", "bl"]
     try:
-        return _first("stage12_gate")
+        return _first(name)
     finally:
         sys.argv = argv
 

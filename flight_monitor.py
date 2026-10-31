@@ -136,8 +136,9 @@ def _abs_node(n):
     return n if n.startswith("/") else "/" + n
 
 
-SCRIPT_RE = re.compile(r"^stage(\d+)_(gate)\.py$")
-SUFFIX_TASK = {"gate": "gate"}
+# 2026-10-30: 入口改名 stage14_mission.py (任务模式在档案里选); 老的 stageNN_gate.py 也认 (编号大的优先)
+SCRIPT_RE = re.compile(r"^stage(\d+)_(gate|mission)\.py$")
+SUFFIX_TASK = {"gate": "gate", "mission": "gate"}
 KNOB_TASK = {"穿环": "gate"}
 
 
@@ -793,7 +794,7 @@ def run_checks(args):
         n = len(fp.list_sites(args.sites_dir))
         add("现场档案", "ok" if n else "warn", "%d 个" % n, args.sites_dir)
     if not args.scripts:
-        add("飞行脚本文件", "fail", "找不到", "同目录放 stageNN_gate.py")
+        add("飞行脚本文件", "fail", "找不到", "同目录放 stageNN_mission.py")
     else:
         add("飞行脚本文件", "ok" if args.script else "warn",
             "  ".join("%s %s" % (TASK_LABEL.get(t, t), os.path.basename(p))
@@ -2083,7 +2084,7 @@ def main():
                     help="监听地址 (默认只本机, 通过 SSH 端口映射访问)")
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--script", default=None,
-                    help="只用这一个飞行脚本 (默认: 同目录编号最大的 stageNN_gate.py; "
+                    help="只用这一个飞行脚本 (默认: 同目录编号最大的 stageNN_mission.py / stageNN_gate.py; "
                          "有 flight.py 软链接就只用它)")
     ap.add_argument("--task", choices=("auto", "gate"), default="auto",
                     help="档案没写任务时用哪种任务的脚本 (只剩 gate)")

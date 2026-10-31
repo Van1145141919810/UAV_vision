@@ -152,8 +152,8 @@ def main():
         print("  识别相机外参 pitch=%.2f° roll=%.2f° yaw=%.2f°  x=%.3f y=%.3f z=%.3f m"
               % (args.pitch, args.roll, args.yaw, args.cam_x, args.cam_y, args.cam_z))
     if args.mode == "gate":
-        print("  识别结果: %s" % ("★ REAL —— 会驱动 stage12 冲刺" if args.drive
-                                 else "SIM —— stage12 只在影子模式下用 (要真飞加 --drive)"))
+        print("  识别结果: %s" % ("★ REAL —— 会驱动 stage14 冲刺" if args.drive
+                                 else "SIM —— stage14 只在影子模式下用 (要真飞加 --drive)"))
     elif args.mode == "gate_gcs":
         print("  识别结果: %s" % ("飞机侧强制 SIM (--lock), 地面 --mode 2 也不驱动" if args.lock
                                  else "跟随地面: gcs_gate.py --mode 2 = REAL, --mode 1 = SIM"))
