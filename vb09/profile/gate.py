@@ -39,9 +39,16 @@ GATE_KNOBS = [
     dict(key="w_half", tasks=["gate"], type="float", unit="m", label="半宽", group="机体",
          min=0.05, max=0.55, help="机体中心 → 最外侧 (含护桨), 实测。决定瞄点能偏离环心多远"),
     dict(key="mode", tasks=["gate"], type="choice", unit="", label="任务模式", group="穿环",
-         choices=["冲刺", "影子"],
-         help="冲刺 = 锁定后摆位冲刺穿环; 影子 = 识别 / 锁定 / 规划照做, 不摆位不冲刺, 计划发网页 "
+         choices=["冲刺", "影子", "停靠"],
+         help="冲刺 = 锁定后摆位冲刺穿环; 影子 = 识别 / 锁定 / 规划照做, 不摆位不冲刺, 计划发网页; "
+              "停靠 = 识别后飞到目标前方 (停靠距离) 停住对正, 悬停 (停靠悬停) 记录检测, 不冲刺 —— 测检测稳定性用 "
               "(不填 = 冲刺; 旧写法 set.GATE_SHADOW = True 等同于 影子)"),
+    dict(key="dock_dist", tasks=["gate"], type="float", unit="m", label="停靠距离", group="穿环",
+         min=1.8, max=8.0,
+         help="mode = 停靠: 停靠点离目标多远 (水平, 沿环法向; 没有法向沿视线)。不填 = max(3.0, 最小助跑)"),
+    dict(key="dock_hold", tasks=["gate"], type="float", unit="s", label="停靠悬停", group="穿环",
+         min=3.0, max=300.0,
+         help="mode = 停靠: 在停靠点悬停多久 (默认 20), 期间 gate.csv 照常记录; 结束打印停靠误差和 aim 抖动"),
     dict(key="allow_slow", tasks=["gate"], type="choice", unit="", label="场地不够时降速", group="穿环",
          choices=["否", "确认", "是"],
          help="场地放不下设定的冲刺速度时: 否 = 规划失败回手动段 (说明卡在哪、最高能冲多快); "
@@ -76,7 +83,7 @@ GATE_KNOBS = [
 ]
 
 # 任务模式旋钮 → C.MISSION_MODE (vb09/flight/modes.py 的键)
-MODE_NAMES = {"冲刺": "dash", "影子": "shadow"}
+MODE_NAMES = {"冲刺": "dash", "影子": "shadow", "停靠": "dock"}
 
 # 穿环旋钮 → 参数 (一对一)
 GATE_KNOB_PARAM = {
@@ -86,6 +93,7 @@ GATE_KNOB_PARAM = {
     "v_tear_min": "V_TEAR_MIN", "entry_ang_max": "ENTRY_ANG_MAX", "d_straight": "D_STRAIGHT",
     "run_max": "D_RUN_MAX",
     "pass_run": "PASS_RUN", "back_margin": "M_BACK", "brake_over": "BRAKE_OVER_T",
+    "dock_dist": "GATE_DOCK_D_STOP", "dock_hold": "GATE_DOCK_HOLD_S",
 }
 
 # 穿环 (stage12) 才有的安全项, 只在 _check_gate 里查
@@ -155,6 +163,9 @@ def _build_gate_overrides(knobs, view):
         if md == "冲刺" and view.get("GATE_SHADOW"):
             warns.append("mode = 冲刺, 但 set.GATE_SHADOW = True —— 两个说法矛盾, 按 影子 飞 (不冲刺)。"
                          "要冲刺就删掉 GATE_SHADOW 那一行")
+        if md == "停靠" and view.get("GATE_SHADOW"):
+            warns.append("mode = 停靠, 但 set.GATE_SHADOW = True —— 两个说法矛盾, 按 影子 飞 (不停靠)。"
+                         "要停靠就删掉 GATE_SHADOW 那一行")
     elif view.get("GATE_SHADOW"):
         warns.append("GATE_SHADOW = True 是旧写法, 现在等同于 mode = 影子 (档案里建议改写成 mode = 影子)")
     if "DASH_V" in ov and ov["DASH_V"] < cur("DASH_V_MIN"):
@@ -300,6 +311,18 @@ def _check_gate(g):
         W.append("GATE_ALLOW_SIM_DRIVE=True —— 标了 sim 的识别结果也能驱动冲刺！只在台架测试时用")
     if get("GATE_SHADOW"):
         W.append("GATE_SHADOW=True: 影子模式 —— 识别、锁定、规划照做, 不摆位、不冲刺; 做完回手动段 (可换位置再 T), L 降落")
+    elif get("MISSION_MODE") == "dock":
+        dd = get("GATE_DOCK_D_STOP") or 0.0
+        d_eff = dd if dd > 0 else max(3.0, get("D_ALIGN_MIN") or 0.0)
+        W.append("停靠模式 (mode = 停靠): 识别 → 飞到目标前 %.2f m%s 停住对正 → 悬停 %.0f s 记录检测 → 回手动段; "
+                 "不冲刺 (冲刺相关的检查照做, 但这一趟用不到)"
+                 % (d_eff, "" if dd > 0 else " (自动)", get("GATE_DOCK_HOLD_S") or 0.0))
+    dd = get("GATE_DOCK_D_STOP") or 0.0
+    if dd < 0:
+        E.append("停靠距离 GATE_DOCK_D_STOP=%.2f < 0 (0 = 自动)" % dd)
+    if 0 < dd < -get("REPO_X_MAX", -1.5) + 0.3:
+        E.append("停靠距离 %.2f m 太近: 摆位时要在目标前 ≥ %.1f m (REPO_X_MAX), 至少给 %.1f m"
+                 % (dd, -get("REPO_X_MAX", -1.5), -get("REPO_X_MAX", -1.5) + 0.3))
     if (get("GATE_VIRTUAL_OFFSET") or 0) > 0:
         W.append("虚拟环 GATE_VIRTUAL_OFFSET=%.2f m: 真冲刺, 停在纸前 (T3 测试)"
                  % g["GATE_VIRTUAL_OFFSET"])

@@ -123,7 +123,7 @@ stage11 / 停靠跟踪已删除（2026-10-30），所以 `task` 只剩 `"gate"`�
 
 ## 3. `/flight_ctrl/telemetry`（`stage14_mission.py`）
 
-顶层：`"task": "gate"`、`"schema": 2`。阶段名 `"gate"`，段在 `gate.seg`。
+顶层：`"task": "gate"`、`"schema": 2`、`"mode"`（`dash` / `shadow` / `dock`，档案 mode；2026-10-31 加）。阶段名 `"gate"`，段在 `gate.seg`。
 
 `gate` 段：
 
@@ -141,7 +141,11 @@ stage11 / 停靠跟踪已删除（2026-10-30），所以 `task` 只剩 `"gate"`�
 | `commit` | 对象 | `d` 提交距离、`passed`、`abort_ok` |
 | `plan` | 对象 | `seq`、`pts [[x,y,z],…]`、`labels […]`、降速时 `slow` `v` `v_set` `slow_why` |
 | `brake` | 对象 | `end [3]`、`dist`、`acc` |
+| `mode` | 串 | 同顶层 `mode` |
+| `dock` | 对象 | 只有停靠模式：`S [3]` 停靠点、`aim [3]`、`d` 停靠距离、`dir [3]` 进入方向、`dir_src`（法向 / 视线）、`err_cm` 离停靠点（中位数）、`err_max_cm`、`aim_sd_cm [h, v, 帧数]` aim 横向抖动、`done`、`ok`（误差 < 20 cm 且抖动 < 3 cm） |
 | `t` | 数 | |
+
+停靠模式的段序列：`wait`（识别）→ `align`（飞到停靠点 + 对正）→ `hold`（悬停记录）→ 回手动段。
 
 频率：提交 / 冲刺 / 制动段 20 Hz，其它 5 Hz。
 
@@ -175,7 +179,8 @@ stage11 / 停靠跟踪已删除（2026-10-30），所以 `task` 只剩 `"gate"`�
 ## 7. `flight_profile.py`（配置页表单）
 
 - `KNOBS` 的 `adv=True` 项放进「高级」折叠区。
-- `task` 旋钮只剩 穿环。**`mode` 旋钮**（2026-10-30）：冲刺 / 影子，选 `vb09/flight/modes.py` 的步骤列表；旧写法 `GATE_SHADOW = True` 仍等于影子（打印"旧写法"提示）。
+- `task` 旋钮只剩 穿环。**`mode` 旋钮**（2026-10-30）：冲刺 / 影子 / 停靠，选 `vb09/flight/modes.py` 的步骤列表；旧写法 `GATE_SHADOW = True` 仍等于影子（打印"旧写法"提示）。
+- 停靠（2026-10-31）：`dock_dist`（→ `GATE_DOCK_D_STOP`，不填 = max(3.0, `D_ALIGN_MIN`)）、`dock_hold`（→ `GATE_DOCK_HOLD_S`，默认 20 s）。
 - 已删除的旋钮（戳点、跟踪）在档案里出现 → 警告并忽略；`gate_mode = 戳点` → 报错拒绝。
 
 ---

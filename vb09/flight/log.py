@@ -703,6 +703,7 @@ def build_telemetry():
         "takeover": F.takeover[0],              # 被接管时 = 飞控模式名
         "t_requested": False,
         "shadow": bool(C.GATE_SHADOW),
+        "mode": C.MISSION_MODE,               # dash / shadow / dock (档案 mode)
         "sim_drive": bool(C.GATE_ALLOW_SIM_DRIVE),
         "z_enable": False,
         "origin": [_f(F.INITIAL_X), _f(F.INITIAL_Y), _f(F.INITIAL_Z), _f(F.INITIAL_YAW)],

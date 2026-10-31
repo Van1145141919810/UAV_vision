@@ -57,6 +57,7 @@ class MissionCtx:
         self.dash_state = None   # (t, s_plan, v_plan, s_est, v_est)
         self.land_deferred = None
         self.outcome = ""
+        self.dock = None         # 停靠: {S, d, d_in_src, err_cm, aim_sd_cm, t_end} (遥测 gate.dock)
         self.keys = None
         self.flags = set()
         self.move = None         # 本拍最后一个方向/悬停键 (手动段用)
@@ -295,6 +296,9 @@ class MissionCtx:
                         "why": pr["why"], "xy_need": _f(pr["xy_need"]), "d_back_need": _f(pr["d_back_need"])}
         g["land_deferred"] = self.land_deferred
         g["shadow"] = bool(C.GATE_SHADOW)
+        g["mode"] = C.MISSION_MODE
+        if self.dock is not None:
+            g["dock"] = dict(self.dock)           # 拷贝: 遥测线程序列化时步骤还在改它
         telem_put("gate", g)
 
         # ---- gate.csv
@@ -473,6 +477,7 @@ class MissionCtx:
         self.p_hover = p
         self.z_hold = p[2]
         self.acq = self.locked = self.plan = None
+        self.dock = None
         self.lvl = 0
         self.passed = False
         self.dash_state = None

@@ -15,15 +15,20 @@ from vb09.flight.steps.base import Step
 from vb09.flight.telemetry import wrap_pi
 
 
-def move_to(ctx, S, yaw_mode, timeout, label):
+def move_to(ctx, S, yaw_mode, timeout, label, ref=None):
     """
     setpoint 以 GATE_REPO_V 斜坡走直线到 S (3D, 带牵引绳)。yaw_mode:
       "ring" = 机头盯环心 (保持环在视野里)   数值 = 固定朝向
     全程查"飞机在环前 ≥1.5m" (环系 x ≤ REPO_X_MAX)。
+    ref = (aim, dir): 不用冲刺计划时 (停靠) 给目标点和进入方向; 不给 = 用 ctx.plan (冲刺, 和以前一样)。
     """
     ctx.set_seg("align", label)
-    P = ctx.plan
-    fwd, _ = gp._ring_frame(P.dir, (ctx.used() or {}).get("n"))
+    if ref is None:
+        P = ctx.plan
+        ref_aim, ref_dir, goal = P.aim, P.dir, "起跑点"
+    else:
+        (ref_aim, ref_dir), goal = ref, "停靠点"
+    fwd, _ = gp._ring_frame(ref_dir, (ctx.used() or {}).get("n"))
     sp = ctx.pos()
     t_end = rospy.Time.now().to_sec() + timeout
     reach = 0
@@ -41,14 +46,14 @@ def move_to(ctx, S, yaw_mode, timeout, label):
         if ln > C.GATE_REPO_LEASH:
             sp = gp.vadd(p, gp.vmul(lead, C.GATE_REPO_LEASH / ln))
         if yaw_mode == "ring":
-            c = (ctx.used() or {}).get("c") or P.aim
+            c = (ctx.used() or {}).get("c") or ref_aim
             if math.hypot(c[0] - p[0], c[1] - p[1]) > 0.5:
                 ctx.yaw_step(math.atan2(c[1] - p[1], c[0] - p[0]), dt)
         else:
             ctx.yaw_step(yaw_mode, dt)
         vff = gp.vmul(d, C.GATE_REPO_V / dn) if dn > step and ln <= C.GATE_REPO_LEASH else (0.0, 0.0, 0.0)
         ctx.setpoint.set_zhold_mode(sp[0], sp[1], sp[2], ctx.yaw_sp, vff[0], vff[1])
-        x_ring = gp.vdot(gp.vsub(p, P.aim), fwd)
+        x_ring = gp.vdot(gp.vsub(p, ref_aim), fwd)
         if x_ring > C.REPO_X_MAX + 0.3:
             ctx.fail(f"摆位中离环平面只剩 {-x_ring:.2f}m (< {-C.REPO_X_MAX:.1f}m)")
         err = gp.vnorm(gp.vsub(S, p))
@@ -59,7 +64,7 @@ def move_to(ctx, S, yaw_mode, timeout, label):
             ctx.fail(f"{label}: {timeout:.0f}s 没到位 (还差 {err:.2f}m)")
         if now - ctx.t_log > 1.0:
             ctx.t_log = now
-            rospy.loginfo(f"    [{label}] 离起跑点 {err:.2f}m  离环平面 {-x_ring:.2f}m")
+            rospy.loginfo(f"    [{label}] 离{goal} {err:.2f}m  离环平面 {-x_ring:.2f}m")
         dt = ctx.tick()
 
 

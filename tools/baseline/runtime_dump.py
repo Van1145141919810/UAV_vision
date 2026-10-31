@@ -64,14 +64,16 @@ def run(root):
 def _intended(g, n):
     """有意的改动 (逐条写明), 比较前两边都抹掉:
       4.5  旧写法 GATE_SHADOW = True 多一条"等同于 mode = 影子"的警告
-      4.6  包络核对表的 "任务 穿环 (stage12)" 改了措辞"""
+      4.6  包络核对表的 "任务 穿环 (stage12)" 改了措辞
+      7    新参数 GATE_DOCK_* (停靠): site_config 多几行, config 的 params 多几个键"""
     def fix(x):
         if isinstance(x, str):
             return x.replace("穿环 (stage12)", "穿环 (模式见下面 开关 / 档案 mode)")
         if isinstance(x, list):
-            return [fix(v) for v in x if not (isinstance(v, str) and "是旧写法, 现在等同于 mode = 影子" in v)]
+            return [fix(v) for v in x if not (isinstance(v, str) and ("是旧写法, 现在等同于 mode = 影子" in v
+                                                                      or "GATE_DOCK_" in v))]
         if isinstance(x, dict):
-            return {k: fix(v) for k, v in x.items()}
+            return {k: fix(v) for k, v in x.items() if not k.startswith("GATE_DOCK_")}
         return x
     return fix(g), fix(n)
 

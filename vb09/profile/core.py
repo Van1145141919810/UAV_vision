@@ -255,6 +255,7 @@ POSITIVE_PARAMS = (
     "GATE_REPO_V", "GATE_YAW_RATE", "GATE_HOLD_S", "HOVER_ACQ", "HOVER_ALIGN",
     "GATE_STATUS_MAX_AGE", "GATE_LOG_HZ",
     "PASS_RUN", "M_BACK",
+    "GATE_DOCK_HOLD_S",          # 2026-10-31 停靠
 )
 
 # 档案里 set.KEY 的 KEY 必须长这样(和网页、命令行 --set 同一规则)

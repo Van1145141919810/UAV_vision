@@ -533,6 +533,16 @@ function renderGate(t, G) {
                               `版本不符 → 强制 SIM: <b>${esc(s.ver_bad.join("; "))}</b></span>`);
   }
   if (t && t.shadow && isGatePhase(t.phase)) parts.push('<span class="info">影子模式</span>');
+  // ★2026-10-31 停靠 (mode = 停靠): 停靠点误差 + aim 横向抖动 (验收 < 20 cm / < 3 cm)
+  const dk = tg.dock;
+  if (dk) {
+    const sd = Array.isArray(dk.aim_sd_cm) ? dk.aim_sd_cm : null;
+    const eOk = nz(dk.err_cm) && dk.err_cm < 20, aOk = sd && Math.max(sd[0], sd[1]) < 3;
+    parts.push(`<span class="info">停靠 <b>${fx(dk.d, 1)}</b> m (按${esc(dk.dir_src || "?")})</span>`);
+    if (nz(dk.err_cm)) parts.push(`<span class="${!dk.done ? "" : eOk ? "ok" : "bad"}">离停靠点 <b>${fx(dk.err_cm, 1)}</b>` +
+                                  (nz(dk.err_max_cm) ? ` / 最大 ${fx(dk.err_max_cm, 1)}` : "") + " cm</span>");
+    if (sd) parts.push(`<span class="${!dk.done ? "" : aOk ? "ok" : "bad"}">aim 抖动 h <b>${fx(sd[0], 1)}</b> / v <b>${fx(sd[1], 1)}</b> cm (${sd[2]} 帧)</span>`);
+  }
   if (G && G.used && G.per && G.used.n && G.per.n) {
     const dc = Math.hypot(...V3.sub(G.used.c, G.per.c));
     parts.push(`<span class="${dc > 0.1 ? "warn" : ""}">锁定 vs 识别 <b>${(dc * 100).toFixed(0)}</b> cm</span>`);

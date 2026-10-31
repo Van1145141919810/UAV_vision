@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 stage14_mission.py (原 stage12_gate.py) 离线仿真: 桩 rospy + 一个粗糙的 PX4 位置环 + 假识别 (延迟/噪声) + 纸。
-  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring  [--set K=V ...]
+  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring|lowbatt|dock|dock_nonormal  [--set K=V ...]
 不是飞行动力学仿真 —— 只用来跑通状态机、检查时间表/停止点/遥测字段和日志。
 """
 import json
@@ -57,6 +57,8 @@ with open(os.path.join(sites, "sim.conf"), "w") as f:
     f.write("task=穿环\nscene=室内\ntakeoff_h=1.5\nz_low=0.8\nz_high=2.2\nxy_radius=10\n"
             "dash_v=2.5\nd_back=%.2f\nd_rear=2.0\nd_side=2.0\nl_f=%.2f\nl_r=%.2f\nw_half=0.25\n"
             % (D_BACK, L_F, L_R))
+    if scenario.startswith("dock"):
+        f.write("mode=停靠\ndock_hold=6\n")          # 停靠: 字符串旋钮只能写在档案里
 os.environ["HOME"] = tempfile.mkdtemp()
 sets = ["--set", "GATE_CONFIRM_DASH=False"]
 if scenario == "shadow":
@@ -296,7 +298,7 @@ def sim_loop():
                           dist=round(dist, 3), sd_cm=[sd, sd, sd], published=True,
                           aim=[AIM[i] + random.gauss(0, sd / 200) for i in range(3)],
                           n_sd_deg=1.0)
-                if scenario != "nonormal":
+                if scenario not in ("nonormal", "dock_nonormal"):
                     st["n"] = nn
             det_q.append((now + 0.25 + random.uniform(-0.03, 0.08), st))
         while det_q and det_q[0][0] <= now:
@@ -344,6 +346,14 @@ for t in telem:
 if lastg:
     print("gate 段缺字段: %s" % [k for k in need if k not in lastg])
     print("plan.pts=%s" % [[round(x, 2) for x in p] for p in lastg["plan"]["pts"]])
+dk = None
+for t in telem:
+    if (t.get("gate") or {}).get("dock"):
+        dk = t["gate"]["dock"]
+if dk:
+    print("停靠: S=%s 距离 %.2fm 方向按%s  误差 中位 %s / 最大 %s cm  aim 抖动 %s  done=%s ok=%s  遥测 mode=%s"
+          % (dk.get("S"), dk.get("d"), dk.get("dir_src"), dk.get("err_cm"), dk.get("err_max_cm"),
+             dk.get("aim_sd_cm"), dk.get("done"), dk.get("ok"), telem[-1].get("mode")))
 cfg = config[-1] if config else {}
 print("config task=%s  derived.gate=%s" % (cfg.get("task"), bool((cfg.get("derived") or {}).get("gate"))))
 # 冲刺段的 20Hz

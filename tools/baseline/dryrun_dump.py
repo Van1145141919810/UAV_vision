@@ -35,7 +35,14 @@ EXPECT_CHANGED = {
     "mode_shadow": ("新档案: mode = 影子", 0, "任务模式: 影子"),
     "mode_dash": ("新档案: mode = 冲刺", 0, "任务模式: 冲刺"),
     "mode_conflict": ("mode = 冲刺 + set.GATE_SHADOW = True → 警告, 按影子飞", 0, "两个说法矛盾, 按 影子 飞"),
+    # 第 7 步 (停靠, 新功能): 新用例, golden 里没有
+    "mode_dock": ("新档案: mode = 停靠 + 停靠距离 4 / 悬停 30", 0, "停靠模式 (mode = 停靠): 识别 → 飞到目标前 4.00 m"),
+    "mode_dock_conflict": ("mode = 停靠 + set.GATE_SHADOW = True → 警告, 按影子飞", 0, "mode = 停靠, 但 set.GATE_SHADOW = True"),
+    "dock_close_cli": ("--set GATE_DOCK_D_STOP=1.0 → 报错 (太近)", 1, "停靠距离 1.00 m 太近"),
+    "dock_hold_zero_cli": ("--set GATE_DOCK_HOLD_S=0 → 报错 (必须是正数)", 1, "GATE_DOCK_HOLD_S=0"),
 }
+# 第 7 步新增的参数 (停靠): 所有用例的 params 里都多了它们 —— 比较前两边去掉
+_NEW_KEY = re.compile(r"^GATE_DOCK_")
 
 
 def cases():
@@ -50,6 +57,8 @@ def cases():
         ("set_shadow_cli", ["--sites-dir", SITES, "--site", "sim", "--set", "GATE_SHADOW=True"]),
         ("bad_flag", ["--sites-dir", SITES, "--site", "sim", "--dryrun"]),
         ("missing_site", ["--sites-dir", SITES, "--site", "nope"]),
+        ("dock_close_cli", ["--sites-dir", SITES, "--site", "mode_dock", "--set", "GATE_DOCK_D_STOP=1.0"]),
+        ("dock_hold_zero_cli", ["--sites-dir", SITES, "--site", "mode_dock", "--set", "GATE_DOCK_HOLD_S=0"]),
     ]
     return out
 
@@ -88,7 +97,7 @@ _POKE_KEY = re.compile(r"poke|POKE")
 
 def _drop_json(x):
     if isinstance(x, dict):
-        return {k: _drop_json(v) for k, v in x.items() if not _POKE_KEY.search(k)}
+        return {k: _drop_json(v) for k, v in x.items() if not _POKE_KEY.search(k) and not _NEW_KEY.search(k)}
     if isinstance(x, list):
         return [_drop_json(v) for v in x
                 if not (isinstance(v, str) and ("戳" in v or "POKE" in v))]
@@ -97,7 +106,7 @@ def _drop_json(x):
 
 def _drop_txt(s):
     s = s.replace("穿环 (stage12)", "穿环 (模式见下面 开关 / 档案 mode)")      # 4.6 改名后的措辞
-    return "\n".join(ln for ln in s.splitlines() if "戳" not in ln and "POKE" not in ln)
+    return "\n".join(ln for ln in s.splitlines() if "戳" not in ln and "POKE" not in ln and "GATE_DOCK_" not in ln)
 
 
 CHANGE_FAIL = []

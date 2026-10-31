@@ -5,8 +5,8 @@ stage14_mission.py —— 实飞入口 (原 stage12_gate.py, 文件头曾写 sta
 2026-10-30 模块化之后这个文件只做: 档案 setup → C.derive() → finalize (--dry-run 在这里退出) →
 终端检查 → import vb09.flight (ROS) → main()。
   参数        vb09/flight/config.py (C.名字)        平台      vb09/flight/{ctx,telemetry,setpoint,keys,
-  任务模式    档案 mode = 冲刺 / 影子 → vb09/flight/modes.py          log,safety,preflight,phases,runner}.py
-  步骤        vb09/flight/steps/*.py (Acquire / PlanDash / Reposition / Align / Commit / Dash / Shadow)
+  任务模式    档案 mode = 冲刺 / 影子 / 停靠 → vb09/flight/modes.py   log,safety,preflight,phases,runner}.py
+  步骤        vb09/flight/steps/*.py (Acquire / PlanDash / Reposition / Align / Commit / Dash / Shadow / StandOff / Hold)
   目标判定    vb09/perception/ring/judge.py (JUDGES["ring"])
 下面是原来的说明 (流程 / 键盘 / 安全分级都没变)。
 
@@ -52,6 +52,8 @@ ROS 接口
   冲刺前任何一步放弃 (锁不住 / 不可行 / G 超时 / 找不到环) 或按 M / 方向键 → 回 MANUAL, 可以再 T
     (GATE_ABORT_TO_MANUAL; LAND 请求 / 接管 / 手动段超时照常降落)
   影子 (mode = 影子; 旧写法 GATE_SHADOW=True 同义): ACQUIRE → PLAN → 在原地做 ALIGN 锁定 → 发计划给网页 → 不摆位不冲刺 → 回 MANUAL
+  停靠 (mode = 停靠): ACQUIRE → 飞到目标前 GATE_DOCK_D (≤ GATE_REPO_V) 对正 → 悬停 GATE_DOCK_HOLD_S 记录检测
+      → 打印停靠误差 / aim 抖动 → 回手动段。不冲刺
   虚拟环 GATE_VIRTUAL_OFFSET=d: 把环平面往进近侧挪 d 米, 真纸面当墙 → 真冲刺但停在纸前 (T3)
 
 键盘
