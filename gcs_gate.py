@@ -687,9 +687,11 @@ def main():
     else:
         cfg, src = GateConfig(), "默认参数 (没找到 %s)" % args.params
     det = GateDetector(rig, cfg)
-    rig_msg = rig_to_msg(rig)
+    rig_msg = rig_to_msg(rig, cfg)
     print(f"[gcs_gate] 标定 {args.calib}: 工作分辨率 {rig.size[0]}x{rig.size[1]}/目 f={rig.f:.1f} "
           f"B={rig.B * 1000:.1f}mm (T 单位 {rig.T_unit})  参数: {src}")
+    print(f"[gcs_gate] 检测库 {rig_msg['lib']}  GateConfig {rig_msg['cfg']} "
+          f"(飞机上的桥核对这两个; 不一致 → 飞机强制 SIM, 网页报 \"版本不符\")")
     print(f"[gcs_gate] 模式 {args.mode} = {MODE_NAMES[args.mode]}   回包 sim={sim}")
     if args.mode == 2 and not args.probe:
         print("[gcs_gate] ⚠ mode 2 会发 sim=false！仅飞控确认后使用！")

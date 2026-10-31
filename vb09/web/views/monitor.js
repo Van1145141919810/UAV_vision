@@ -481,7 +481,7 @@ function renderGate(t, G) {
     setTile("#g-stage", GATE_STAGE[s.stage] || s.stage || "—",
             !fresh ? "bad" : s.published ? "ok" : "warn",
             [s.src, nz(s.dist) ? `距离 ${fx(s.dist, 2)} m` : "", s.pose && s.pose !== "ok" ? "位姿 " + s.pose : "",
-             s.sim ? "SIM" : ""].filter(Boolean).join(" · "));
+             s.sim ? (verBad(s) ? "SIM (版本不符)" : "SIM") : ""].filter(Boolean).join(" · "));
   }
   // 控制段 (飞行脚本)
   const cmt = tg.commit || {};
@@ -528,6 +528,9 @@ function renderGate(t, G) {
     parts.push(`<span>红点 <b>${Array.isArray(s.dots) && s.dots.length ? esc(s.dots.join("/")) : "—"}</b></span>`);
     parts.push(`<span class="${s.published ? "" : "warn"}">发布 <b>${s.published ? "是" : "否"}</b></span>`);
     parts.push(`<span class="${s.sim === false ? "warn" : "info"}">${s.sim === false ? "REAL (会驱动)" : "SIM (不驱动)"}</span>`);
+    // ★2026-10-31 地面 / 飞机检测库、GateConfig 或消息版本不一致 → 桥强制 SIM
+    if (verBad(s)) parts.push(`<span class="bad" title="${esc(s.ver_bad.join("\n"))}">` +
+                              `版本不符 → 强制 SIM: <b>${esc(s.ver_bad.join("; "))}</b></span>`);
   }
   if (t && t.shadow && isGatePhase(t.phase)) parts.push('<span class="info">影子模式</span>');
   if (G && G.used && G.per && G.used.n && G.per.n) {
@@ -537,6 +540,8 @@ function renderGate(t, G) {
   $("#gate-counts").innerHTML = parts.join("");
   drawTarget($("#cv-tgt"), G);
 }
+
+function verBad(s) { return !!(s && Array.isArray(s.ver_bad) && s.ver_bad.length); }
 
 // 靶面视图: 站在进近侧看向环 (右 = +h, 上 = +v), 原点 = 环中心
 function drawTarget(cv, G) {

@@ -69,7 +69,12 @@ def gate_checks(add, s):
     if gs.get("pose") not in (None, "ok"):
         st = "warn"
         notes.append("位姿插值失败: %s" % gs.get("pose"))
-    if gs.get("sim", True):
+    vb = gs.get("ver_bad")
+    if isinstance(vb, list) and vb:
+        st = "fail"
+        notes.append("地面和飞机版本不符 → 桥强制 SIM: %s —— 两边 vb09/ 一起更新 (gate_params.json 也要一样)"
+                     % "; ".join(str(x) for x in vb))
+    elif gs.get("sim", True):
         notes.append("发布为 odom_sim: 不会驱动飞机 (gate_gcs 下地面 --mode 2 才驱动)")
     if gs.get("n") is None:
         notes.append("没有法向 n —— 俯视图/靶面视图只能画环中心点 (bridge 要按 INTERFACE_gate.md 补 n)")

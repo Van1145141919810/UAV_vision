@@ -610,7 +610,10 @@ class GateFuseWorker(object):
         self.lock = threading.Lock()
         self.status = None                  # 最新融合结果, 放进上行包头给地面显示
         self.n_bad = 0
+        self.ver_bad = None                 # 上一包的版本问题 (变了才打日志)
         rospy.loginfo("[gate_gcs] 检测在地面 (gcs_gate.py); 飞机只做位姿插值 + 融合。估计器参数 %s" % src)
+        rospy.loginfo("[gate_gcs] 本机检测库 %s  GateConfig %s (地面 gcs_gate 启动时打印同样两个数, 要一致)"
+                      % (wire.lib_version(), wire.cfg_digest(self.gcfg)))
         rospy.loginfo("[gate_gcs] T_BC: pitch_down=%.1f° roll=%.1f° yaw=%.1f° lever=(%.3f,%.3f,%.3f)m  "
                       "飞机侧保险 %s" % (cfg["cam_pitch_deg"], cfg["cam_roll_deg"], cfg["cam_yaw_deg"],
                                         cfg["cam_x"], cfg["cam_y"], cfg["cam_z"],
@@ -660,8 +663,17 @@ class GateFuseWorker(object):
             self.fuser.update(fr, T_WC, t)
         ground_sim = bool(det.get("sim", True))
         ex = {"ground_sim": ground_sim, "ground_stage": g.get("stage")}
+        # ★2026-10-31 版本检查: 地面检测库 / GateConfig / 消息版本和本机不一致 → 强制 SIM (不驱动)
+        ver_bad = wire.peer_mismatch(g, rig, self.gcfg)
+        if ver_bad:
+            ex["ver_bad"] = ver_bad
+            if ver_bad != self.ver_bad:
+                rospy.logerr("[gate_gcs] ★ 地面和飞机版本不符 → 强制 SIM (不驱动): %s" % "; ".join(ver_bad))
+        elif self.ver_bad:
+            rospy.loginfo("[gate_gcs] 地面版本已一致, 解除强制 SIM")
+        self.ver_bad = ver_bad
         ex.update(_ring_extra(self.fuser, fr, T_WC))
-        st = self.out.emit(fr, t, why, fr.t_ms.get("total", 0.0), sim_extra=ground_sim, extra=ex)
+        st = self.out.emit(fr, t, why, fr.t_ms.get("total", 0.0), sim_extra=ground_sim or bool(ver_bad), extra=ex)
         with self.lock:
             self.status = st
         return True

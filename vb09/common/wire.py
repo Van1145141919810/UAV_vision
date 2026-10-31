@@ -9,10 +9,21 @@ gcs_gate.py / vision_bridge.py (msgpack / zmq 导入 + pack / unpack, 两份一�
   require_msgpack(msg) / require_zmq(msg)   缺包时 sys.exit(msg) —— 各入口自己给提示文字
   frame_to_msg / frame_from_msg / rig_to_msg   环检测结果 (相机 rect 系观测) ↔ 纯 Python 字典
 网络输入当不可信数据: frame_from_msg 对缺失/非法字段直接丢掉, 不抛异常。
+
+★2026-10-31 版本检查 (PLAN_refactor_v2 第 6 步 3):
+  lib_version()      检测库指纹 = LIB_FILES 内容 (换行统一成 \n) 的 sha256 前 12 位
+  cfg_digest(cfg)    GateConfig 全部字段的 sha256 前 12 位
+  rig_to_msg(rig, cfg)  下行包 rig 里多带 lib / cfg 两项
+  peer_mismatch(gate_msg, rig_msg, cfg)  飞机侧: 消息版本 v / 检测库 / GateConfig 和本机不一致 → 原因列表
+    (空 = 一致)。不一致时桥把这一帧强制当 SIM 发布 (不驱动), /gate/status 带 ver_bad = 原因列表。
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 import sys
+from dataclasses import asdict
 
 import numpy as np
 
@@ -162,7 +173,67 @@ def frame_from_msg(m: dict) -> GateFrame:
     return fr
 
 
-def rig_to_msg(rig) -> dict:
-    """飞机侧融合只需要这几个数 (和地面检测用的是**同一份**标定)。"""
-    return {"f": float(rig.f), "cx": float(rig.cx), "cy": float(rig.cy), "B": float(rig.B),
-            "R1": _vec(rig.R1), "size": [int(rig.size[0]), int(rig.size[1])]}
+def rig_to_msg(rig, cfg=None) -> dict:
+    """飞机侧融合只需要这几个数 (和地面检测用的是**同一份**标定)。另带 lib / cfg 给飞机核对版本。"""
+    m = {"f": float(rig.f), "cx": float(rig.cx), "cy": float(rig.cy), "B": float(rig.B),
+         "R1": _vec(rig.R1), "size": [int(rig.size[0]), int(rig.size[1])], "lib": lib_version()}
+    if cfg is not None:
+        m["cfg"] = cfg_digest(cfg)
+    return m
+
+
+# =============================================================================
+# 版本检查 (见文件头)
+# =============================================================================
+_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 决定"地面发的观测是什么意思"的文件: 序列化本身 + 校正 + 检测 + 融合。画图 / judge / locate 不算。
+LIB_FILES = ("vb09/common/wire.py", "vb09/perception/stereo_rig.py",
+             "vb09/perception/ring/config.py", "vb09/perception/ring/frame.py",
+             "vb09/perception/ring/det2d.py", "vb09/perception/ring/geom3d.py",
+             "vb09/perception/ring/detect.py", "vb09/perception/ring/fusion.py")
+_LIB_VER = None
+
+
+def lib_version() -> str:
+    """LIB_FILES 的内容指纹。CRLF → LF (Windows 地面站 git 检出可能是 CRLF)。缺文件记 "missing"。"""
+    global _LIB_VER
+    if _LIB_VER is None:
+        h = hashlib.sha256()
+        for rel in LIB_FILES:
+            h.update(rel.encode("utf-8") + b"\0")
+            try:
+                with open(os.path.join(_ROOT, *rel.split("/")), "rb") as f:
+                    h.update(f.read().replace(b"\r\n", b"\n"))
+            except OSError:
+                h.update(b"missing")
+            h.update(b"\0")
+        _LIB_VER = h.hexdigest()[:12]
+    return _LIB_VER
+
+
+def cfg_digest(cfg) -> str:
+    """GateConfig (dataclass) 全部字段 → 指纹。float 用 repr, 和 gate_params.json 的写法无关。"""
+    d = asdict(cfg)
+    return hashlib.sha256(json.dumps(d, sort_keys=True, default=repr).encode("utf-8")).hexdigest()[:12]
+
+
+def peer_mismatch(gate_msg, rig_msg, cfg) -> list:
+    """飞机侧: 地面这一包和本机不一致的地方 → 原因列表 (中文短句); 一致 → []。"""
+    bad = []
+    v = gate_msg.get("v") if isinstance(gate_msg, dict) else None
+    if v != MSG_VERSION:
+        bad.append("消息版本 v=%s (本机 %d)" % (v, MSG_VERSION))
+    rig_msg = rig_msg if isinstance(rig_msg, dict) else {}
+    lib = rig_msg.get("lib")
+    if lib is None:
+        bad.append("地面没报检测库版本 (旧版 gcs_gate?)")
+    elif lib != lib_version():
+        bad.append("检测库 地面 %s ≠ 本机 %s" % (lib, lib_version()))
+    if cfg is not None:
+        c = rig_msg.get("cfg")
+        mine = cfg_digest(cfg)
+        if c is None:
+            bad.append("地面没报 GateConfig 摘要")
+        elif c != mine:
+            bad.append("GateConfig 地面 %s ≠ 本机 %s (gate_params.json 两边不一样?)" % (c, mine))
+    return bad
