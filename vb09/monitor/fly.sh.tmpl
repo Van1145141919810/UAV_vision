@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# =============================================================================
+# 飞行启动脚本 —— 由 flight_monitor 网页生成于 @@GEN_STR@@，不要手改 (改了也会被下次生成覆盖)
+#   档案       @@SITE@@   (@@CONF@@)
+#   飞行脚本   @@SCRIPT_PATH@@
+# 用法: 笔记本上新开的**普通** SSH 终端 (不要 tmux / VSCode 终端), 运行
+#       @@LAUNCHER@@
+# 生成超过 @@MAX_AGE@@ 秒、档案或飞行脚本在生成后被改过 → 先警告, 输入 yes 才起飞。
+# =============================================================================
+GEN_TS=@@GEN_TS@@
+MAX_AGE=@@MAX_AGE@@
+SITE=@@Q_SITE@@
+CONF=@@Q_CONF@@
+SITES_DIR=@@Q_SITES@@
+CONF_SHA=@@CONF_SHA@@
+SCRIPT_DIR=@@Q_DIR@@
+SCRIPT=@@Q_SCRIPT@@
+SCRIPT_SHA=@@SCRIPT_SHA@@
+TEMP=@@TEMP@@
+
+R=$'\e[1;31m'; Y=$'\e[1;33m'; G=$'\e[1;32m'; N=$'\e[0m'
+fmt_age() {
+  local s=$1
+  if [ "$s" -ge 3600 ]; then echo "$((s / 3600)) 小时 $((s % 3600 / 60)) 分"
+  elif [ "$s" -ge 60 ]; then echo "$((s / 60)) 分 $((s % 60)) 秒"
+  else echo "$s 秒"; fi
+}
+sha() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
+
+if [ ! -f "$CONF" ]; then
+  echo "${R}档案不存在: $CONF —— 拒绝起飞。回网页「起飞配置」重新生成。${N}"; exit 1
+fi
+if [ ! -f "$SCRIPT_DIR/$SCRIPT" ]; then
+  echo "${R}飞行脚本不存在: $SCRIPT_DIR/$SCRIPT —— 拒绝起飞。${N}"; exit 1
+fi
+
+age=$(( $(date +%s) - GEN_TS ))
+warn=()
+if [ "$age" -lt -5 ]; then
+  warn+=("生成时间比现在晚 $(( -age )) 秒 —— 飞机时钟跳过, 判断不了这个脚本新不新")
+elif [ "$age" -gt "$MAX_AGE" ]; then
+  warn+=("这个启动脚本是 $(fmt_age "$age")前生成的 (超过 ${MAX_AGE} 秒) —— 确认它就是这次要飞的配置")
+fi
+[ "$(sha "$CONF")" = "$CONF_SHA" ] || \
+  warn+=("档案 $SITE 在生成之后被改过 —— 现在生效的已不是网页上预览过的那套")
+[ "$(sha "$SCRIPT_DIR/$SCRIPT")" = "$SCRIPT_SHA" ] || \
+  warn+=("飞行脚本 $SCRIPT 在生成之后被改过 (更新过代码 / flight.py 换了目标?)")
+
+if [ ${#warn[@]} -gt 0 ]; then
+  line="$(printf '!%.0s' $(seq 1 72))"
+  echo "${Y}${line}${N}"
+  echo "${Y}  启动前请确认:${N}"
+  for w in "${warn[@]}"; do echo "${Y}  ⚠️  $w${N}"; done
+  echo
+  echo "  档案 $CONF 当前内容:"
+  sed -e 's/[[:space:]]*#.*$//' -e '/^[[:space:]]*$/d' -e 's/^/      /' "$CONF"
+  echo "${Y}${line}${N}"
+  read -r -p "  确认用这套配置起飞, 输入 yes 回车 (其它任何输入 = 取消): " ans || exit 1
+  if [ "$ans" != "yes" ]; then
+    echo "已取消。回网页「起飞配置」重新生成, 或核对后再运行。"; exit 1
+  fi
+else
+  echo "${G}档案 $SITE  ·  启动脚本 $(fmt_age "$age")前生成${N}"
+  if [ "$TEMP" = "1" ]; then
+    # 临时配置没有档案名可核对 → 每次都把内容摊开给飞手看一眼
+    echo "  临时配置 (没有存为档案) 内容:"
+    body="$(sed -e 's/[[:space:]]*#.*$//' -e '/^[[:space:]]*$/d' -e 's/^/      /' "$CONF")"
+    if [ -n "$body" ]; then echo "$body"; else echo "      (空 = 全部代码默认值)"; fi
+  fi
+fi
+
+cd "$SCRIPT_DIR" || exit 1
+# exec: python 直接接管这个终端 —— SSH 断开时它要收到 stdin EOF 才能自动降落
+exec python3 "$SCRIPT" --sites-dir "$SITES_DIR" --site "$SITE"
