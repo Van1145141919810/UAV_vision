@@ -1,4 +1,4 @@
-# 穿环（撞环）数据接口约定 v2 — 2026-10-31
+# 穿环（撞环）数据接口约定 v2 — 2026-10-31（2026-11-01 补 §1.6 目标类型）
 
 v1（2026-10-19）写的时候生产方还没实现。**v2 第 1、2 节已经改成和代码实际行为一致**（PLAN_refactor_v2 第 6 步 4）。
 代码位置按重构后的目录写（`vb09/…`）。
@@ -75,7 +75,7 @@ stage11 / 停靠跟踪已删除（2026-10-30），所以 `task` 只剩 `"gate"`�
 |---|---|---|
 | `ground_sim` | 布尔 | 地面 `gcs_gate --mode` ≠ 2（或 `--probe`） |
 | `ground_stage` | 串 | 地面检测阶段 |
-| `ver_bad` | 列表 | **2026-10-31 新增**。地面和飞机不一致的原因（中文短句）：消息版本 `v`、检测库指纹 `lib`、`GateConfig` 摘要 `cfg`、或地面没报（旧版 gcs_gate）。有它时这一帧 `sim` 被**强制为 true**。一致时不带这个字段 |
+| `ver_bad` | 列表 | **2026-10-31 新增**。地面和飞机不一致的原因（中文短句）：目标类型 `kind`、消息版本 `v`、检测库指纹 `lib`、`GateConfig` 摘要 `cfg`、或地面没报（旧版 gcs_gate）。有它时这一帧 `sim` 被**强制为 true**。一致时不带这个字段 |
 
 `sim` = 飞机 `_gate_sim` 或 `ground_sim` 或 `ver_bad` 非空。飞行脚本只在 `GATE_SHADOW`（影子）或 `GATE_ALLOW_SIM_DRIVE` 时用 sim 数据。
 
@@ -86,11 +86,13 @@ stage11 / 停靠跟踪已删除（2026-10-30），所以 `task` 只剩 `"gate"`�
 
 ### 1.6 下行包（地面 → 飞机，`gate_gcs`）
 
-`{t_cap, found, gate: frame_to_msg(…), rig: rig_to_msg(rig, cfg), sim}`，msgpack。`vb09/common/wire.py`：
+`{t_cap, found, gate: codec(kind).frame_to_msg(…), rig: rig_to_msg(rig, cfg, kind), sim}`，msgpack。
+2026-11-01 接线后按目标类型（kind）分发，环的格式在 `vb09/perception/ring/wire.py`，公共部分在 `vb09/common/wire.py`：
 
-- `gate.v` = `MSG_VERSION`（现在 1）
-- `rig` = `{f, cx, cy, B, R1[9], size[2], lib, cfg}`。`f` / `R1` 变了 → 飞机重置估计器；`lib` / `cfg` 和飞机算出来的不一致 → 1.4 的 `ver_bad`
-- `lib` = 检测库文件（`wire / stereo_rig / ring/{config,frame,det2d,geom3d,detect,fusion}`）内容的 sha256 前 12 位，换行统一成 LF。两边启动时都会打印 `检测库 xxxx  GateConfig yyyy`，对一下就知道是不是同一版
+- `gate.v` = 这种目标的 `MSG_VERSION`（环现在是 1）
+- `rig` = `{f, cx, cy, B, R1[9], size[2], lib, cfg, kind}`。`f` / `R1` 变了 → 飞机重置估计器；`kind` / `lib` / `cfg` 和飞机不一致 → 1.4 的 `ver_bad`。没有 `kind` 的旧包当作 `ring`
+- `lib` = 公共文件（`common/wire.py`、`perception/stereo_rig.py`）+ 这种目标的 `LIB_FILES`（环：`ring/{config,frame,det2d,geom3d,detect,fusion,wire,plugin}.py`）内容的 sha256 前 12 位，换行统一成 LF。两边启动时都会打印 `目标 / 检测库 / GateConfig`，对一下就知道是不是同一版
+- 选目标类型：地面 `gcs_gate.py --target`，飞机桥 `_target:=`（`run_vision.py --target`），飞行脚本 `TARGET_KIND`。现在只有 `ring`
 
 ---
 

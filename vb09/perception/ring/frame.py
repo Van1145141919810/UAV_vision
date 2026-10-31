@@ -2,7 +2,7 @@
 """
 vb09/perception/ring/frame.py —— 一帧检测结果的数据结构 (RingObs / DotObs / TargetState / GateFrame)
 ===============================================================================
-2026-10-30 从 gate_detector.py 原样搬来。检测 (detect.py)、融合 (fusion.py)、序列化 (vb09/common/wire.py)、
+2026-10-30 从 gate_detector.py 原样搬来。检测 (detect.py)、融合 (fusion.py)、序列化 (ring/wire.py)、
 画图 (draw.py) 共用。坐标: rect = 校正后左目系; world = VIO odom。
 """
 from __future__ import annotations

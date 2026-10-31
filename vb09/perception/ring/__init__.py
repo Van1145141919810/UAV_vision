@@ -4,7 +4,7 @@ vb09/perception/ring —— 格子环 + 红点 识别（正式版）
 
 2026-10-30 从 gate_detector.py 拆成: config (GateConfig) / frame (结果结构) / det2d (单目 2D) /
 geom3d (双目 3D、单目椭圆位姿) / fusion (估计器, 只依赖 numpy) / detect (GateDetector) / draw (画图) /
-locate (飞机侧附加字段); 网络序列化在 vb09/common/wire.py。代码原样, 下面是原来的说明。
+locate (飞机侧附加字段); 网络序列化在 wire.py; 插件适配器 (registry 用) 在 plugin.py。代码原样, 下面是原来的说明。
 
 任务: 识别比赛环（外径 1.6m / 内径 1.2m，左红格右蓝格，上下渐变色带）及其中间纸上的红点(11cm)，
       输出红点在世界系下的位置，供最终冲撞。不依赖 ROS；双目校正用 vb09/perception/stereo_rig.StereoRig。
