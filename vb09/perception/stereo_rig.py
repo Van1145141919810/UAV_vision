@@ -24,6 +24,9 @@ _KEYS = {
     "R": ["R", "R_lr", "rotation"],
     "T": ["T", "T_lr", "translation"],
     "size": ["image_size", "imageSize", "size", "img_size", "imgSize"],
+    # ★2026-10-31 (PLAN_refactor_v2 §4 第 6 步 1): 尺寸也可能分两个标量写
+    "w": ["image_width", "imageWidth", "img_width", "width"],
+    "h": ["image_height", "imageHeight", "img_height", "height"],
 }
 
 
@@ -64,7 +67,10 @@ def load_stereo_calib(path: str):
                     node = fs.getNode(n)
                     if node.empty():
                         continue
-                    m = node.mat()
+                    if node.isInt() or node.isReal():   # 标量 (image_width: 1920): 新版 cv2 的 mat() 会抛
+                        m = np.array([node.real()])
+                    else:
+                        m = node.mat()
                     if m is None:
                         if node.isSeq():
                             m = np.array([node.at(i).real() for i in range(node.size())])
@@ -131,6 +137,12 @@ def load_stereo_calib(path: str):
         out["size"] = (int(w), int(h))
     else:
         out["size"] = None
+    if "w" in found and "h" in found and found["w"].size >= 1 and found["h"].size >= 1:
+        wh = (int(found["w"].ravel()[0]), int(found["h"].ravel()[0]))
+        if out["size"] is not None and out["size"] != wh:
+            raise ValueError(f"标定文件 {path} 自相矛盾: image_size = {out['size'][0]}x{out['size'][1]}, "
+                             f"image_width/height = {wh[0]}x{wh[1]}")
+        out["size"] = wh
     return out
 
 
@@ -169,7 +181,17 @@ class StereoRig:
 
     @classmethod
     def from_file(cls, path, size_full=None, scale=0.5, alpha=0.0):
+        """
+        size_full: 调用方写死的单目全分辨率 (地面 1920×1080, 机上 cam_w/2 × cam_h)。
+        ★2026-10-31: 标定文件里写了尺寸且和 size_full 不一致 → ValueError (以前悄悄用 size_full,
+          内参按别的分辨率标的 → 校正和 f 全错, 测距偏一个倍数)。文件里没写尺寸 → 照旧用 size_full。
+        """
         c = load_stereo_calib(path)
+        if size_full is not None and c["size"] is not None \
+                and (int(size_full[0]), int(size_full[1])) != c["size"]:
+            raise ValueError(f"标定尺寸不符: {path} 是按 {c['size'][0]}x{c['size'][1]} 标的, "
+                             f"这里的单目分辨率是 {int(size_full[0])}x{int(size_full[1])}。"
+                             f"换对应分辨率的标定, 或改采集分辨率 (机上 ~cam_w/~cam_h)")
         size = size_full or c["size"] or (1920, 1080)
         rig = cls(c["K1"], c["D1"], c["K2"], c["D2"], c["R"], c["T"], size, scale, alpha)
         rig.T_unit = c.get("T_unit", "m")
