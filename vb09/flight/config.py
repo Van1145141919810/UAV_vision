@@ -89,7 +89,7 @@ GATE_ALIGN_MAX_S     = 5.0     # s，ALIGN 最多延长到这么久, 还不收�
 GATE_ACQ_SCAN_AFTER  = 8.0     # s，这么久没看到环 → ±30° 慢扫一次
 GATE_ACQ_TIMEOUT     = 25.0    # s，ACQUIRE 总超时 → 放弃 (降落)
 GATE_SCAN_DEG        = 30.0    # °
-# 两道 sim 保险 (同 stage11 的思路)
+# 两道 sim 保险 (桥的 sim 标志 + 影子模式)
 GATE_SHADOW          = False   # True = 识别/锁定/规划照做, 不摆位不冲刺 (网页上看计划)。= 档案 mode = 影子
 # 任务模式 (2026-10-30, 档案 mode): "dash" 冲刺 / "shadow" 影子 —— 选 vb09/flight/modes.py 的步骤列表。
 #   字符串, 只能由档案的 mode 旋钮设 (--set 只认数字/开关)。旧写法 GATE_SHADOW = True 仍然有效 (= 影子)
@@ -199,7 +199,7 @@ ZDROP_REFRACTORY     = 2.0     # s
 ZDROP_MIN_SAMPLES    = 5
 
 # =============================================================================
-# ========================  G. 安全防线 (同 stage11, flight_profile.SAFETY_RULES 守着)
+# ========================  G. 安全防线 (flight_profile.SAFETY_RULES 守着)
 # =============================================================================
 MAX_TILT_DEG         = 30.0    # °，触发空中停桨。PX4 MPC_TILTMAX_AIR 必须 ≤ 此值 − 5
 # 冲刺段单独的停桨线 (2026-10-19): 按 G 之后到刹停悬停结束。急刹 + 撞纸会有短时大倾角,

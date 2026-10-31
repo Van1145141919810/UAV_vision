@@ -463,7 +463,7 @@ function renderGate(t, G) {
   $("#card-gate").classList.toggle("idle", !g);
   let head = !s ? "没有环识别数据（/gate/status）" : s.age > 3 ? `环数据 ${fx(s.age, 0)} s 前` :
              g && !g.n ? "没有法向 n，只能显示环中心" :
-             // ★stage12: 识别没给 n 时, 脚本用"−进入方向"或视线方向代替 (n_src), 靶面按它画
+             // ★飞行脚本: 识别没给 n 时, 脚本用"−进入方向"或视线方向代替 (n_src), 靶面按它画
              g && g.n_src && g.n_src !== "bridge" ? "法向按进入方向估计（识别没给 n）" : "";
   if (G && G.src) head += `<span class="src-tag ${G.src === "控制" ? "ctl" : "per"}">${G.src}</span>`;
   if (G && G.used) head += `<span class="src-tag ctl">${G.used.locked ? "环已锁定" : "环未锁定"}</span>`;

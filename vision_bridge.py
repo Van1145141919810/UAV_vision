@@ -40,7 +40,7 @@ vision_bridge.py — 飞机侧图传/检测桥 (新相机直连版, 2026-10-12)
   ~device       相机设备             默认 "" = 自动按 by-id 找 (排除老相机 SPCA2100)
   ~cam_w ~cam_h 采集分辨率           默认 1920 / 1080 (地面站内参就是按这个标的, 别改)
   ~cam_fps      请求相机帧率         默认 10 (和老相机同一条 USB 2.0, 先保守)
-  ~tx_hz        上行帧率上限         默认 10 (= stage11 的 F_DETECT)
+  ~tx_hz        上行帧率上限         默认 10
   ~tx_max_w     上行最大宽度         默认 1920 (<1920 时必须重编码, 远处小标记会丢)
   ~raw_max_kb   原始帧 ≤ 这么大就原样转发, 否则重编码   默认 260 (0 = 永远重编码)
   ~jpeg_q       重编码时的 JPEG 质量  默认 85
@@ -53,7 +53,7 @@ vision_bridge.py — 飞机侧图传/检测桥 (新相机直连版, 2026-10-12)
   2. 参数残留在 master: 飞完新相机再飞老相机 → "视觉全程无效" → 不再用这些参数。
   3. 抓帧节点读帧失败无限 continue, 不重开设备 → 现在自己重开 (不需要看门狗)。
   4. 抓帧节点按 sleep 节流: 相机若比 10fps 快, read() 会拿到驱动里排队的旧帧,
-     但时间戳打的是"现在" → t_cap 偏新, stage11 的年龄降级被骗 → 现在持续 grab。
+     但时间戳打的是"现在" → t_cap 偏新, 下游按年龄降级的逻辑被骗 → 现在持续 grab。
   5. 时间戳在解码之后才打 → 现在在 grab 返回时打。
   6. MJPG → 解码成 6.2MB bgr8 → ROS 序列化 → 桥里再压一次 JPEG (两次有损 + 一堆 CPU)
      → 现在默认原样转发相机的 JPEG。
@@ -64,12 +64,14 @@ vision_bridge.py — 飞机侧图传/检测桥 (新相机直连版, 2026-10-12)
 依赖: OpenCV, pyzmq, msgpack (飞机上都有)。没有 cv_bridge 依赖了。
 
 ★ 2026-10-19 (穿环首飞问题 §1 §2, gate / gate_gcs 共用)
-  · /gate/status 加 cov (世界系 3×3 协方差, m², 行主序) —— stage12 用它把 σ 拆成横向 / 深度
+  · /gate/status 加 cov (世界系 3×3 协方差, m², 行主序) —— 飞行脚本 (stage14_mission) 用它把 σ 拆成横向 / 深度
   · /gate/status 加 ring_w / ring_cov / ring_src / ring_c / n / aim (见 _ring_extra): target 是红点,
-    红点没定位上时 stage12 改用每帧的环心观测, 按环心穿
+    红点没定位上时飞行脚本改用每帧的环心观测 (judge 优先用 ring_w), 按环心穿
   · 环估计 gate_reset_age 秒没被新检测更新 → 丢掉旧状态, 从下一帧重新初始化
     (默认 = max(1s, gate_params 的 lost_timeout))。落地后 / VINS 跳过后不再空转出旧环。
     过程噪声 q 在 vb09/perception/ring/config.py (GateConfig.q_pos) 里, 这里没改
+★ 2026-10-31 (gate_gcs) 版本检查: 下行包 rig 带地面的检测库指纹 lib + GateConfig 摘要 cfg;
+    和本机不一致 (或消息版本 v 不同 / 旧版地面没报) → 这一帧强制 sim=true, /gate/status 带 ver_bad = 原因列表
 
 ★ gate 模式 (2026-10-15 新增, _mode:=gate) —— 格子环 + 红点, **机上**识别
 -------------------------------------------------------------------------------
@@ -82,7 +84,6 @@ vision_bridge.py — 飞机侧图传/检测桥 (新相机直连版, 2026-10-12)
     上行: 发校正后左目小图(带叠加)给地面站看; 地面站回包里的 target 在 gate 模式下**不发布**。
   需要同目录: vb09/ (perception + common)  stereo_calib.yaml  (gate_params.json 可选)
   例:  bash run_vision.sh 192.168.2.179 _mode:=gate _cam_fps:=15 _cam_pitch_deg:=0
-  ★ stage11 现在的 STANDOFF 控制律会在 1.2~1.5m 停住, 不会去撞; 冲撞控制另做。
 
 ★ gate_gcs 模式 (2026-10-15 新增, _mode:=gate_gcs) —— 格子环 + 红点, **地面**识别
 -------------------------------------------------------------------------------
@@ -447,7 +448,7 @@ class GateOut(object):
             st.update(target=[round(float(v), 4) for v in tg.pos_w], dist=round(tg.dist, 3),
                       sd_cm=[round(float(v) * 100, 1) for v in sd], src=tg.src, age_ms=round(tg.age * 1000),
                       side=tg.side, published=publish,
-                      # INTERFACE_gate §1: 世界系协方差 m² (行主序 3×3)。stage12 拿它把 σ 拆到靶面
+                      # INTERFACE_gate §1: 世界系协方差 m² (行主序 3×3)。飞行脚本拿它把 σ 拆到靶面
                       cov=[float("%.4g" % v) for v in np.asarray(tg.cov_w, float).reshape(-1)[:9]])
         self.pub_s.publish(String(data=json.dumps(st, default=str)))
         self.n += 1

@@ -16,30 +16,30 @@ stage14_mission.py —— 实飞入口 (原 stage12_gate.py, 文件头曾写 sta
 接口: 项目文档 claude/INTERFACE_gate.md (遥测 gate 段 / 配置 derived.gate / gate.csv)
 规划: 同目录 gate_plan.py (纯函数, 可离线跑)
 
-启动 (档案与参数见 flight_profile.py; 档案里写 task = 穿环)
+启动 (档案与参数见 flight_profile.py; 档案里写 task = 穿环, mode = 冲刺 / 影子)
   python3 stage14_mission.py --site <档案> --dry-run   只打印生效包络, 不需要 ROS
   python3 stage14_mission.py --site <档案>             真飞: 必须在**普通** SSH 终端里
 
-文件名约定 (2026-10-19): stage<版本号>_<任务>.py —— 编号是版本, 后缀是任务
-  (_gate 穿环 / _track 停靠跟踪; 老名字 stage11_real.py 也算跟踪)。flight_monitor 按任务各取编号最大的。
+文件名约定: stage<版本号>_<任务>.py —— 编号是版本, 后缀是任务 (_mission 任务入口; 老的 _gate 也认)。
+  flight_monitor 取编号最大的 (SCRIPT_RE)。stage11 停靠跟踪已删除; 13 号被相机外参标定 stage13_cam_calib 用过, 所以入口是 14。
 
 前提
   视觉链路: python3 run_vision.py gate_gcs (地面检测) 或 run_vision.py gate --drive (机上检测) —— 预检会查
   PX4: MPC_TILTMAX_AIR ≤ MAX_TILT_DEG − 5 (=25°), MPC_XY_VEL_MAX ≥ 1.1×DASH_V —— 预检会查
 
 ROS 接口
-  节点   /flight_ctrl   (和 stage11 同名, 不能同时跑)
-  订阅   /gate/status   String JSON (vision_bridge 每帧一条: target=环心, 可选 n / aim / n_sd_deg)
+  节点   /flight_ctrl   (同一时间只能跑一个飞行脚本)
+  订阅   /gate/status   String JSON (vision_bridge 每帧一条, 字段见 INTERFACE_gate §1; 优先用 ring_w)
          /vision_bridge/cam  String JSON (图传模式, 预检用)
-         /mavros/...  /vins_estimator/odometry  (同 stage11)
+         /mavros/...  /vins_estimator/odometry
   发布   /mavros/setpoint_raw/local   PositionTarget  SP_PUB_HZ (冲刺段带加速度前馈)
-         /flight_ctrl/status      JSON 2Hz   (同 stage11 + task)
+         /flight_ctrl/status      JSON 2Hz   (地面 HUD 在用, 字段不改; 加 task)
          /flight_ctrl/telemetry   JSON 5Hz, 提交/冲刺/制动段 20Hz  (+ task, schema, gate 段)
          /flight_ctrl/config      JSON latched (+ task, derived.gate, derived.speed_chain)
 
 飞行流程 (phase 全程 = "gate", 段名在遥测 gate.seg)
   preflight → prime → OFFBOARD → arm → takeoff
-    → MANUAL   (manual) 手动段 (GATE_MANUAL_START): 键和 stage11 一样, 把飞机开到想起跑的地方,
+    → MANUAL   (manual) 手动段 (GATE_MANUAL_START): 键见下面"键盘", 把飞机开到想起跑的地方,
                         按 T 开始下面这一次。GATE_MANUAL_TIMEOUT 一个键都没按 → 降落
     → ACQUIRE  (wait)   原地悬停, 机头慢慢转向环, 收 HOVER_ACQ 秒有效识别; 8s 看不到 → ±30° 扫一次
     → PLAN     (wait)   gate_plan.plan_dash: 进入方向 / 起跑点 S / 制动终点 E / 撞纸速度; 不可行先降速
@@ -51,7 +51,7 @@ ROS 接口
     → HOLD     (hold)   以**当前位置**重锚悬停 GATE_HOLD_S → 原地缓降 → AUTO.LAND
   冲刺前任何一步放弃 (锁不住 / 不可行 / G 超时 / 找不到环) 或按 M / 方向键 → 回 MANUAL, 可以再 T
     (GATE_ABORT_TO_MANUAL; LAND 请求 / 接管 / 手动段超时照常降落)
-  影子 GATE_SHADOW=True: ACQUIRE → PLAN → 在原地做 ALIGN 锁定 → 发计划给网页 → 不摆位不冲刺 → 回 MANUAL
+  影子 (mode = 影子; 旧写法 GATE_SHADOW=True 同义): ACQUIRE → PLAN → 在原地做 ALIGN 锁定 → 发计划给网页 → 不摆位不冲刺 → 回 MANUAL
   虚拟环 GATE_VIRTUAL_OFFSET=d: 把环平面往进近侧挪 d 米, 真纸面当墙 → 真冲刺但停在纸前 (T3)
 
 键盘
@@ -59,18 +59,18 @@ ROS 接口
   冲刺前   M 或任一方向键 = 回手动段   L = 就地降落   X = 停桨   G = 确认冲刺 (只在 COMMIT 段有效)
   冲刺中   X = 停桨 (立刻)   L / SSH 断连 = 记下, **刹停之后**再降落 (冲刺中缓降比刹完更危险)
 
-安全分级 (沿用 stage11)
+安全分级 (vb09/flight/safety.py)
   FATAL (空中停桨)   倾角 > MAX_TILT_DEG(30°) 持续 FATAL_CONFIRM_S / MAVROS 断链 / 按 X
                     按 G 后到刹停悬停结束: 倾角 > GATE_DASH_TILT_DEG(45°) 持续 0.3s (急刹 + 撞纸)
   LAND  (缓降)       围栏、VIO 老化/跳变、视觉断供、速度超限、低电压、SSH 断连 …
                     —— 冲刺/制动段收到的 LAND **推迟到刹停后**执行 (见上)
   卡纸              冲刺中 (过纸面前) 实测速度比规划低 > GATE_STUCK_DV 且落后规划 > GATE_STUCK_DS
                     持续 GATE_STUCK_HOLD → 设定点改成当前位置 (停止前推) → 原地降落
-  接管 / 脚本异常    同 stage11 (phase_handover / cleanup_decision)
+  接管 / 脚本异常    vb09/flight/phases.py (phase_handover / cleanup_decision)
 
 和方案 PLAN_gate_v1.md 的差别 (2026-10-19 定的"先简单方案")
   · 全程 P 模式 (盲区不切速度模式), 不做 vision_gate (VINS 照常喂 EKF)
-  · 不做 kill_watchdog / 姿态模式 (L2) / D-att: 倾角停桨沿用 stage11 的 safety_monitor,
+  · 不做 kill_watchdog / 姿态模式 (L2) / D-att: 倾角停桨用平台的 safety_monitor (vb09/flight/safety.py),
     只是按 G 之后到刹停悬停结束换成 GATE_DASH_TILT_DEG (默认 45°/0.3s)
   · 刹车起点 (2026-10-21 改): 机头碰纸后再冲 PASS_RUN 才刹, s_b = −L_F + PASS_RUN + v·T_LAG
     (滞后补偿); 停止点要离环后墙 ≥ M_BACK, 放不下就降速

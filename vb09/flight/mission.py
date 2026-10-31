@@ -343,7 +343,7 @@ class MissionCtx:
     # ---------------- MANUAL (手动段) ----------------
     def manual(self, why=""):
         """
-        手动段: 和 stage11 的 teleop 一样的键 (机体系 WASD 平移 / R F 升降 / Q E 转向 / 空格悬停),
+        手动段: 键 (机体系 WASD 平移 / R F 升降 / Q E 转向 / 空格悬停),
         按 T 返回 = 开始这一次 (找环 → 规划 → …)。所有按键都是"给速度, 按 dt 积分", 松键
         TELEOP_DEADMAN 后速度归零、位置冻结。GATE_MANUAL_TIMEOUT 内一个键都没按 → 降落。
         没有终端键盘 → 直接返回 (= 老行为: 起飞后马上找环)。

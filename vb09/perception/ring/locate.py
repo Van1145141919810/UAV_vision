@@ -14,8 +14,8 @@ from .fusion import _cov_along_ray
 
 def ring_extra(fuser, fr, T_WC, warn=None):
     """
-    ★2026-10-19 按环心穿 (stage12): 估计器的 target 是**红点**; 红点没定位上时它是"环心 + 0.3m 先验"
-    (ring_prior), σ 停在 6~7cm 压不下去。所以另发这一帧的环心观测, 让 stage12 自己多帧取中值:
+    ★2026-10-19 按环心穿: 估计器的 target 是**红点**; 红点没定位上时它是"环心 + 0.3m 先验"
+    (ring_prior), σ 停在 6~7cm 压不下去。所以另发这一帧的环心观测, 让飞行脚本 (judge.py) 自己多帧取中值:
       ring_w    这一帧的环心 (world)             ring_cov  它的协方差 (m², 行主序 3×3)
       ring_src  stereo (角点平面) / mono (椭圆)   ring_c    估计器累积的环心 (world, 显示用)
       n         估计器的环法向 (world, 已翻成指向相机一侧; 至少 3 次可信法向才有)

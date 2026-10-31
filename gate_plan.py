@@ -2,7 +2,7 @@
 """
 gate_plan.py —— 穿环冲刺的规划 (纯函数, 不 import ROS / numpy)
 ===============================================================================
-stage12_gate.py 用它; 也能在笔记本上离线跑:  python3 gate_plan.py   (打印一组例子)
+飞行脚本 (stage14_mission.py, vb09/flight/steps) 用它; 也能在笔记本上离线跑:  python3 gate_plan.py   (打印一组例子)
 
 坐标约定 (和 INTERFACE_gate.md 第 0 节、flight_monitor.gate_axes 同一套)
 -------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ from vb09.common.geom import (  # noqa: E402,F401
 # 参数
 # =============================================================================
 class Params(object):
-    """规划用到的全部参数。stage12 从自己的全局里拼出来 (见 params_from_globals)。"""
+    """规划用到的全部参数。飞行脚本从 vars(C) 里拼出来 (见 params_from_globals)。"""
     FIELDS = (
         "DASH_V", "DASH_V_MIN", "DASH_V_STEP", "DASH_ACC", "BRAKE_ACC", "T_LAG",
         "D_STRAIGHT", "D_ALIGN_MIN", "ENTRY_ANG_MAX", "E_ALONG", "V_TEAR_MIN",

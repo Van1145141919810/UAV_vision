@@ -3,11 +3,11 @@
 """
 run_vision.py —— 起视觉链路 (新相机直连版桥 vision_bridge.py), 取代 run_vision.sh
 ===============================================================================
-模式必须写明 (以前漏写会悄悄变成 aruco, stage12 起飞前检查才拦得住):
+模式必须写明 (以前漏写会悄悄变成 aruco, 飞行脚本起飞前检查才拦得住):
 
   python3 run_vision.py gate_gcs                    # ★穿环推荐: 地面检测 (gcs_gate.py)
   python3 run_vision.py gate                        # 穿环: 机上检测
-  python3 run_vision.py aruco                       # 停靠跟踪 (stage11)
+  python3 run_vision.py aruco                       # ArUco 链路 (原停靠跟踪用; stage11 已删除, 桥的 aruco 模式原样保留)
 
 常用选项
   --gcs 192.168.2.179     地面站 IP (默认见 DEFAULT_GCS)

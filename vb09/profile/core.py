@@ -233,7 +233,7 @@ SAFETY_RULES = [
 # 单独运行 flight_profile.py 时没有飞行脚本的全局可参考, 用这组保底值推导
 _STANDALONE_DEFAULTS = {
     "DESCEND_SPEED": 0.50, "TAKEOFF_HEIGHT": 1.5, "MAX_HEIGHT": 11.0,
-    # 穿环 (和 stage12_gate.py 的代码默认值一致)
+    # 穿环 (和 vb09/flight/config.py 的代码默认值一致)
     "DASH_V_MIN": 1.2, "D_BACK": 2.0, "D_REAR": 2.0, "D_SIDE": 2.0,
     "L_F": 0.28, "L_R": 0.28, "W_HALF": 0.28, "PASS_RUN": 1.0, "M_BACK": 0.3,
     "BRAKE_OVER_T": 0.3, "GATE_SLOW_POLICY": 1,
