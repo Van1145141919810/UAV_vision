@@ -27,6 +27,10 @@ _KEYS = {
     # ★2026-10-31 (PLAN_refactor_v2 §4 第 6 步 1): 尺寸也可能分两个标量写
     "w": ["image_width", "imageWidth", "img_width", "width"],
     "h": ["image_height", "imageHeight", "img_height", "height"],
+    # ★2026-10-31 (第 6 步 2): 标定工具记下的"采集时左右对调 / 旋转 180°"。本代码不做这两种变换,
+    #   不为 0 → from_file 拒绝 (以前被悄悄忽略 → 左右目或上下颠倒, 基线符号 / 校正全错)
+    "swap_halves": ["swap_halves", "swapHalves", "swap_lr"],
+    "flip_180": ["flip_180", "flip180", "rotate_180"],
 }
 
 
@@ -45,7 +49,7 @@ def _to_array(v):
 
 def load_stereo_calib(path: str):
     """读取双目标定。支持 cv2.FileStorage 写的 yaml/xml/json，以及 PyYAML / json 写的普通字典。
-    返回 dict: K1 D1 K2 D2 R T size(w,h, 单目尺寸)。"""
+    返回 dict: K1 D1 K2 D2 R T size(w,h, 单目尺寸) T_unit swap_halves flip_180 (没写 = 0)。"""
     if not os.path.isfile(path):
         raise FileNotFoundError(f"找不到标定文件: {os.path.abspath(path)}（--calib 要写完整路径或相对当前目录的路径）")
     found = {}
@@ -143,6 +147,9 @@ def load_stereo_calib(path: str):
             raise ValueError(f"标定文件 {path} 自相矛盾: image_size = {out['size'][0]}x{out['size'][1]}, "
                              f"image_width/height = {wh[0]}x{wh[1]}")
         out["size"] = wh
+    for k in ("swap_halves", "flip_180"):
+        v = found.get(k)
+        out[k] = int(round(float(v.ravel()[0]))) if v is not None and v.size >= 1 else 0
     return out
 
 
@@ -192,6 +199,11 @@ class StereoRig:
             raise ValueError(f"标定尺寸不符: {path} 是按 {c['size'][0]}x{c['size'][1]} 标的, "
                              f"这里的单目分辨率是 {int(size_full[0])}x{int(size_full[1])}。"
                              f"换对应分辨率的标定, 或改采集分辨率 (机上 ~cam_w/~cam_h)")
+        flags = ["%s = %d" % (k, c[k]) for k in ("swap_halves", "flip_180") if c.get(k)]
+        if flags:
+            raise ValueError(f"标定文件 {path} 里 {', '.join(flags)}: 这份标定是在左右对调 / 旋转 180° 的画面上做的, "
+                             f"本代码不做这种变换 (以前被悄悄忽略)。按现在的接线 / 安装方向重标, "
+                             f"或确认后把这两个键改成 0")
         size = size_full or c["size"] or (1920, 1080)
         rig = cls(c["K1"], c["D1"], c["K2"], c["D2"], c["R"], c["T"], size, scale, alpha)
         rig.T_unit = c.get("T_unit", "m")

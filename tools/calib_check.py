@@ -4,6 +4,7 @@ tools/calib_check.py —— 标定读取的自检 (PLAN_refactor_v2 第 6 步 1/
     python3 tools/calib_check.py          全过打印 ALL PASS, 否则退出码 1
 用临时文件造几份标定 (cv2.FileStorage yaml + 普通 json), 检查:
   · 尺寸: image_size 或 image_width/height; 和调用方的单目分辨率不一致 → ValueError
+  · swap_halves / flip_180: 不为 0 → ValueError
 """
 import json
 import os
@@ -55,6 +56,11 @@ CASES = [
      "自相矛盾"),
     ("json_wh_bad", mk_json, {"image_width": 1280, "image_height": 720}, "标定尺寸不符"),
     ("json_size_ok", mk_json, {"image_size": [1920, 1080]}, "ok"),
+    ("flags_zero", mk_fs, {"swap_halves": 0, "flip_180": 0}, "ok"),
+    ("swap", mk_fs, {"swap_halves": 1}, "swap_halves = 1"),
+    ("flip", mk_fs, {"flip_180": 1, "image_size": np.array([1920, 1080.0])}, "flip_180 = 1"),
+    ("json_swap", mk_json, {"swap_halves": 1}, "swap_halves = 1"),
+    ("json_flags_false", mk_json, {"swap_halves": False, "flip_180": False}, "ok"),
 ]
 
 
