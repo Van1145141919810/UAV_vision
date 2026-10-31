@@ -65,7 +65,7 @@ vision_bridge.py — 飞机侧图传/检测桥 (新相机直连版, 2026-10-12)
 
 ★ 2026-10-19 (穿环首飞问题 §1 §2, gate / gate_gcs 共用)
   · /gate/status 加 cov (世界系 3×3 协方差, m², 行主序) —— 飞行脚本 (stage14_mission) 用它把 σ 拆成横向 / 深度
-  · /gate/status 加 ring_w / ring_cov / ring_src / ring_c / n / aim (见 _ring_extra): target 是红点,
+  · /gate/status 加 ring_w / ring_cov / ring_src / ring_c / n / aim (见 vb09/perception/ring/locate.py): target 是红点,
     红点没定位上时飞行脚本改用每帧的环心观测 (judge 优先用 ring_w), 按环心穿
   · 环估计 gate_reset_age 秒没被新检测更新 → 丢掉旧状态, 从下一帧重新初始化
     (默认 = max(1s, gate_params 的 lost_timeout))。落地后 / VINS 跳过后不再空转出旧环。
@@ -101,6 +101,9 @@ vision_bridge.py — 飞机侧图传/检测桥 (新相机直连版, 2026-10-12)
   需要同目录: vb09/ (perception/ring/fusion 等, 不拉 cv2 检测库; gate_params.json 可选; 标定文件在地面)
   例:  bash run_vision.sh 192.168.2.179 _mode:=gate_gcs
        地面: python gcs_gate.py --drone 192.168.2.20 --mode 1
+  ★2026-11-01 目标类型 _target:=ring (默认; 只有 gate / gate_gcs 模式用): 机上检测按 registry.DETECTORS,
+    地面检测时的机上融合按 registry.LOCATORS, 下行消息按 registry.CODECS 解析 (vb09/perception/registry.py)。
+    地面 gcs_gate.py --target 必须一样, 不一样 → 版本检查强制 SIM。
   ★2026-10-20 外参默认值已换成 stage13_cam_calib 的标定结果 (pitch 5.23 roll 3.40 yaw -0.73,
   lever 0.080/0.030/-0.115), 启动命令里不要再带 _cam_*:= (会覆盖默认值)。下面是旧说明:
   外参 _cam_pitch_deg 默认 1.3° (= gcs_aruco_det2 的 CAM_PITCH_DOWN_DEG, 同一颗相机;
@@ -134,8 +137,7 @@ from geometry_msgs.msg import PointStamped, PoseStamped
 
 from vb09.common import geom
 from vb09.common import wire
-from vb09.perception.ring.config import GateConfig
-from vb09.perception.ring.locate import ring_extra
+from vb09.perception import registry
 from mavros_msgs.msg import State
 from std_msgs.msg import String
 
@@ -463,10 +465,10 @@ class GateOut(object):
 
 
 def _load_gate_cfg(cfg, here):
+    """检测 / 融合参数 (registry.CONFIGS[_target]; 环 = GateConfig)。没有文件 → 代码默认值。"""
     params = cfg["gate_params"] if os.path.isabs(cfg["gate_params"]) else os.path.join(here, cfg["gate_params"])
-    if os.path.exists(params):
-        return GateConfig.load(params), params
-    return GateConfig(), "(默认参数, 没找到 %s)" % params
+    obj, src = registry.load_config(cfg.get("target", "ring"), params)
+    return obj, (src or "(默认参数, 没找到 %s)" % params)
 
 
 def _reset_age(cfg, gcfg):
@@ -474,9 +476,9 @@ def _reset_age(cfg, gcfg):
     return a if a > 0 else max(1.0, float(getattr(gcfg, "lost_timeout", 1.0)))
 
 
-def _ring_extra(fuser, fr, T_WC):
-    """附加字段 (ring_w / ring_cov / ring_src / ring_c / n / aim), 见 vb09/perception/ring/locate.py"""
-    return ring_extra(fuser, fr, T_WC, warn=lambda m: rospy.logwarn_throttle(10.0, m))
+def _warn_extra(m):
+    """插件附加字段出错的告警 (Detector.extra / Locator.extra 的 warn 回调)"""
+    rospy.logwarn_throttle(10.0, m)
 
 
 def _stale(fr, reset_age):
@@ -494,15 +496,13 @@ class GateWorker(object):
             sys.path.insert(0, here)
         # 只依赖 cv2/numpy, 不影响上面 "cv2 先导入" 的约束
         from vb09.perception.stereo_rig import StereoRig
-        from vb09.perception.ring.detect import GateDetector
-        from vb09.perception.ring.draw import draw_frame
-        self.GateDetector, self.draw_frame = GateDetector, draw_frame
+        Detector = registry.load(registry.DETECTORS, cfg.get("target", "ring"))     # 环 = RingDetector
         self.cfg, self.cam = cfg, cam
         calib = cfg["calib"] if os.path.isabs(cfg["calib"]) else os.path.join(here, cfg["calib"])
         self.rig = StereoRig.from_file(calib, (cfg["cam_w"] // 2, cfg["cam_h"]), cfg["det_scale"])
         gcfg, src = _load_gate_cfg(cfg, here)
         self.gcfg = gcfg
-        self.det = GateDetector(self.rig, gcfg)
+        self.det = Detector(self.rig, gcfg)
         self.reset_age = _reset_age(cfg, gcfg)
         self.n_reset = 0
         self.T_BC = make_T_BC(cfg["cam_pitch_deg"], cfg["cam_roll_deg"], cfg["cam_yaw_deg"],
@@ -568,14 +568,14 @@ class GateWorker(object):
             # → 整个检测器重建, 用这一帧重新初始化 (没看到环就是 "没有环", 不再发旧值)
             self.n_reset += 1
             rospy.logwarn("[gate] 环估计 %.1fs 没更新 → 重置 (第 %d 次)" % (fr.target.age, self.n_reset))
-            self.det = self.GateDetector(self.rig, self.gcfg)
+            self.det.reset()
             fr = self.det.process(L, R, t, T_WC)
         st = self.out.emit(fr, t, why, (time.time() - t0) * 1000,
-                           extra=_ring_extra(self.det.fuser, fr, T_WC))
+                           extra=self.det.extra(fr, T_WC, warn=_warn_extra))
         # 给上行线程的预览 (按 tx_hz 节流, 只在需要时画)
         if self.cfg["tx_hz"] > 0 and time.time() - self.last_prev >= 0.9 / self.cfg["tx_hz"]:
             self.last_prev = time.time()
-            vis = self.draw_frame(L, fr, self.det, T_WC)
+            vis = self.det.draw(L, fr, T_WC)
             ok, buf = cv2.imencode(".jpg", vis, [int(cv2.IMWRITE_JPEG_QUALITY), self.cfg["jpeg_q"]])
             if ok:
                 with self.prev_lock:
@@ -596,9 +596,11 @@ class GateFuseWorker(object):
         here = os.path.dirname(os.path.abspath(__file__))
         if here not in sys.path:
             sys.path.insert(0, here)
-        # 只导入融合 (numpy), 不拉起整个检测库
-        from vb09.perception.ring.fusion import GateFuser
-        self.GateFuser, self.cfg = GateFuser, cfg
+        # 只导入融合 (numpy), 不拉起整个检测库: registry 按字符串延迟 import, LOCATORS 只要 numpy
+        self.kind = cfg.get("target", "ring")
+        self.Locator = registry.load(registry.LOCATORS, self.kind)     # 环 = RingLocator
+        self.codec = wire.codec(self.kind)
+        self.cfg = cfg
         self.gcfg, src = _load_gate_cfg(cfg, here)
         self.T_BC = make_T_BC(cfg["cam_pitch_deg"], cfg["cam_roll_deg"], cfg["cam_yaw_deg"],
                               [cfg["cam_x"], cfg["cam_y"], cfg["cam_z"]])
@@ -614,7 +616,7 @@ class GateFuseWorker(object):
         self.ver_bad = None                 # 上一包的版本问题 (变了才打日志)
         rospy.loginfo("[gate_gcs] 检测在地面 (gcs_gate.py); 飞机只做位姿插值 + 融合。估计器参数 %s" % src)
         rospy.loginfo("[gate_gcs] 本机检测库 %s  GateConfig %s (地面 gcs_gate 启动时打印同样两个数, 要一致)"
-                      % (wire.lib_version(), wire.cfg_digest(self.gcfg)))
+                      % (wire.lib_version(self.kind), wire.cfg_digest(self.gcfg)))
         rospy.loginfo("[gate_gcs] T_BC: pitch_down=%.1f° roll=%.1f° yaw=%.1f° lever=(%.3f,%.3f,%.3f)m  "
                       "飞机侧保险 %s" % (cfg["cam_pitch_deg"], cfg["cam_roll_deg"], cfg["cam_yaw_deg"],
                                         cfg["cam_x"], cfg["cam_y"], cfg["cam_z"],
@@ -646,12 +648,12 @@ class GateFuseWorker(object):
         if self.fuser is None or not self.fuser.same_rig(f, R1):
             if self.fuser is not None:
                 rospy.logwarn("[gate_gcs] ★ 地面的标定变了 (f %.1f → %.1f) —— 估计器重置" % (self.fuser.f, f))
-            self.fuser = self.GateFuser(self.gcfg, f, R1)
+            self.fuser = self.Locator(self.gcfg, f, R1)
             self.rig = dict(rig)
             rospy.loginfo("[gate_gcs] 地面标定: f=%.1f B=%.1fmm 工作分辨率 %s/目"
                           % (f, float(rig.get("B") or 0) * 1000, rig.get("size")))
         t = float(tc)
-        fr = wire.frame_from_msg(g)
+        fr = self.codec.frame_from_msg(g)
         T_WB, why = self.poses.at(t)
         T_WC = T_WB @ self.T_BC if T_WB is not None else None
         self.fuser.update(fr, T_WC, t)
@@ -659,13 +661,13 @@ class GateFuseWorker(object):
             # 同 GateWorker: 旧状态 → 重建估计器, 用这一帧的观测重新初始化
             self.n_reset += 1
             rospy.logwarn("[gate_gcs] 环估计 %.1fs 没更新 → 重置 (第 %d 次)" % (fr.target.age, self.n_reset))
-            self.fuser = self.GateFuser(self.gcfg, f, R1)
-            fr = wire.frame_from_msg(g)
+            self.fuser = self.Locator(self.gcfg, f, R1)
+            fr = self.codec.frame_from_msg(g)
             self.fuser.update(fr, T_WC, t)
         ground_sim = bool(det.get("sim", True))
         ex = {"ground_sim": ground_sim, "ground_stage": g.get("stage")}
         # ★2026-10-31 版本检查: 地面检测库 / GateConfig / 消息版本和本机不一致 → 强制 SIM (不驱动)
-        ver_bad = wire.peer_mismatch(g, rig, self.gcfg)
+        ver_bad = wire.peer_mismatch(g, rig, self.gcfg, self.kind)
         if ver_bad:
             ex["ver_bad"] = ver_bad
             if ver_bad != self.ver_bad:
@@ -673,7 +675,7 @@ class GateFuseWorker(object):
         elif self.ver_bad:
             rospy.loginfo("[gate_gcs] 地面版本已一致, 解除强制 SIM")
         self.ver_bad = ver_bad
-        ex.update(_ring_extra(self.fuser, fr, T_WC))
+        ex.update(self.fuser.extra(fr, T_WC, warn=_warn_extra))
         st = self.out.emit(fr, t, why, fr.t_ms.get("total", 0.0), sim_extra=ground_sim or bool(ver_bad), extra=ex)
         with self.lock:
             self.status = st
@@ -952,7 +954,7 @@ class Bridge(object):
 # ============================== main ==============================
 CFG_KEYS = ("mode", "gcs_host", "device", "cam_w", "cam_h", "cam_fps", "tx_hz", "tx_max_w",
             "raw_max_kb", "jpeg_q", "status_topic", "ground_z")
-GATE_KEYS = ("det_scale", "det_hz", "calib", "gate_params", "gate_sim", "cam_pitch_deg", "cam_roll_deg",
+GATE_KEYS = ("target", "det_scale", "det_hz", "calib", "gate_params", "gate_sim", "cam_pitch_deg", "cam_roll_deg",
              "cam_yaw_deg", "cam_x", "cam_y", "cam_z", "max_pose_gap", "gate_reset_age")
 
 
@@ -1010,6 +1012,8 @@ def read_cfg():
         "det_hz": float(g("~det_hz", 30.0)),             # 检测频率上限 (实际受 CPU 限制)
         "calib": str(g("~calib", "stereo_calib.yaml")),
         "gate_params": str(g("~gate_params", "gate_params.json")),
+        # ★2026-11-01 接线: 目标类型 (vb09/perception/registry.py), 默认 ring
+        "target": str(g("~target", "ring")),
         # ★ gate (机上检测): 默认 True = frame_id odom_sim, 不驱动飞机 (没有地面开关, 只有这一道)
         #   gate_gcs: 默认 False = 跟随地面 --mode (单保险, 同 aruco 链路); 给 true 强制锁住
         "gate_sim": bool(g("~gate_sim", mode == "gate")),

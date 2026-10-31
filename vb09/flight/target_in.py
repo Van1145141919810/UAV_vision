@@ -15,7 +15,7 @@ import rospy
 from vb09.flight import config as C
 
 from vb09.flight.ctx import F
-from vb09.perception.registry import JUDGES
+from vb09.perception import registry
 
 
 # =============================================================================
@@ -45,7 +45,8 @@ class GateInput:
         self.win = deque(maxlen=900)          # 有效样本 (dict)
         self.rej = {k: 0 for k in self.REASONS}
         self.n_valid = 0
-        self._judge = JUDGES["ring"](C)     # 本轮目标固定是环; 以后按目标类型选
+        # 2026-11-01 接线: 判定按目标类型选 (C.TARGET_KIND → vb09/perception/registry.py JUDGES)
+        self._judge = registry.load(registry.JUDGES, C.TARGET_KIND)(C)
 
     # ---- 回调 ----
     def on_status(self, msg):

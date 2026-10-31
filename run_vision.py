@@ -46,9 +46,11 @@ CAM = {"cam_pitch_deg": 5.23, "cam_roll_deg": 3.40, "cam_yaw_deg": -0.73,
 
 # 2026-10-30: 检测库搬进 vb09/ 包 (gate_detector.py / ring_detector.py 只剩兼容壳, 桥不再用它们)
 _VB09_COMMON = ["vb09/__init__.py", "vb09/common/__init__.py", "vb09/common/geom.py", "vb09/common/wire.py"]
-_VB09_FUSE = ["vb09/perception/__init__.py", "vb09/perception/ring/__init__.py",
-              "vb09/perception/ring/config.py", "vb09/perception/ring/frame.py",
-              "vb09/perception/ring/geom3d.py", "vb09/perception/ring/fusion.py", "vb09/perception/ring/locate.py"]
+# 2026-11-01 接线: 插件按 registry 延迟加载; 下面是环 (--target ring) 要的文件
+_VB09_FUSE = ["vb09/perception/__init__.py", "vb09/perception/registry.py", "vb09/perception/ring/__init__.py",
+              "vb09/perception/ring/config.py", "vb09/perception/ring/frame.py", "vb09/perception/ring/wire.py",
+              "vb09/perception/ring/geom3d.py", "vb09/perception/ring/fusion.py", "vb09/perception/ring/locate.py",
+              "vb09/perception/ring/plugin.py"]
 NEED = {"gate": ["vision_bridge.py", "stereo_calib.yaml", "vb09/perception/stereo_rig.py",
                  "vb09/perception/ring/det2d.py", "vb09/perception/ring/detect.py",
                  "vb09/perception/ring/draw.py"] + _VB09_COMMON + _VB09_FUSE,
@@ -104,6 +106,8 @@ def main():
     ap.add_argument("mode", choices=("gate_gcs", "gate", "aruco"),
                     help="gate_gcs = 穿环地面检测(推荐)  gate = 穿环机上检测  aruco = 停靠跟踪")
     ap.add_argument("--gcs", default=DEFAULT_GCS, help="地面站 IP (默认 %s)" % DEFAULT_GCS)
+    ap.add_argument("--target", default="ring", help="gate / gate_gcs: 目标类型 (_target, 见 vb09/perception/registry.py), "
+                                                     "默认 ring。地面 gcs_gate.py --target 要一样")
     ap.add_argument("--fps", type=float, help="相机采集帧率 (_cam_fps)")
     ap.add_argument("--tx-hz", type=float, help="上行帧率上限 (_tx_hz)")
     ap.add_argument("--drive", action="store_true", help="gate 模式: 识别结果能驱动飞机 (_gate_sim:=false)")
@@ -132,6 +136,8 @@ def main():
         ros.append("_cam_fps:=%g" % args.fps)
     if args.tx_hz:
         ros.append("_tx_hz:=%g" % args.tx_hz)
+    if args.mode in ("gate", "gate_gcs") and "_target" not in ros_given and args.target != "ring":
+        ros.append("_target:=%s" % args.target)          # ring 是桥的默认值, 不传 (命令行和以前一样)
     if args.mode in ("gate", "gate_gcs"):
         for k, v in (("_cam_pitch_deg", args.pitch), ("_cam_roll_deg", args.roll),
                      ("_cam_yaw_deg", args.yaw), ("_cam_x", args.cam_x),
@@ -149,6 +155,7 @@ def main():
     print("=" * 70)
     print("  视觉链路   模式 ★ %s ★   地面站 %s" % (title, args.gcs))
     if args.mode in ("gate", "gate_gcs"):
+        print("  目标类型 %s" % args.target)
         print("  识别相机外参 pitch=%.2f° roll=%.2f° yaw=%.2f°  x=%.3f y=%.3f z=%.3f m"
               % (args.pitch, args.roll, args.yaw, args.cam_x, args.cam_y, args.cam_z))
     if args.mode == "gate":

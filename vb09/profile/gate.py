@@ -306,6 +306,16 @@ def _check_gate(g):
     elif isinstance(pe, dict):
         E.append("PHASE_ENVELOPE 里没有 gate —— 冲刺会落到默认包络 (1 m/s) 一冲就缓降")
 
+    # ---------------- 目标类型 (2026-11-01 接线) ----------------
+    tk = get("TARGET_KIND", "ring")
+    try:
+        from vb09.perception import registry
+        if tk not in registry.JUDGES:
+            E.append("目标类型 TARGET_KIND=%r 没有判定插件 (vb09/perception/registry.py JUDGES 里只有: %s)"
+                     % (tk, ", ".join(registry.kinds(registry.JUDGES))))
+    except ImportError:
+        pass
+
     # ---------------- 开关 ----------------
     if get("GATE_ALLOW_SIM_DRIVE"):
         W.append("GATE_ALLOW_SIM_DRIVE=True —— 标了 sim 的识别结果也能驱动冲刺！只在台架测试时用")

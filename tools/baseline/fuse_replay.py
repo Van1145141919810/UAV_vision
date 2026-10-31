@@ -7,7 +7,7 @@ fuse_replay.py —— 飞机侧融合等价验证 (gate_gcs 模式)
 另跑一遍"地面 sim=True"和"位姿缺失"的变体, 覆盖 ground_sim / pose 分支。
 ★第 6 步 3 (版本检查): 基线里的 rig 不带 lib / cfg → 这里按本机现算现填 (= 两边一致, 输出和以前相同);
   另有 ver_* 变体 (不进基线, 现场断言): 地面缺版本 / 检测库不同 / GateConfig 不同 / 消息版本不同
-  → 每条 /gate/status 都 sim = true 且带 ver_bad。
+  / 目标类型不同 (ver_kind) → 每条 /gate/status 都 sim = true 且带 ver_bad。
 """
 import json
 import os
@@ -44,6 +44,8 @@ def run(inp, variant):
         rig_in["lib"] = "0" * 12
     elif variant == "ver_cfg":
         rig_in["cfg"] = "0" * 12
+    elif variant == "ver_kind":                  # 接线: 地面跑的是别的目标类型
+        rig_in["kind"] = "reddot"
     rig = synth.make_rig()
     seq = synth.sequence(rig)
     used = []
@@ -77,7 +79,7 @@ def main():
                 json.dump(r["status"], f)
         ok &= _util.report("fuse_" + v, *_util.save_or_compare("fuse_%s.json" % v, r, write))
     for v, want in (("ver_old_ground", "旧版"), ("ver_lib", "检测库"), ("ver_cfg", "GateConfig"),
-                    ("ver_msg", "消息版本")):
+                    ("ver_msg", "消息版本"), ("ver_kind", "目标类型")):
         st = run(inp, v)["status"]
         why = [s for s in st if not (s.get("sim") is True and s.get("ver_bad")
                                      and any(want in x for x in s["ver_bad"]))]

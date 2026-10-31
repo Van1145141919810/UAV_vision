@@ -60,12 +60,12 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from vb09.common import geom   # noqa: E402
-from vb09.common.wire import pack, unpack, require_msgpack, zmq, frame_to_msg, rig_to_msg   # noqa: E402
+from vb09.common import wire   # noqa: E402
+from vb09.common.wire import pack, unpack, require_msgpack, zmq, rig_to_msg   # noqa: E402
+from vb09.perception import registry   # noqa: E402
 from vb09.perception.stereo_rig import StereoRig   # noqa: E402
-from vb09.perception.ring.config import GateConfig   # noqa: E402
-from vb09.perception.ring.detect import GateDetector   # noqa: E402
+# HUD / 掩膜视图 / 控制台诊断还是环专用的 (见 main 里 --target 的检查)
 from vb09.perception.ring.det2d import apply_wb, segment   # noqa: E402
-from vb09.perception.ring.draw import draw_frame   # noqa: E402
 from vb09.perception.ring.geom3d import ring_tilt_deg   # noqa: E402
 
 require_msgpack("必须安装 msgpack: pip install msgpack")       # zmq 可以没有 (--replay 离线回放)
@@ -653,6 +653,8 @@ def main():
     # ---- gate 版自己的 ----
     ap.add_argument("--calib", default=os.path.join(HERE, "stereo_calib.yaml"))
     ap.add_argument("--params", default=os.path.join(HERE, "gate_params.json"))
+    ap.add_argument("--target", default="ring", choices=registry.kinds(registry.DETECTORS),
+                    help="目标类型 (vb09/perception/registry.py), 默认 ring。飞机桥的 _target:= 要一样")
     ap.add_argument("--scale", type=float, default=0.5, help="检测工作分辨率 (相对 1920×1080/目), 默认 0.5")
     ap.add_argument("--record", default=None, help="把收到的上行包存到这个目录 (每 --record-every 帧一张)")
     ap.add_argument("--record-every", type=int, default=5)
@@ -681,16 +683,18 @@ def main():
         print("[gcs_gate] ! 画面固定是校正后左目彩色图 (= 检测器看到的), --show-color/--preview-gray 忽略")
     sim = (args.mode != 2) or args.probe          # 同 gcs_aruco_det2: probe 永远 sim
 
+    if args.target != "ring":
+        # 检测 / 序列化已经按 registry 走, 但下面的 HUD、掩膜视图、控制台诊断还按环的字段写 (DEV_GUIDE §8)
+        sys.exit("[gcs_gate] --target %s: 本程序的 HUD / 掩膜视图目前只支持 ring, 先把它们挪进插件" % args.target)
     rig = StereoRig.from_file(args.calib, (1920, 1080), args.scale)
-    if os.path.exists(args.params):
-        cfg, src = GateConfig.load(args.params), args.params
-    else:
-        cfg, src = GateConfig(), "默认参数 (没找到 %s)" % args.params
-    det = GateDetector(rig, cfg)
-    rig_msg = rig_to_msg(rig, cfg)
+    cfg, src = registry.load_config(args.target, args.params)
+    src = src or "默认参数 (没找到 %s)" % args.params
+    det = registry.load(registry.DETECTORS, args.target)(rig, cfg)
+    codec = wire.codec(args.target)
+    rig_msg = rig_to_msg(rig, cfg, args.target)
     print(f"[gcs_gate] 标定 {args.calib}: 工作分辨率 {rig.size[0]}x{rig.size[1]}/目 f={rig.f:.1f} "
           f"B={rig.B * 1000:.1f}mm (T 单位 {rig.T_unit})  参数: {src}")
-    print(f"[gcs_gate] 检测库 {rig_msg['lib']}  GateConfig {rig_msg['cfg']} "
+    print(f"[gcs_gate] 目标 {args.target}  检测库 {rig_msg['lib']}  GateConfig {rig_msg['cfg']} "
           f"(飞机上的桥核对这两个; 不一致 → 飞机强制 SIM, 网页报 \"版本不符\")")
     print(f"[gcs_gate] 模式 {args.mode} = {MODE_NAMES[args.mode]}   回包 sim={sim}")
     if args.mode == 2 and not args.probe:
@@ -862,7 +866,7 @@ def main():
                        "found": found, "target": None,      # gate 结果不走旧的世界系 target 字段
                        "sim": sim, "mode": args.mode, "model": "gate/" + MODE_NAMES[args.mode]}
                 if fr is not None:                           # mode 0: 不带 gate → 桥只统计往返
-                    msg["gate"], msg["rig"] = frame_to_msg(fr), rig_msg
+                    msg["gate"], msg["rig"] = codec.frame_to_msg(fr), rig_msg
                 try:
                     pub.send(pack(msg), flags=zmq.NOBLOCK)
                 except zmq.Again:
@@ -870,7 +874,7 @@ def main():
 
             if need_img:
                 # 检测标记画在 960×540 工作图上, 不写字 (同 gcs_aruco_det2: 网页图不画 HUD)
-                vis = draw_frame(L, fr, det, None, text=False) if fr is not None else L.copy()
+                vis = det.draw(L, fr, None, text=False) if fr is not None else L.copy()
                 if args.show_mask and fr is not None:
                     m_ = segment(apply_wb(L, cfg), cfg)["sat"]
                     vis = np.hstack([vis, cv2.cvtColor(m_, cv2.COLOR_GRAY2BGR)])

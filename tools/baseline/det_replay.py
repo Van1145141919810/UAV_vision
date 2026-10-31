@@ -38,8 +38,8 @@ def run():
                                    ("valid", "pos_w", "cov_w", "src", "age", "dist", "side")},
                         "msg": _util.strip_keys(wire.frame_to_msg(fa), {"t_ms"})})
     rig_msg = wire.rig_to_msg(rig)
-    # ★第 6 步 3: rig 多了 lib (检测库指纹, 每次改代码都变) / cfg —— 不进基线 (fuse_replay 现算现填)
-    rig_msg = {k: v for k, v in rig_msg.items() if k not in ("lib", "cfg")}
+    # ★第 6 步 3: rig 多了 lib (检测库指纹, 每次改代码都变) / cfg / kind (接线) —— 不进基线 (fuse_replay 现算现填)
+    rig_msg = {k: v for k, v in rig_msg.items() if k not in ("lib", "cfg", "kind")}
     return {"rig": rig_msg, "msgs": msgs}, onboard
 
 

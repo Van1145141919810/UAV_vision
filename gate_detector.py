@@ -21,4 +21,5 @@ from vb09.perception.ring.geom3d import (  # noqa: E402,F401
 from vb09.perception.ring.fusion import TargetEstimator, GateFuser, _cov_along_ray, _N_FUSE  # noqa: E402,F401
 from vb09.perception.ring.detect import GateDetector  # noqa: E402,F401
 from vb09.perception.ring.draw import STAGE_COLOR, draw_frame  # noqa: E402,F401
-from vb09.common.wire import MSG_VERSION, frame_to_msg, frame_from_msg, rig_to_msg  # noqa: E402,F401
+from vb09.perception.ring.wire import MSG_VERSION, frame_to_msg, frame_from_msg  # noqa: E402,F401
+from vb09.common.wire import rig_to_msg  # noqa: E402,F401
