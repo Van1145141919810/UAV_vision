@@ -2,6 +2,197 @@
 
 给以后写代码的人（和新对话）用。目录和调用链见 README；接口字段见 `docs/INTERFACE_gate.md`。
 本文回答：**要做 X，该动哪几个文件、按什么顺序、怎么验证**。
+A 节是文件地图（每个文件做什么、关键符号），B 节是调用链，C 节是"想改 X → 先看哪里"；第 0–9 节是具体步骤。
+
+---
+
+## A. 文件地图
+
+行数是 2026-10-31 的。只列可以找的入口点（类和函数），不是全部。
+
+### 根目录：入口（飞机上就在这个目录里运行）
+
+| 文件 | 行 | 做什么 | 关键符号 |
+|---|---|---|---|
+| `stage14_mission.py` | 225 | 飞行入口：档案 → 派生量 → dry-run 退出 → 终端检查 → import ROS → `runner.main()` | `_SITE_REPORT`、`_terminal_problems` |
+| `stage12_gate.py` | 17 | 空壳，只打印"已改名" | |
+| `gate_plan.py` | 693 | 冲刺规划，纯函数，可离线跑 | `Params`、`params_from_globals`、`plan_dash`、`preflight_check`、`static_preview`、`fuse_samples`、`Traj`、`_ring_frame` |
+| `flight_profile.py` | 67 | 转发 `vb09/profile`，再加 `__main__`（命令行查档案） | |
+| `flight_monitor.py` | 406 | 网页后端：HTTP 路由、静态白名单 `WEB_FILES`、命令行参数 | `Handler.do_GET/do_POST`、`main` |
+| `run_vision.py` | 210 | 视觉链路启动器：模式、相机外参 `CAM`、需要的文件 `NEED`，用子进程起桥 | `main` |
+| `vision_bridge.py` | 1115 | 图传桥（ROS 节点）：采图、上行、下行、位姿插值、融合、发布 | `NewCam`、`PoseBuffer`、`GateOut`（发布 /gate/status）、`GateWorker`（机上检测）、`GateFuseWorker`（地面检测时的机上融合）、`Bridge`、`read_cfg` |
+| `gcs_gate.py` | 935 | 地面检测程序：收帧 → 校正 → 检测 → 回传，本地 HUD，网页预览 | `reader_loop`、`draw_hud`、`preview_meta`、`main` |
+| `gate_detector.py` / `ring_detector.py` / `preview_server.py` | 16–24 | 兼容壳，转发到 vb09 | |
+
+### `vb09/common/`：公共（飞机 + 地面）
+
+| 文件 | 行 | 做什么 | 关键符号 |
+|---|---|---|---|
+| `geom.py` | 186 | 纯 Python 几何：向量、四元数、靶面坐标 | `gate_axes`、`to_plane`、`entry_axes`、`sigma_hva`、`spread_hva`、`rpy_from_quat`、`quat_to_R` |
+| `wire.py` | 239 | 地面 ↔ 飞机的网络格式、版本检查 | `pack/unpack`、`frame_to_msg`、`frame_from_msg`、`rig_to_msg`、`MSG_VERSION`、`LIB_FILES`、`lib_version`、`cfg_digest`、`peer_mismatch` |
+| `target.py` | 71 | 契约 | `Target`、`Lock`（dict + 属性 kind / trk_id / size） |
+| `preview_server.py` | 333 | 地面网页预览（MJPEG + X-Det 元数据） | `publish`、`start` |
+
+### `vb09/perception/`：感知
+
+| 文件 | 行 | 做什么 | 关键符号 |
+|---|---|---|---|
+| `stereo_rig.py` | 241 | 读标定、双目校正、MJPG 降采样解码 | `_KEYS`、`load_stereo_calib`、`StereoRig.from_file / split / rectify`、`decode_sbs_mjpg` |
+| `registry.py` | 12 | 插件注册表 | `JUDGES` |
+| `ring/config.py` | 125 | 环检测和融合参数（默认值 = 现场参数） | `GateConfig`（`load` / `save`） |
+| `ring/frame.py` | 86 | 一帧结果的数据结构 | `GateFrame`、`RingObs`、`DotObs`、`TargetState` |
+| `ring/det2d.py` | 394 | 2D：白平衡、红色分割、找环、角点、红点 | `segment`、`find_gate`、`find_corners`、`find_dot` |
+| `ring/geom3d.py` | 259 | 3D：角点配对、平面、环心、法向、椭圆 → 圆位姿 | `fit_plane`、`ring_center_in_plane`、`pick_ring_normal`、`circle_pose_from_ellipse` |
+| `ring/detect.py` | 386 | 检测主流程 | `GateDetector.process` → `_find_ring_2d` / `_ring_diag` / `_locate_ring` / `_find_dots` / `_remember_ref` |
+| `ring/fusion.py` | 329 | 世界系融合（只依赖 numpy） | `TargetEstimator`、`GateFuser`（`update`、`T_WR`、`same_rig`） |
+| `ring/locate.py` | 50 | 机上：融合结果 → /gate/status 的环字段 | `ring_extra` |
+| `ring/judge.py` | 103 | 飞行脚本侧的单帧判定 | `RingJudge.judge` |
+| `ring/draw.py` | 101 | 画叠加 | `draw_frame` |
+
+### `vb09/flight/`：飞行脚本
+
+| 文件 | 行 | 做什么 | 关键符号 |
+|---|---|---|---|
+| `config.py` | 274 | **全部参数**，分 A–G 区；`derive()` 算派生量（包络、`GATE_DOCK_D`、shadow → MISSION_MODE） | `MISSION_MODE`、`PHASE_ENVELOPE`、`derive` |
+| `ctx.py` | 227 | 共享状态单例 `F`、阶段和包络、中止/降落请求、遥测数据仓库 | `FlightContext`、`F`、`bind_defaults`、`all_params`、`set_phase`、`request_land/abort`、`check_abort`、`telem_put` |
+| `telemetry.py` | 174 | 订阅回调的数据（位姿、速度、状态、电池、VINS） | `Telemetry` |
+| `setpoint.py` | 140 | 设定点状态（VEL / ZHOLD / TRAJ） | `SetpointState.set_zhold_mode / set_traj_mode / set_velocity_mode` |
+| `safety.py` | 214 | 安全监控线程 | `safety_monitor`、`Debounce` |
+| `preflight.py` | 441 | 起飞前检查 + 配置摘要 | `preflight`、`preflight_plan`、`print_config_summary`、`PX4_PULL_TIMEOUT` |
+| `phases.py` | 507 | 通用飞行段 | `phase_takeoff`、`phase_descend`、`phase_auto_land`、`phase_handover`、`arm_with_confirm`、`cleanup_decision`、`emergency_land`、`pose_cb` |
+| `log.py` | 768 | 日志目录、各 csv（gate.csv 列表在约 57 行）、发布线程、遥测、config | `init_log_dir`、`gate_logger_loop`、`build_telemetry`、`publish_config`、`status_loop` |
+| `keys.py` | 98 | 终端键盘 | `KeyReader` |
+| `target_in.py` | 143 | 收 /gate/status → judge → 样本滑窗 | `GateInput.on_status / valid_since / latest_valid / counters` |
+| `mission.py` | 585 | 步骤的 ctx + 任务循环 | `MissionCtx`（`enter`、`tick`、`hold`、`fail`、`again`、`manual`、`_telem_and_log`、`new_attempt`）、`run_mission`、`phase_gate` |
+| `modes.py` | 24 | 模式 → 步骤列表 | `MODES` |
+| `runner.py` | 306 | `main()`：飞行主序列 | `main` |
+| `steps/base.py` | 46 | 步骤接口 | `Step`、`StepFail`、`StepBack` |
+| `steps/acquire.py` | 88 | 悬停识别 → 粗估 | `Acquire` |
+| `steps/plan_dash.py` | 55 | 规划 + 降速 | `make_plan`、`PlanDash` |
+| `steps/reposition.py` | 94 | 移动 / 转头 | `move_to`、`turn_to`、`Reposition` |
+| `steps/align.py` | 107 | 取样锁定 | `align_lock`、`Align`、`AlignHere` |
+| `steps/commit.py` | 69 | 等 G | `Commit` |
+| `steps/dash.py` | 86 | 冲刺、制动、卡纸 | `Dash`（`committed = True`） |
+| `steps/shadow.py` | 27 | 影子收尾 | `Shadow` |
+| `steps/standoff.py` | 136 | 停靠 | `StandOff`、`Hold` |
+
+### `vb09/profile/`：现场档案
+
+| 文件 | 行 | 做什么 | 关键符号 |
+|---|---|---|---|
+| `core.py` | 804 | 通用：档案解析和格式化、`--set`、setup / finalize、JSON、核对表 | `parse_conf_text`、`format_conf`、`schema_json`（网页表单）、`build_overrides`、`setup`、`finalize`、`derived_snapshot`、`SAFETY_RULES`、`POSITIVE_PARAMS`、`SCENE_TABLE` |
+| `gate.py` | 496 | 穿环：旋钮表、旋钮 → 参数、校验、派生、打印 | `GATE_KNOBS`、`MODE_NAMES`、`GATE_KNOB_PARAM`、`GATE_SAFETY_RULES`、`_build_gate_overrides`、`_check_gate`、`_derived_gate`、`_gate_lines` |
+
+### `vb09/monitor/`：网页后端
+
+| 文件 | 行 | 做什么 | 关键符号 |
+|---|---|---|---|
+| `common.py` | 123 | 找飞行脚本、任务表 | `SCRIPT_RE`、`discover_scripts`、`script_for` |
+| `store.py` | 287 | ROS 数据缓存、频率统计、遥测环形缓冲 | `Store`（`set_*`、`snapshot`）、`STORE` |
+| `ros.py` | 190 | 订阅各话题写进 STORE | `start_ros` |
+| `checks.py` | 419 | 机况检查、文件与路径 | `run_checks`、`gate_checks`、`camera_check`、`paths_info` |
+| `launcher.py` + `fly.sh.tmpl` | 343 | dry-run 预览、保存档案、生成 fly.sh | `dry_run`、`save_site`、`write_launcher`、`regen_launcher` |
+| `logs.py` | 58 | 回放接口 | `list_logs`、`read_log` |
+| `fake.py` | 417 | `--fake` 假数据（假飞机 + 假识别画面） | `start_fake_gate` |
+
+### `vb09/web/`：网页（普通 `<script>` 按顺序加载，共享全局作用域）
+
+| 文件 | 行 | 做什么 | 关键符号 |
+|---|---|---|---|
+| `monitor.html` / `monitor.css` | 525 / — | 页面骨架、样式 | |
+| `core.js` | 133 | 全局状态 `S`、工具函数、`SEG` / `PHASE` 中文表 | `fx`、`nz`、`P()` 参数、`tel()` |
+| `kinds/ring.js` | 116 | 环的几何和数据来源 | `gateAxes`、`toPlane`、`gatePerceived`、`gateUsed`、`gateNow` |
+| `live.js` | 295 | 轮询 `/api/state` 和 `/api/stream`，顶栏状态标签、提示行 | `pollStream`、`pollState`、`setChip`、`updateHint`、`onState` |
+| `views/monitor.js` | 679 | 监控页：俯视图、姿态、高度、安全余量、穿环卡片、靶面视图、曲线 | `drawTop`、`renderGate`、`drawTarget`、`renderSafety` |
+| `views/detail.js` | 86 | 详情页、事件 | `renderDetail`、`addEvent` |
+| `views/checks.js` | 22 | 机况检查页 | `pollChecks` |
+| `views/config.js` | 441 | 起飞配置：表单、预览、保存、fly.sh | `buildForm`、`readKnobs`、`initConfig` |
+| `views/help.js` | 54 | 帮助页 | |
+| `views/cam.js` | 313 | 识别画面 + 叠加 | `camLoop`、`renderGateDet`、`drawCamOverlay` |
+| `ui.js` | 53 | 卡片收起、文件路径 | |
+| `views/replay.js` | 269 | 回放 | `loadFlight`、`renderReplay` |
+| `main.js` | 82 | 标签页、主题、启动 | |
+
+### `tools/` 和 `sim/`
+
+| 文件 | 做什么 |
+|---|---|
+| `tools/baseline/run_all.py` | 跑全部等价基线（`--quick` 不跑 sim） |
+| `tools/baseline/dryrun_dump.py` | 所有档案的 `--dry-run`（JSON + 文本）。`EXPECT_CHANGED`、`_NEW_KEY` 在这里 |
+| `tools/baseline/plan_grid.py` | `gate_plan` 参数扫描 |
+| `tools/baseline/det_replay.py` / `fuse_replay.py` / `judge_replay.py` | 检测 / 融合 / 判定回放；`synth.py` 生成合成双目 |
+| `tools/baseline/sim_check.py` | `sim/run_sim.py` 10 个场景并行跑，按容差和 golden 比 |
+| `tools/baseline/runtime_dump.py` | site_config.txt、config 消息、csv 列名。`_intended` 在这里 |
+| `tools/baseline/log_compare.py` | 日志模板和 e6b73cb 比 |
+| `tools/baseline/sites/*.conf`、`golden/` | 用例档案、基线结果 |
+| `tools/calib_check.py` / `geom_check.py` / `py38_check.py` | 标定读取 / Python 和 JS 坐标对拍 / 3.8 语法 |
+| `tools/dev/js_check.py`、`page_check.js` | 网页语法 / 无头浏览器冒烟 |
+| `tools/dev/qualify.py`、`split_*.py`、`stepify.py`、`api_snapshot.py`、`rep.py` | 重构时用的一次性脚本（AST 改名、切文件），留着备查 |
+| `sim/run_sim.py` + `sim/stubs/` | 离线仿真：桩 rospy + 粗糙的位置环 + 假识别 + 纸 |
+
+---
+
+## B. 调用链
+
+**飞行**
+```
+fly.sh → stage14_mission.py
+  profile.setup(argv, vars(C)) → C.derive() → profile.finalize()   (--dry-run 到此为止)
+  → _terminal_problems() → import vb09.flight → bind_defaults() → runner.main()
+      订阅 → 起线程: setpoint 发布 / safety_monitor / 各 logger / telemetry / status
+      → preflight() → prime → OFFBOARD → arm_with_confirm() → phase_takeoff()
+      → mission.phase_gate() → run_mission(MODES[C.MISSION_MODE])
+            手动段 ─T→ for step: ctx.enter(step); lock = step.run(ctx, lock)   每拍 ctx.tick()
+      → phase_descend() → phase_auto_land() → finally: cleanup_decision()
+目标数据: /gate/status → GateInput.on_status → JUDGES["ring"].judge → 滑窗 → 步骤 ctx.gate_in.valid_since() → gp.fuse_samples → Lock
+```
+
+**视觉（gate_gcs）**
+```
+飞机 run_vision.py → vision_bridge.py: NewCam → 降采样并排帧 → zmq 上行
+地面 gcs_gate.py: StereoRig.rectify → GateDetector.process → frame_to_msg + rig_to_msg(rig, cfg) → zmq 下行
+飞机 GateFuseWorker.on_obs: peer_mismatch → frame_from_msg → PoseBuffer.at(t_cap)·T_BC → GateFuser.update
+     → ring_extra → GateOut.emit → /gate/status
+```
+
+**网页**
+```
+flight_monitor.py → ros.start_ros → STORE ← 网页轮询 /api/state、/api/stream
+配置页 → /api/schema (KNOBS) 和 /api/preview → launcher.dry_run (子进程跑入口 --dry-run --json)
+生成 fly.sh → launcher.write_launcher (fly.sh.tmpl, 写入脚本名 + SHA)
+```
+
+---
+
+## C. 想改 X → 先看哪里
+
+| 想改 | 文件 |
+|---|---|
+| 某个参数的默认值 | `vb09/flight/config.py`（检测参数：`perception/ring/config.py`，会触发版本检查） |
+| 档案里能写什么、网页表单 | `profile/gate.py` `GATE_KNOBS` |
+| 档案校验 / 拒绝 / 警告 | `profile/gate.py` `_check_gate`；通用部分在 `profile/core.py` |
+| dry-run / site_config 核对表文字 | `profile/gate.py` `_gate_lines` |
+| 冲刺几何（起跑点、刹车、降速） | `gate_plan.py` |
+| 某一段的飞行行为 | `vb09/flight/steps/<段>.py` |
+| 段的顺序 / 新模式 | `vb09/flight/modes.py` |
+| 手动段按键 / 回手动段 / 收尾悬停 | `vb09/flight/mission.py` `manual`、`run_mission` |
+| 停桨、围栏、包络 | `flight/safety.py`、`config.derive()` 的 `PHASE_ENVELOPE` |
+| 起飞前检查 | `flight/preflight.py` |
+| 起飞 / 降落 / 接管 / cleanup | `flight/phases.py`、`flight/runner.py` |
+| 遥测 gate 段 / gate.csv | `flight/mission.py` `_telem_and_log`；gate.csv 列名在 `flight/log.py` |
+| 一帧识别能不能用（拒绝原因） | `perception/ring/judge.py` |
+| 检测算法 | `perception/ring/det2d.py`、`geom3d.py`、`detect.py` |
+| 世界系估计 / σ / 重置 | `perception/ring/fusion.py`、`vision_bridge.py` `_stale` / `_reset_age` |
+| /gate/status 字段 | `vision_bridge.GateOut.emit`、`perception/ring/locate.py` |
+| 相机外参 | `run_vision.py` `CAM`（传给桥的 `_cam_*` 参数） |
+| 标定读取 | `perception/stereo_rig.py` |
+| 地面 HUD / 本地窗口 | `gcs_gate.py` `draw_hud`、`to_canvas` |
+| 机况检查 | `monitor/checks.py` |
+| 网页监控页 / 穿环卡片 | `web/views/monitor.js`（`renderGate`），顶栏在 `web/live.js` |
+| 网页配置页 | `web/views/config.js` |
+| 识别画面叠加 | `web/views/cam.js`、`web/kinds/ring.js` |
+| fly.sh 内容 | `monitor/fly.sh.tmpl`、`monitor/launcher.py` |
+| 飞行脚本怎么被找到 | `monitor/common.py` `SCRIPT_RE` |
 
 ---
 
