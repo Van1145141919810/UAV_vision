@@ -9,7 +9,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 bad = 0
 files = []
-for p in [os.path.join(ROOT, "monitor.html")] + [os.path.join(d, f) for d, _, fs in os.walk(os.path.join(ROOT, "vb09")) for f in fs if f.endswith((".html", ".js"))]:
+for p in [os.path.join(d, f) for d, _, fs in os.walk(os.path.join(ROOT, "vb09")) for f in fs if f.endswith((".html", ".js"))]:
     if not os.path.exists(p):
         continue
     s = open(p, encoding="utf-8").read()

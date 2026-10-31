@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VB09 飞行监控</title>
+<link rel="stylesheet" href="monitor.css">
+</head>
+<body class="cam-off">
+<header>
+  <div class="brand">VB09 飞行监控<span id="mode-tag"></span></div>
+  <nav class="tabs" role="tablist">
+    <button data-tab="mon" class="on">监控</button>
+    <button data-tab="det">详情</button>
+    <button data-tab="rep">回放</button>
+    <button data-tab="chk">机况检查</button>
+    <button data-tab="cfg">起飞配置</button>
+    <button data-tab="help">帮助</button>
+  </nav>
+  <div class="hdr-right">
+    <label class="tgl" title="显示 / 关闭识别画面（快捷键 V）。关闭后完全不请求画面，俯视图放大到左栏">
+      <input type="checkbox" id="cam-sw"><i class="knob"></i><span>识别画面</span></label>
+    <span id="link" class="pill">连接中…</span>
+    <button id="theme" class="icon-btn" title="明 / 暗">◐</button>
+  </div>
+</header>
+
+<section id="strip">
+  <div class="chip big" id="c-data"><label>数据</label><b>—</b><small></small></div>
+  <div class="chip big" id="c-phase"><label>阶段</label><b>—</b><small></small></div>
+  <div class="chip big" id="c-sub"><label>控制权</label><b>—</b><small></small></div>
+  <div class="chip" id="c-loop"><label>保险 1</label><b>—</b></div>
+  <div class="chip" id="c-sim"><label>保险 2</label><b>—</b></div>
+  <div class="chip" id="c-z"><label>Z 环</label><b>—</b></div>
+  <div class="chip" id="c-fc"><label>飞控</label><b>—</b><small></small></div>
+  <div class="chip" id="c-bat"><label>电池</label><b>—</b><small></small></div>
+  <div class="chip" id="c-cfg" title="点这里去「起飞配置」"><label>配置</label><b>—</b><small></small></div>
+  <div class="chip" id="c-sw" title="点这里去「起飞配置」"><label>开关 · 配置</label><b>—</b><small></small></div>
+  <button class="strip-btn" id="strip-mode" title="状态条: 自动 / 全部 / 精简">自动</button>
+</section>
+<div id="hint" class="dim"><span id="hint-t">连接中…</span></div>
+
+<main>
+<!-- ======================= 监控 ======================= -->
+<section id="tab-mon" class="tab on">
+  <div class="col">
+    <div id="slot-main">
+      <div class="card" id="card-cam">
+        <div class="card-h"><h3>识别画面</h3><span id="cam-stat" class="st muted small"></span>
+          <div class="r">
+            <select id="cam-fps" class="sm cam-opt" title="最多每秒几张（链路慢时会自动更慢）">
+              <option value="500">≤2 张/秒</option><option value="200" selected>≤5 张/秒</option>
+              <option value="100">≤10 张/秒</option></select>
+            <select id="cam-q" class="sm" title="画质。全尺寸 = 检测图原尺寸带框；原始 = 飞机发来的 JPEG 原样转发（最清楚，无框）。跨 WiFi 看时选标清">
+              <option value="w=640&amp;q=70">标清</option>
+              <option value="">默认</option>
+              <option value="w=1280&amp;q=85" selected>高清</option>
+              <option value="w=0&amp;q=92">全尺寸</option>
+              <option value="src=raw">原始</option></select>
+            <label class="tgl" title="在画面左下角叠加检测数字（检出 / 距离 / px / rms / 往返）">
+              <input type="checkbox" id="det-sw" checked><i class="knob"></i><span>数据</span></label>
+            <label class="tgl" id="ov-tgl" title="在画面上叠加 环（紫=识别，蓝=脚本锁定）/ 红点 / 计划路径 / 预计穿越点。需要识别程序在 X-Det 里给出这一帧的投影参数 proj（见 INTERFACE_gate.md）">
+              <input type="checkbox" id="ov-sw" checked><i class="knob"></i><span>叠加</span></label>
+            <button class="btn sm cam-opt" id="cam-cfg">地址</button>
+            <button class="btn sm" id="cam-fs" title="全屏看画面（双击画面也行，Esc 退出）">⛶</button>
+            <button class="btn sm" id="cam-swap" title="主次互换：识别画面 ⇄ 俯视图，谁在左边大窗">⇄</button>
+            <button class="btn sm" id="cam-off" title="关闭识别画面（同页头开关 / 快捷键 V）">✕</button>
+          </div></div>
+        <div id="cam-box">
+          <img id="cam-img" alt="">
+          <canvas id="cam-ov"></canvas>
+          <div id="cam-det" hidden></div>
+          <div id="cam-over">连接中…</div>
+          <div id="cam-url-row" hidden>
+            <input type="text" id="cam-url" spellcheck="false" placeholder="http://127.0.0.1:8091/snapshot.jpg">
+            <button class="btn sm" id="cam-url-ok">确定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="card-gate">
+      <div class="card-h"><h3>穿环</h3><span id="gate-src" class="st muted small"></span>
+        <div class="r small muted">靶面 = 从飞机这边看向环</div></div>
+      <div class="gate-body">
+        <div class="cv" id="cvw-tgt"><canvas id="cv-tgt"></canvas></div>
+        <div class="gate-tiles">
+          <div class="tile" id="g-stage"><div class="th"><label>识别</label><b>—</b></div><small></small></div>
+          <div class="tile" id="g-seg"><div class="th"><label>控制段</label><b>—</b></div><small></small></div>
+          <div class="tile" id="g-along"><div class="th"><label>距环平面</label><b class="num">—</b></div><small></small></div>
+          <div class="tile" id="g-off"><div class="th"><label>偏差 横/竖</label><b class="num">—</b></div><small></small></div>
+          <div class="tile" id="g-miss"><div class="th"><label>离红点</label><b class="num">—</b></div><small></small></div>
+          <div class="tile" id="g-sd"><div class="th"><label>环位置 σ</label><b class="num">—</b></div><small></small></div>
+          <div class="tile" id="g-v"><div class="th"><label>沿法向速度</label><b class="num">—</b></div><small></small></div>
+          <div class="tile" id="g-ttc"><div class="th"><label>到环</label><b class="num">—</b></div><small></small></div>
+          <div class="tile" id="g-age"><div class="th"><label>感知</label><b class="num">—</b></div><small></small></div>
+        </div>
+      </div>
+      <div class="counts" id="gate-counts"></div>
+    </div>
+  </div>
+  <div class="col">
+    <div id="slot-side">
+      <div class="card" id="card-top">
+        <div class="card-h"><h3>俯视图</h3><span id="top-info" class="st muted small"></span>
+          <div class="r">
+            <button class="btn sm" id="top-swap" title="主次互换：俯视图 ⇄ 识别画面，谁在左边大窗">⇄</button>
+            <button class="btn sm" id="leg-btn">图例</button>
+            <div class="seg" id="top-mode"><button data-v="fence" class="on">全景</button><button data-v="follow">跟随</button></div>
+          </div></div>
+        <div class="legend-pop" id="legend" hidden>
+          <span><i style="background:var(--text)"></i>飞机（箭头 = 机头）</span>
+          <span><i style="background:var(--sp)"></i>设定点</span>
+          <span><i style="border:1px dashed var(--muted)"></i>水平软限</span>
+          <span><i style="border:1px solid var(--bad)"></i>硬围栏</span>
+          <span><i style="border:1px dashed var(--warn)"></i>当前阶段水平限制</span>
+          <span style="margin-top:4px"><b>穿环</b>：环从上面看是一条线，粗段 = 环带、中间 = 开口</span>
+          <span><i style="background:var(--tgt)"></i>环（识别）　<i style="background:var(--sp)"></i>环（脚本锁定 / 计划路径）</span>
+          <span><i style="background:#e5534b"></i>红点（瞄准点）　箭头 = 法向，指向进近侧　虚线 = 进近走廊</span>
+          <span><i style="background:var(--warn)"></i>制动段（红 = 制动终点出了硬围栏）　✕ = 预计穿越点</span>
+          <span style="margin-top:4px">高度条：蓝带 = 目标 z 门限带；穿环时淡紫带 = 环（深色 = 开口）</span>
+          <span>▶ 飞机 ▷ 设定点 ◆ 目标 ● 进来的 z（<b class="ok">接受</b> <b class="bad">zbad</b> <b class="warn">zflip/jump</b>）</span>
+          <span style="margin-top:4px">姿态球：R = 横滚（右侧下为正） P = 俯仰（机头上为正）</span>
+          <span>红刻度 = 倾角停桨线；外圈按合成倾角变色</span>
+        </div>
+        <div class="topbody">
+          <div class="cv" id="cvw-top"><canvas id="cv-top"></canvas></div>
+          <div class="hcol">
+            <div class="cv" id="cvw-att"><canvas id="cv-att"></canvas></div>
+            <div class="cv" id="cvw-h"><canvas id="cv-h"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="card-saf" style="flex:none">
+      <div class="card-h"><h3>安全余量</h3><span id="saf-src" class="r st muted small"></span></div>
+      <div id="saf-rows"></div>
+    </div>
+    <div class="card" id="card-ev">
+      <div class="card-h"><h3>事件</h3>
+        <label class="r small muted"><input type="checkbox" id="ev-info" checked> INFO</label></div>
+      <ol id="ev-list"></ol>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 详情 ======================= -->
+<section id="tab-det" class="tab">
+  <div class="card">
+    <div class="card-h"><h3>曲线</h3><span id="det-info" class="st muted small"></span>
+      <div class="r"><span class="small muted">时间窗</span>
+        <div class="seg" id="det-win"><button data-v="30">30s</button><button data-v="60" class="on">60s</button><button data-v="120">120s</button></div>
+      </div></div>
+    <div class="det-charts">
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-d"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-z"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-ez"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-age"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-g"></canvas></div></div>
+      <div><span class="lab"></span><div class="cv"><canvas id="dc-v"></canvas></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h3>原始数据</h3><span class="r small muted">飞行脚本遥测原样显示</span></div>
+    <div id="det-raw"></div>
+  </div>
+</section>
+
+<!-- ======================= 回放 (★2026-10-19) ======================= -->
+<section id="tab-rep" class="tab">
+  <div class="card" id="card-rep-list">
+    <div class="card-h"><h3>飞行日志</h3><span id="rep-root" class="st muted small"></span>
+      <div class="r"><button class="btn sm" id="rep-refresh">刷新</button></div></div>
+    <div id="rep-list"><p class="muted small">加载中…</p></div>
+  </div>
+  <div class="card" id="card-rep-main">
+    <div class="card-h"><h3 id="rep-title">回放</h3><span id="rep-info" class="st muted small">左边选一次飞行</span></div>
+    <div class="rep-body">
+      <div class="cv" id="cvw-rtop"><canvas id="rp-top"></canvas></div>
+      <div class="rep-charts">
+        <div><span class="lab">高度（相对第一行）<i style="display:inline-block;width:10px;height:3px;vertical-align:3px;margin:0 3px 0 8px;background:var(--text)"></i>dz
+          <i style="display:inline-block;width:10px;height:3px;vertical-align:3px;margin:0 3px 0 8px;background:var(--info)"></i>水平速度 m/s
+          <span class="dim">· 底色 = 跟踪 / 穿环段</span></span>
+          <div class="cv"><canvas id="rp-c1"></canvas></div></div>
+        <div><div class="row" style="gap:6px;flex:none"><select id="rep-file" class="sm"></select>
+            <span class="small muted">勾选列（最多 4 列，同一坐标轴）</span></div>
+          <div class="rep-cols" id="rep-cols"></div>
+          <div class="cv"><canvas id="rp-c2"></canvas></div></div>
+      </div>
+    </div>
+    <div class="rep-ctl"><button class="btn sm" id="rep-play" title="播放 / 暂停（2 倍速）">▶</button>
+      <input type="range" id="rep-t" min="0" max="1000" value="0">
+      <span id="rep-now" class="num small" style="min-width:300px"></span></div>
+  </div>
+</section>
+
+<!-- ======================= 机况检查 ======================= -->
+<section id="tab-chk" class="tab scroll">
+  <div class="card" style="display:block">
+    <div class="card-h"><h3>机况检查（每秒刷新）</h3><span id="chk-sum"></span></div>
+    <table><thead><tr><th style="width:70px">状态</th><th style="width:190px">项目</th><th>当前</th><th>说明</th></tr></thead>
+      <tbody id="chk-body"></tbody></table>
+    <p class="note">这里只是起飞前的提示。真正的门禁仍然是飞行脚本自己的 preflight —— 不过它会拒绝起飞。<br>
+      飞行必须在 SSH 终端里启动（脚本需要 TTY：键盘急停和断连检测都依赖它）。</p>
+  </div>
+  <div class="card" id="card-paths" style="display:block;margin-top:8px">
+    <div class="card-h"><h3>文件与路径</h3><span id="paths-host" class="r st muted small"></span></div>
+    <table><thead><tr><th style="width:70px">状态</th><th style="width:190px">项目</th><th>路径（→ 软链接实际指向）</th><th>说明</th></tr></thead>
+      <tbody id="paths-body"></tbody></table>
+    <p class="note">全部文件放在同一个文件夹时，只有「现场档案目录」「启动脚本」「飞行日志」在文件夹外面。
+      飞行脚本按文件名 <code>stage&lt;版本号&gt;_&lt;任务&gt;.py</code> 找，取编号最大的（2026-10-30 起只有穿环 <code>_gate</code>，
+      停靠跟踪已删除）。同目录有 <code>flight.py</code> 软链接时只用它。</p>
+  </div>
+</section>
+
+<!-- ======================= 起飞配置 ======================= -->
+<section id="tab-cfg" class="tab">
+  <div class="card">
+    <div id="cfg-armed" class="verdict bad" hidden>飞机已解锁 / 在空中 —— 配置页只读，不能保存档案。</div>
+    <div class="card-h"><h3>现场档案</h3><span id="cfg-dir" class="r st muted small"></span></div>
+    <div class="row">
+      <select id="cfg-base" style="flex:1;width:auto;min-width:0"></select>
+      <button class="btn" id="cfg-load">载入</button>
+      <button class="btn" id="cfg-clear" title="全部清空 = 全用代码默认值">清空</button>
+    </div>
+    <div class="note">空着的项 = 用代码默认值（灰字就是默认值）。<b class="warn">黄框</b> = 和载入的档案不同。</div>
+    <form id="cfg-form" onsubmit="return false"></form>
+    <details>
+      <summary>高级：覆盖原始参数（会写进档案的 set.KEY 行）</summary>
+      <div class="note">每行一个 <code>KEY=VALUE</code>，例如 <code>GATE_HOLD_S=2</code>。
+        只能改大写的数值/开关参数；安全项照样受限。保存时写进档案（<code>set.KEY = VALUE</code>），
+        启动命令只需要 <code>--site 档案名</code>，不会因为少复制一段而悄悄换了配置。</div>
+      <textarea id="cfg-sets" spellcheck="false" placeholder="GATE_SHADOW=True"></textarea>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>预览（飞机上 dry-run 的结果）</h3><span id="pv-time" class="r muted small"></span></div>
+    <div id="pv-verdict" class="verdict busy">等待预览…</div>
+    <ul id="pv-err" class="msgs e"></ul>
+    <ul id="pv-warn" class="msgs w"></ul>
+    <div id="pv-sw"></div>
+    <div class="prev-cv"><div class="cv"><canvas id="pv-top"></canvas></div><div class="cv"><canvas id="pv-h"></canvas></div></div>
+    <dl id="pv-env" class="env" style="margin-top:10px"></dl>
+    <details><summary>实际覆盖的参数（相对代码默认值）</summary><div id="pv-applied" class="kv"></div></details>
+    <details><summary>推导说明</summary><ul id="pv-lines" class="msgs small"></ul></details>
+
+    <div id="sv-box">
+      <div class="row">
+        <button class="btn primary" id="sv-temp"
+          title="只生成 ~/fly.sh，配置写进一个临时文件（每次覆盖），不在档案目录里多出副本">生成启动脚本（不存档案）</button>
+        <span class="small muted" style="flex:1;min-width:160px">临时测试用。想留着下次用再展开下面「存为档案」</span>
+      </div>
+      <details id="sv-more">
+        <summary>存为档案…</summary>
+        <div class="row" style="margin-top:6px">
+          <input type="text" id="sv-name" placeholder="档案名" style="flex:1;width:auto;min-width:120px">
+          <label class="small"><input type="checkbox" id="sv-over"> 覆盖同名</label>
+          <button class="btn" id="sv-btn">保存档案</button>
+          <button class="btn" id="sv-go" title="保存档案, 同时生成 ~/fly.sh: 在普通 SSH 终端里直接运行即可起飞">保存并生成启动脚本</button>
+        </div>
+      </details>
+      <div id="sv-msg" class="small" style="margin-top:6px"></div>
+      <div id="sv-cmds"></div>
+      <div id="ln-box" class="ln"></div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-help" class="tab scroll">
+<div class="help">
+
+  <div class="card">
+    <div class="card-h"><h3>先记住三条</h3></div>
+    <div class="callout"><b>飞行脚本只能在笔记本上新开的「普通」SSH 窗口里运行。</b>
+      tmux / screen / VSCode 内置终端 / 后台运行都会被脚本直接拒绝 ——
+      这些终端在 SSH 断开后不会让脚本收到 EOF，断连自动降落就失效了。<code>--dry-run</code> 不受限制。</div>
+    <div class="callout w"><b>RC 的急停开关是坏的。</b>飞行中的人工通道只有键盘（<kbd>X</kbd> 停桨 / <kbd>L</kbd> 降落）和 QGC。</div>
+    <div class="callout i"><b>这个网页只读。</b>它不能起飞、不发任何控制量；配置页只写档案、只跑 dry-run。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>第一步：飞机上启动底层（每条命令占一个 tmux 窗口）</h3></div>
+    <p class="sub">SSH 上飞机后 <code>tmux new -s base</code>，用 <kbd>Ctrl</kbd>+<kbd>B</kbd> <kbd>C</kbd> 开新窗口，
+      <kbd>Ctrl</kbd>+<kbd>B</kbd> <kbd>数字</kbd> 切换。底层放 tmux 没问题，<b>只有飞行脚本不行</b>。</p>
+
+    <div class="hp-step"><div class="n">1</div><div>
+      <b class="t">MAVROS（连飞控 + 转发给地面站 QGC）</b>
+      <div class="hp-in"><span class="small muted">地面站（跑 QGC 的电脑）IP</span>
+        <input type="text" id="hp-gcs" spellcheck="false" placeholder="192.168.2.179"></div>
+      <div id="hp-c-mavros"></div>
+      <p class="sub">⚠️ <code>gcs_url</code> 里的 IP 要换成你自己电脑的 IP —— 改上面的输入框，命令会跟着变（浏览器会记住）。
+        这条最先起，它会顺带拉起 roscore。</p>
+    </div></div>
+
+    <div class="hp-step"><div class="n">2</div><div>
+      <b class="t">VINS（视觉惯性里程计 —— 没有它就没有位置，进不了 OFFBOARD）</b>
+      <div id="hp-c-vins"></div>
+      <p class="sub">开机自启会崩，必须手动起。起来后等几秒，「机况检查」里 VINS odometry ≥ 8Hz、位姿 ≥ 15Hz。</p>
+    </div></div>
+
+    <div class="hp-step"><div class="n">3</div><div>
+      <b class="t">杀掉 geometric_controller</b>
+      <div id="hp-c-kill"></div>
+      <p class="sub">它开机自启，会往飞控注入竞争设定点（历史 z 轴不稳的根因）。<b>每次开机都要杀</b>，
+        「机况检查」里这一项必须是绿的。</p>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>第二步：监控页 + 视觉链路</h3></div>
+    <div class="hp-step"><div class="n">4</div><div>
+      <b class="t">启动本监控（tmux 里新窗口）</b>
+      <div id="hp-c-mon"></div>
+      <p class="sub">笔记本上开端口映射，然后浏览器打开 <code>http://localhost:8080</code>
+        （VSCode Remote-SSH 的「端口」面板点一下也行）：</p>
+      <div id="hp-c-tunnel"></div>
+      <p class="sub">⚠️ <code>ExitOnForwardFailure=yes</code> 不要省：本地 8080 被占时（旧隧道没关、VSCode 自动转发占了它），
+        ssh 默认只打一行警告还继续连着，浏览器打开的其实是旧隧道 —— 可能是<b>另一架飞机</b>。
+        页头「VB09 飞行监控」后面显示的是这一页对应的飞机主机名，开页先核对。</p>
+      <p class="sub">多台电脑同时看：每台各开一条隧道，互不冲突。同一台电脑看两架飞机：第二条改成
+        <code>-L 8081:127.0.0.1:8080</code>，打开 <code>http://localhost:8081</code>。
+        「起飞配置 → 保存」只让飞手那台用（~/fly.sh 只有一份，谁最后生成就是谁的）。</p>
+      <p class="sub">⚠️ roscore / mavros 重启过的话，本程序要跟着重启（ROS1 不会自动重连），
+        否则页面会一直显示「无数据」。飞机上提示 8080 被占 = 已经有一个监控在跑（<code>tmux ls</code> 找它）。</p>
+    </div></div>
+    <div class="hp-step"><div class="n">5</div><div>
+      <b class="t">视觉链路（新相机）—— 一条命令</b>
+      <p>tmux 新窗口里起图传桥（别关）。桥自己打开新相机、掉线自动重开；老相机只给 VINS，不受影响：</p>
+      <div id="hp-c-bridge"></div>
+      <p class="sub">期望：<code>[cam] 已打开 …STYT…</code> → <code>[cam] 分辨率确认 1920x1080</code>，
+        之后每 2 秒一行 <code>相机 ✓ 10.0fps | 上行 10.0Hz 原样100% …</code>。
+        脚本会先停掉旧的 det_cam_node / 看门狗 / 旧桥（它们会抢相机）；<code>~/tools</code> 那套不用再跑。</p>
+      <p>地面站跑 <code>gcs_aruco_det2.py</code>，终端里应是 <code>上行=1920x1080</code>。</p>
+      <p class="sub">「机况检查 → 识别相机」显示采集帧率、上行帧率、原样转发比例、每张 KB、自动重开次数。
+        没有目标也允许起飞 —— 起飞后先在手动段，看到环后按 <kbd>T</kbd>。</p>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>可选：在「监控」页里看识别画面</h3></div>
+    <p><code>gcs_aruco_det2.py</code> 已经内置预览服务（同目录要有 <code>preview_server.py</code>），默认就开着，
+      地址 <code>http://127.0.0.1:8091/snapshot.jpg</code>。不想要就加 <code>--no-preview</code>。</p>
+    <p class="sub">页头右侧的「识别画面」开关（或快捷键 <kbd>V</kbd>）控制显示 / 关闭画面；关闭后完全不请求。
+      画面打开时左栏是识别画面、俯视图移到右上；关闭后俯视图回到左栏放大。
+      画面卡片里的「数据」开关控制左下角的检测数字（检出 / 相机距 / 标记 px / rms / 往返 / 卡顿），
+      这些数字和画面是同一帧。网页这张图不带 HUD（中文由浏览器渲染）；地面站本地窗口照旧有 HUD。
+      <kbd>⇄</kbd> 把识别画面和俯视图互换（谁在左边大窗），<kbd>⛶</kbd> 或双击画面 = 全屏。
+      没有识别程序时可以先自测：<code>python3 preview_server.py --demo</code>。</p>
+    <p class="sub"><b>画质</b>：标清 640 · 默认（检测程序 <code>--preview-width</code>，960）· 高清 1280 ·
+      全尺寸 1920（检测图原尺寸，带框）· <b>原始</b> = 飞机发来的 JPEG 原样转发（彩色、无框、零重编码，最清楚）。
+      标题栏显示实际分辨率和「上行 KB/张」。<b>「原始」也糊 ⇒ 是飞机端 vision_bridge 压 JPEG 压得太狠</b>
+      （检测、本地窗口、网页看的都是这同一张图），要在飞机端提高 JPEG 质量，网页/地面站这边救不回来。</p>
+    <p class="sub"><b>顶栏状态条</b>：最右边的竖条按钮切换 自动 / 全部 / 精简。精简 = 保险1、保险2、Z环、配置合成一张「开关」卡片；
+      自动 = 窗口宽度不到约 1150px 时自动精简，不到 640px 时再藏掉灰色（当前不适用）的卡片和小字。
+      「阶段」「控制权」任何时候都在；出问题的卡片（黄 / 红）也不会被藏。</p>
+    <p class="sub"><b>俯视图原点</b>：飞行中 = 本次起飞点（飞行脚本 preflight 通过时记下的位置）；
+      没在飞 = 飞机当前位置（就是待会儿的起飞点），所以围栏直接画在飞机周围。卡片标题右边写着当前用的是哪个。</p>
+    <p class="sub"><b>卡片收起</b>：每张卡片标题右边的 <kbd>▾</kbd>（或点标题文字）收起 / 展开，浏览器会记住。
+      收起后同一列的其他卡片（俯视图、事件）自动变大。</p>
+    <table style="margin-top:6px">
+      <thead><tr><th style="width:170px">浏览器在哪台电脑</th><th>怎么设</th><th style="width:150px">占用飞机 AP 带宽</th></tr></thead>
+      <tbody>
+        <tr><td>和识别程序同一台</td><td>默认即可，「地址」留空（= 127.0.0.1:8091）</td><td class="ok">0（走本机回环）</td></tr>
+        <tr><td>另一台电脑</td><td>检测程序加 <code>--preview-host 0.0.0.0 --preview-width 480</code>，地址填
+          <code>http://&lt;识别机IP&gt;:8091/snapshot.jpg</code>，选 ≤2 张/秒</td>
+          <td class="warn">≈0.3 Mbps × 2（经 AP 转一次）</td></tr>
+      </tbody>
+    </table>
+    <p class="sub">画面标题栏实时显示帧龄、张/秒和实际带宽。画面超过 1 秒没更新会盖红色遮罩，
+      不要把冻住的旧图当实时画面。关闭画面、切到别的标签页时完全不请求。
+      8091 被占时检测程序只会关掉预览（终端里有提示），检测照常。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>穿环模式（2026-10-19）</h3></div>
+    <p>监控页左下是「穿环」卡片（2026-10-30 停靠跟踪布局已删除）。脚本没在跑时也会显示 <code>/gate/status</code> 的识别结果 ——
+      悬停等初始识别时就能看环的估计有没有收敛。</p>
+    <ul>
+      <li><b>靶面视图</b>（穿环卡片左边）：站在飞机这边看向环。灰环 = 环带，红点 = 瞄准点，白点 = 飞机现在沿法向的投影，
+        ✕ + 椭圆 = 脚本预计的穿越点和误差。卡片标题旁标着数据来自
+        <span class="src-tag per">感知</span>（bridge 的 /gate/status，网页自己算偏差）还是
+        <span class="src-tag ctl">控制</span>（飞行脚本实际在用的数）。</li>
+      <li><b>俯视图</b>：环从上面看是一条线；箭头是法向（指向进近侧）；虚线 = 进近走廊；黄段 = 制动段，制动终点出了硬围栏会标红。</li>
+      <li><b>画面叠加</b>（识别画面卡片的「叠加」开关）：把识别出的环、红点、计划路径投影回画面。需要识别程序在 X-Det 里给出这一帧的
+        <code>proj</code>（内参 + 相机位姿），没有就不画。<code>python3 flight_monitor.py --fake --fake-task gate</code> 能离线看效果：
+        叠加的紫色环应当和假画面里的红环基本重合。</li>
+      <li><b>回放</b>页：读飞机上 <code>~/uav_logs</code> 的 csv（只读），按时间拖动看轨迹和任意列的曲线。冲刺只有一两秒，复盘主要靠它。</li>
+      <li><b>机况检查</b>新增：任务 / 图传是否配套、环识别、<b>PX4 机动参数</b>。
+        PX4 默认 <code>MPC_TILTMAX_AIR = 45°</code>，而飞行脚本倾角超过 30° 持续 0.25 s 就空中停桨 ——
+        冲刺急刹时 PX4 自己就可能把飞机倾过这条线，冲之前先改。按 G 之后到刹停悬停结束，停桨线换成
+        <code>GATE_DASH_TILT_DEG</code>（默认 45° 持续 0.3 s），撞纸的短时大倾角不会停桨。</li>
+    </ul>
+    <p><b>飞行脚本 stage14_mission.py</b>（原 stage12_gate.py；同目录还要有 <code>gate_plan.py</code> 和 <code>vb09/</code>）：档案里写 <code>task = 穿环</code>，
+      流程：起飞 → <b>手动段</b>
+      （WASD 平移 / R F 升降 / Q E 转向 / 空格悬停，把飞机开到想起跑的地方）→ <b>按 T</b> 找环 → 规划 →
+      摆到起跑点 → 取样锁定 → <b>在飞行终端按 G</b> 冲刺 → 刹停 → 原地降落。
+      起跑点是动态的：离环在 [最小助跑, <code>run_max</code>] 之间就地起跑，近了后退、远了前进。
+      冲刺前锁不住 / 不可行 / 没按 G，或者按 <b>M</b> / 任一方向键 → 回手动段，可以再按 T；L = 降落。
+      冲刺中只有 X（停桨）立即生效，L / 断连等刹停后再降。
+      测试顺序：<code>set.GATE_SHADOW = True</code>（影子：不摆位不冲刺）→ <code>set.GATE_VIRTUAL_OFFSET = 2.0</code>
+      （虚拟环：真冲刺，停在纸前）→ 正式。视觉链路用 <code>python3 run_vision.py gate_gcs</code>（模式必须写）。
+      档案 <code>mode = 冲刺 / 影子</code> 选任务模式（旧写法 <code>set.GATE_SHADOW = True</code> 等同于影子）。网页用编号最大的 <code>stageNN_mission.py</code>。</p>
+    <p class="sub">各字段的含义、坐标约定（靶面 h/v、法向朝向）、bridge / 地面程序 / 新飞行脚本各要补什么，见同目录
+      <code>INTERFACE_gate.md</code>。缺字段时网页会降级显示，机况检查「环识别」一行会说缺了什么。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>第三步：起飞前检查和配置（在本网页里）</h3></div>
+    <div class="hp-step"><div class="n">6</div><div>
+      <b class="t">「机况检查」页：所有「不通过」都处理掉</b>
+      <p class="sub">重点看 geometric_controller、设定点话题、MAVROS、VINS、静止漂移（飞机放平别碰）、电池。</p>
+    </div></div>
+    <div class="hp-step"><div class="n">7</div><div>
+      <b class="t">「起飞配置」页：选档案 → 改旋钮 → 右侧显示「✓ 校验通过」→ 生成启动脚本</b>
+      <p class="sub">空着的项用代码默认值。校验通过的那套会立刻成为「监控」页俯视图 / 高度条 / 安全余量的参考配置
+        （顶栏「配置」卡片显示它的名字，点卡片回到这里）；飞行脚本一启动就换成脚本实际生效的那套。
+        临时测试点「生成启动脚本（不存档案）」，不会在档案目录里多出副本；要留着下次用再展开「存为档案」。</p>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>第四步：起飞（笔记本上新开一个普通终端：PowerShell / Windows Terminal）</h3></div>
+    <div class="hp-in"><span class="small muted">飞机 IP</span>
+      <input type="text" id="hp-ip" spellcheck="false" placeholder="192.168.2.20">
+      <span class="small muted">档案</span>
+      <select id="hp-site"></select></div>
+    <div class="hp-step"><div class="n">8</div><div>
+      <b class="t">登录飞机（不要进 tmux）</b>
+      <div id="hp-c-ssh"></div>
+    </div></div>
+    <div class="hp-step"><div class="n">9</div><div>
+      <b class="t">先核对：打印生效包络，不起飞（这一步在哪都能跑）</b>
+      <div id="hp-c-dry"></div>
+    </div></div>
+    <div class="hp-step"><div class="n">10</div><div>
+      <b class="t">起飞</b>
+      <p class="sub">推荐：在「起飞配置」点「生成启动脚本」（不存档案 / 或存为档案再生成），然后直接运行它（生成超过 60 秒、
+        或配置 / 飞行脚本在生成后被改过，会先列出配置内容并要求输入 <kbd>yes</kbd>；临时配置每次都会先把内容打出来）：</p>
+      <div id="hp-c-fly2"></div>
+      <p class="sub">或者手动带参数启动：</p>
+      <div id="hp-c-fly"></div>
+      <p class="sub">脚本会做 6 项起飞前检查、打印参数摘要，2 秒后自动切 OFFBOARD、解锁、起飞。
+        起飞前 <kbd>Ctrl</kbd>+<kbd>C</kbd> 可以中止；空中 <kbd>Ctrl</kbd>+<kbd>C</kbd> 会交给 PX4 自动降落（不停桨）。
+        之后在本网页「监控」页看实时状态。</p>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>飞行流程和按键（按键在飞行终端里按）</h3></div>
+    <div class="flow"><span>起飞</span><i>→</i><span>手动段</span><i>→</i><span>T 找环 / 规划</span><i>→</i>
+      <span>摆位 / 锁定</span><i>→</i><span>G 冲刺</span><i>→</i><span>制动 / 悬停</span><i>→</i><span>原地降落</span></div>
+    <table style="margin-top:10px">
+      <thead><tr><th style="width:110px">按键</th><th>手动段</th><th>冲刺前（找环 / 摆位 / 锁定 / 等确认）</th><th>冲刺中</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>W</kbd><kbd>S</kbd><kbd>A</kbd><kbd>D</kbd></td><td>机头方向 前 / 后 / 左 / 右</td><td>回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>R</kbd><kbd>F</kbd></td><td>升 / 降</td><td>回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>Q</kbd><kbd>E</kbd></td><td>左转 / 右转</td><td>回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>空格</kbd></td><td>原地悬停</td><td>回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>T</kbd></td><td>开始找环 / 规划</td><td class="muted">—</td><td class="muted">—</td></tr>
+        <tr><td><kbd>M</kbd></td><td class="muted">—</td><td>不冲了，回手动段</td><td class="muted">无效</td></tr>
+        <tr><td><kbd>G</kbd> / <kbd>Y</kbd></td><td class="muted">—</td><td>确认冲刺（降速了只认 Y）</td><td class="muted">—</td></tr>
+        <tr><td><kbd>L</kbd></td><td>就地降落</td><td>就地降落</td><td>记下，刹停后再降</td></tr>
+        <tr><td><kbd>X</kbd></td><td colspan="3"><b class="bad">紧急停桨（空中也会立刻停 = 掉下来），最后手段</b></td></tr>
+      </tbody>
+    </table>
+    <ul class="small">
+      <li>手动段：松键 0.3s 自动停；<code>GATE_MANUAL_TIMEOUT</code>（默认 120s）一个键都没按 → 降落。</li>
+      <li>冲刺前放弃（锁不住 / 不可行 / G 超时）→ 回手动段，可以再按 T。</li>
+      <li>SSH 断开（普通终端才有效）→ 就地降落；冲刺中断开 → 刹停后再降。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>出事怎么办</h3></div>
+    <table>
+      <thead><tr><th style="width:200px">情况</th><th>做法</th></tr></thead>
+      <tbody>
+        <tr><td>想马上降下来</td><td>按 <kbd>L</kbd>（就地缓降 → AUTO.LAND）</td></tr>
+        <tr><td>姿态失控 / 要撞人撞物</td><td>按 <kbd>X</kbd>：立即停桨，飞机会掉下来</td></tr>
+        <tr><td>键盘没反应 / SSH 卡死</td><td>QGC 切 Land，必要时 QGC Kill</td></tr>
+        <tr><td>用 QGC / 遥控切走了模式</td><td>脚本进入「飞手接管」：不再切模式、不停桨，只发原地悬停设定点，等你把飞机降下来上锁后自己退出。
+          此时只有 <kbd>X</kbd> 还有效；<kbd>Ctrl</kbd>+<kbd>C</kbd> 只退出脚本、不动电机。
+          如果又切回 OFFBOARD，飞机原地悬停，用 QGC 切 Land 降落</td></tr>
+        <tr><td>空中按了 <kbd>Ctrl</kbd>+<kbd>C</kbd> / 脚本报错退出</td><td>不会停桨：脚本请求 PX4 AUTO.LAND 后退出，PX4 自己降。
+          终端会打印是否切换成功，没成功就立刻用 QGC 切 Land</td></tr>
+        <tr><td>脚本自己触发了「缓降」</td><td>正常现象：VIO 老化、视觉断供、速度/围栏超限、电压低都会就地缓降（返航途中也一样）。看「监控」页横幅和事件里的原因</td></tr>
+        <tr><td>脚本自己触发了「停桨」</td><td>只有三种来源：倾角持续超限、MAVROS 断链、操作员按 <kbd>X</kbd>。复盘看日志</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>飞完 / 常见问题</h3></div>
+    <ul>
+      <li>日志在 <code>~/uav_logs/flight_NNNN/</code>：<code>flight_log.csv</code> 主日志、<code>gate.csv</code> 穿环段、
+        <code>site_config.txt</code> 本次生效的全部参数（复盘先看它）。</li>
+      <li><b>看得到环却一直不锁定</b>：飞行终端的 <code>[manual]</code> / <code>[wait]</code> 行会写「识别到了但单帧被拒: …」，
+        说明卡在哪道门（σ / 距离 / 斜视角）。</li>
+      <li><b>飞行脚本说「拒绝起飞: 检测到在 tmux 里运行」</b>：照提示在笔记本新开普通终端再 ssh 上去跑。</li>
+      <li><b>飞行脚本说「不认识的参数」</b>：命令拼错了（比如 <code>--dryrun</code>）。以前这种情况会被当成真飞。</li>
+      <li><b>本页一直「无数据」但飞机正常</b>：roscore / mavros 重启过，重启本监控。</li>
+      <li><b>dry-run 报错</b>：错误信息就是原因，逐条改档案。校验不过一律拒绝起飞，没有绕过开关。</li>
+    </ul>
+  </div>
+
+</div>
+</section>
+
+</main>
+
+<!-- 2026-10-30: 脚本拆到 vb09/web/ (按这个顺序加载, 顺序不能乱: 后面的文件在顶层用到前面的名字) -->
+<script src="core.js"></script>
+<script src="kinds/ring.js"></script>
+<script src="live.js"></script>
+<script src="views/monitor.js"></script>
+<script src="views/detail.js"></script>
+<script src="views/checks.js"></script>
+<script src="views/config.js"></script>
+<script src="views/help.js"></script>
+<script src="views/cam.js"></script>
+<script src="ui.js"></script>
+<script src="views/replay.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

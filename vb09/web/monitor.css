@@ -1,0 +1,359 @@
+/* 纯本地: 不加载任何外部资源 (外场没网) */
+:root{
+  --bg:#0e1116; --panel:#151a20; --panel2:#1b222a; --line:#29313b; --line2:#353f4b;
+  --text:#e6edf3; --muted:#8b98a5; --dim:#5d6875;
+  --ok:#3fb950; --warn:#d29922; --bad:#f85149; --info:#58a6ff; --tgt:#c297ff; --sp:#79c0ff;
+  --ok-bg:rgba(63,185,80,.14); --warn-bg:rgba(210,153,34,.16); --bad-bg:rgba(248,81,73,.16); --info-bg:rgba(88,166,255,.13);
+  --band:rgba(88,166,255,.16); --shell:rgba(63,185,80,.20); --grid:#222a33;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"SFMono-Regular",monospace;
+  --sans:system-ui,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  --side:clamp(360px,31vw,560px);
+}
+:root[data-theme="light"]{
+  --bg:#eef1f4; --panel:#ffffff; --panel2:#f6f8fa; --line:#d6dce2; --line2:#c3ccd5;
+  --text:#1f2328; --muted:#57606a; --dim:#8c959f;
+  --ok:#1a7f37; --warn:#9a6700; --bad:#cf222e; --info:#0969da; --tgt:#8250df; --sp:#0550ae;
+  --ok-bg:rgba(26,127,55,.10); --warn-bg:rgba(154,103,0,.12); --bad-bg:rgba(207,34,46,.10); --info-bg:rgba(9,105,218,.09);
+  --band:rgba(9,105,218,.12); --shell:rgba(26,127,55,.16); --grid:#e4e8ec;
+}
+*{box-sizing:border-box}
+/* ★ 整页固定一屏: 只有指定的区域 (事件列表 / 文档类标签页) 自己内部滚动 */
+html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--bg);color:var(--text);font:14px/1.45 var(--sans);
+  display:grid;grid-template-rows:auto auto auto minmax(0,1fr)}
+button,input,select,textarea{font:inherit;color:inherit}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .small{font-size:12px} .dim{color:var(--dim)}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)} .info{color:var(--info)}
+[hidden]{display:none!important}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:14px;padding:6px 12px;background:var(--panel);
+  border-bottom:1px solid var(--line);min-width:0}
+.brand{font-weight:650;letter-spacing:.02em;white-space:nowrap}
+.brand span{color:var(--muted);font-weight:400;margin-left:6px}
+.tabs{display:flex;gap:2px;background:var(--panel2);padding:3px;border-radius:8px;border:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:4px 13px;border-radius:6px;cursor:pointer;color:var(--muted);white-space:nowrap}
+.tabs button.on{background:var(--panel);color:var(--text);box-shadow:0 0 0 1px var(--line2)}
+.hdr-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.pill{padding:3px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line2);white-space:nowrap}
+.pill.ok{background:var(--ok-bg);border-color:transparent} .pill.bad{background:var(--bad-bg);border-color:transparent}
+.icon-btn{border:1px solid var(--line2);background:var(--panel2);border-radius:6px;padding:2px 9px;cursor:pointer}
+
+/* ---------- 状态条: 永远一行 ---------- */
+#strip{display:flex;gap:6px;padding:6px 10px;overflow:hidden;border-bottom:1px solid var(--line)}
+.chip{flex:1 1 0;min-width:0;display:flex;flex-direction:column;padding:3px 9px;border-radius:7px;
+  background:var(--panel);border:1px solid var(--line)}
+.chip label{font-size:10.5px;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.chip b,.chip small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip b{font-weight:600;font-size:14px}
+.chip.big{flex-grow:1.4} .chip.big b{font-size:16px}
+.chip small{font-size:11px;color:var(--muted)}
+.chip.s-ok{border-color:var(--ok);background:var(--ok-bg)} .chip.s-ok b{color:var(--ok)}
+.chip.s-warn{border-color:var(--warn);background:var(--warn-bg)} .chip.s-warn b{color:var(--warn)}
+.chip.s-bad{border-color:var(--bad);background:var(--bad-bg)} .chip.s-bad b{color:var(--bad)}
+.chip.s-info{border-color:var(--info);background:var(--info-bg)} .chip.s-info b{color:var(--info)}
+.chip.s-dim{opacity:.55}
+#c-cfg,#c-sw{cursor:pointer}
+#c-cfg:hover,#c-sw:hover{border-color:var(--info)}
+/* ★2026-10-12 状态条收起: 右端按钮 自动 / 全部 / 精简
+   c1 (精简, 或自动且宽 <1150px): 保险1/保险2/Z环/配置 合并成一张「开关」卡片
+   c2 (宽 <640px, 「全部」模式除外): 再藏起灰掉的卡片和小字;
+       「数据」只在出问题(黄/红)时出现。
+       ★「阶段」「控制权」是飞行关键, 任何模式都不藏 (脚本没跑时显示灰色的 —, 位置不变,
+         飞行中也不会因为它们出现/消失而让别的卡片跳来跳去)。 */
+#c-sw{display:none}
+#strip.c1 #c-loop,#strip.c1 #c-sim,#strip.c1 #c-z,#strip.c1 #c-cfg{display:none}
+#strip.c1 #c-sw{display:flex}
+#strip.c2 .chip.s-dim:not(#c-phase):not(#c-sub):not(#c-sw){display:none}
+#strip.c2 #c-data:not(.s-warn):not(.s-bad){display:none}
+#strip.c2 .chip small{display:none}
+#strip.c2 .chip.big b{font-size:14px}
+#strip.c2 .chip{padding:3px 7px}
+#strip.c2 .chip.big{flex-grow:1.2}
+#strip.c2 #c-bat{flex:none}                       /* 电压数字不许被截断 */
+/* c3 (宽 <480px): 「开关」只在出现假数据可驱动(红)时出现 —— 实闭环/影子已经写在下面提示行里 */
+#strip.c3 #c-sw:not(.s-bad){display:none}
+.strip-btn{flex:none;align-self:stretch;writing-mode:vertical-rl;letter-spacing:.1em;font-size:11px;
+  border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:7px;
+  padding:4px 2px;cursor:pointer}
+.strip-btn:hover{color:var(--text);border-color:var(--info)}
+/* 页头在窄窗口里也别挤成两行 */
+.brand{min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:860px){
+  header{gap:8px;padding:6px 8px}
+  .brand span,.hdr-right .tgl span{display:none}
+  .tabs button{padding:4px 8px}
+}
+@media (max-width:520px){
+  header{gap:6px}
+  .brand{flex:0 1 auto;font-size:13px}
+  .tabs button{padding:3px 6px;font-size:13px}
+  .hdr-right{gap:6px}
+  #link.ok{display:none}            /* 连着就不占地方; 断开时红色照样显示, 下面提示行也会变红 */
+}
+
+/* ---------- 提示 / 告警行: 固定高度, 出现告警时不会把下面挤下去 ---------- */
+#hint{height:30px;display:flex;align-items:center;gap:8px;padding:0 12px;font-weight:600;font-size:13.5px;
+  border-bottom:1px solid var(--line);background:var(--panel);overflow:hidden}
+#hint span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hint.bad{background:var(--bad-bg);color:var(--bad)} #hint.warn{background:var(--warn-bg);color:var(--warn)}
+#hint.info{color:var(--info)} #hint.ok{color:var(--ok)} #hint.dim{color:var(--muted);font-weight:400}
+body.stale #tab-mon,body.stale #tab-det{opacity:.45;filter:grayscale(.6)}
+
+/* ---------- 主区 ---------- */
+main{min-height:0;min-width:0;padding:8px 10px;overflow:hidden}
+.tab{display:none;height:100%;min-height:0;min-width:0}
+.tab.on{display:block}
+.tab.scroll{overflow:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 10px;
+  min-width:0;min-height:0;display:flex;flex-direction:column;position:relative}
+.card-h{flex:none;display:flex;align-items:center;gap:8px;min-height:24px;margin-bottom:4px;min-width:0}
+.card-h h3{margin:0;font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.05em;white-space:nowrap}
+.card-h .r{margin-left:auto;display:flex;gap:6px;align-items:center}
+.card-h .st{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* 画布永远填满它的容器 —— 尺寸由布局决定, 不再写死像素 */
+.cv{position:relative;flex:1 1 0;min-height:0;min-width:0}
+.cv>canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.btn{border:1px solid var(--line2);background:var(--panel2);padding:3px 10px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--info)}
+.btn.primary{background:var(--info);border-color:var(--info);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:1px 8px;font-size:12px}
+select,input[type=number],input[type=text],textarea{background:var(--panel2);border:1px solid var(--line2);border-radius:6px;padding:4px 8px;width:100%}
+select.sm{width:auto;padding:1px 6px;font-size:12px}
+.seg{display:flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:var(--panel2);padding:1px 9px;cursor:pointer;color:var(--muted);font-size:12px}
+.seg button.on{background:var(--info-bg);color:var(--info)}
+
+/* ================== 监控页 ==================
+   左栏: [识别画面 或 俯视图] + 穿环卡片
+   右栏: [俯视图 (画面开着时)] + 安全余量 + 事件
+   识别画面收起时, 俯视图搬到左栏放大, 右栏只剩安全余量和事件。 */
+#tab-mon.on{display:grid;grid-template-columns:minmax(0,1fr) var(--side);gap:8px}
+.col{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
+#slot-main{flex:1 1 0;min-height:0;display:flex}
+#slot-side{flex:3 1 0;min-height:150px;display:flex}
+#slot-main>.card,#slot-side>.card{flex:1 1 auto}
+#card-ev{flex:2 1 0;min-height:84px}
+body.cam-off #slot-side{display:none}
+body.cam-off #card-ev{flex:1 1 0}
+
+/* 识别画面 */
+#cam-box{position:relative;flex:1 1 0;min-height:0;background:#000;border-radius:7px;overflow:hidden}
+#cam-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+#cam-over{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+  padding:12px;color:#fff;font-weight:600;background:rgba(0,0,0,.55);white-space:pre-line}
+#cam-over.stale{background:rgba(207,34,46,.45)}
+#cam-url-row{position:absolute;left:8px;right:8px;top:8px;z-index:2;display:flex;gap:6px;align-items:center;
+  background:var(--panel);border:1px solid var(--line2);border-radius:8px;padding:6px}
+#cam-url-row input{flex:1}
+/* 画面上叠加的检测数字 (来自 preview_server 的 X-Det 头, 和画面同一帧) */
+#cam-det{position:absolute;left:8px;bottom:8px;max-width:calc(100% - 16px);padding:3px 9px;border-radius:6px;
+  background:rgba(0,0,0,.65);font:12px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:1}
+
+/* 开关 (页头「识别画面」、画面卡片「数据」) */
+.tgl{position:relative;display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;
+  font-size:12.5px;color:var(--muted);white-space:nowrap}
+.tgl input{position:absolute;opacity:0;width:0;height:0;margin:0}
+.tgl .knob{position:relative;flex:none;width:30px;height:17px;border-radius:999px;background:var(--line2);transition:background .15s}
+.tgl .knob::after{content:"";position:absolute;left:2px;top:2px;width:13px;height:13px;border-radius:50%;
+  background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.35)}
+.tgl input:checked+.knob{background:var(--info)}
+.tgl input:checked+.knob::after{transform:translateX(13px)}
+.tgl input:checked~span{color:var(--text)}
+.tgl input:focus-visible+.knob{outline:2px solid var(--info);outline-offset:2px}
+/* 识别画面全屏 (⛶ 或双击画面) */
+#cam-box:fullscreen{border-radius:0;background:#000}
+#cam-box:fullscreen #cam-det{font-size:15px;left:14px;bottom:14px}
+/* 画面卡片在右侧小窗时, 收掉次要控件 (帧率 / 地址 / 状态文字), 留 画质·数据·⛶·⇄·✕ */
+#slot-side #card-cam .cam-opt,#slot-side #card-cam #cam-stat{display:none}
+body.cam-off #top-swap{display:none}
+
+/* ---------- 卡片收起 (每张卡片标题右边的 ▾, 或点标题) ---------- */
+.card-h h3{cursor:pointer;user-select:none}
+.card-h .fold{flex:none;border:0;background:none;color:var(--muted);cursor:pointer;font-size:13px;
+  line-height:1;padding:3px 5px;border-radius:5px;margin-left:4px}
+.card-h .fold:hover{background:var(--panel2);color:var(--text)}
+.card.collapsed{flex:none!important;min-height:0!important;height:auto!important}
+#tab-det .card.collapsed,#tab-cfg .card.collapsed{align-self:start}   /* 网格里别被拉高; 列里保持满宽 */
+#slot-main>.card.collapsed,#slot-side>.card.collapsed{flex:1 1 auto!important}  /* 槽位是横向 flex: 收起后仍占满宽 */
+.card.collapsed>*:not(.card-h){display:none!important}
+.card.collapsed>.card-h{margin-bottom:0}
+/* 槽位里没有"可见且展开"的卡片 → 槽位让出空间给同一列的其他卡片 */
+#slot-main:not(:has(>.card:not([hidden]):not(.collapsed))),
+#slot-side:not(:has(>.card:not([hidden]):not(.collapsed))){flex:none;min-height:0}
+#card-ev.collapsed{flex:none}
+
+/* 俯视图 + 高度条 */
+.topbody{flex:1 1 0;min-height:0;display:flex;gap:8px}
+/* 右侧一列: 姿态球 (上) + 高度条 (下) */
+.hcol{flex:none;width:clamp(112px,9vw,150px);display:flex;flex-direction:column;gap:6px;min-height:0}
+#cvw-att{flex:none;aspect-ratio:1/1.25;max-height:62%}
+#cvw-h{flex:1 1 0;min-height:60px}
+.legend-pop{position:absolute;right:10px;top:34px;z-index:3;background:var(--panel);border:1px solid var(--line2);
+  border-radius:8px;padding:8px 10px;font-size:12px;color:var(--muted);display:grid;gap:3px;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+.legend-pop i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* 安全余量 */
+.srow{display:grid;grid-template-columns:86px minmax(0,1fr) 108px;gap:8px;align-items:center;height:20px}
+.srow .lbl{font-size:12.5px;white-space:nowrap;overflow:hidden}
+.srow .lbl em{font-style:normal;font-size:10px;color:var(--muted);margin-left:3px}
+.bar{position:relative;height:9px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--ok);transition:width .2s}
+.bar.warn>i{background:var(--warn)} .bar.bad>i{background:var(--bad)}
+.bar.obs{box-shadow:0 0 0 2px var(--warn);animation:blink .8s steps(2) infinite}
+@keyframes blink{50%{box-shadow:0 0 0 2px transparent}}
+.srow .val{text-align:right;font-size:11.5px;white-space:nowrap;overflow:hidden}
+.srow.na{opacity:.4}
+
+/* 卡片里的数字格 (穿环卡片用) */
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px 8px;min-width:0;display:flex;flex-direction:column}
+.tile .th{display:flex;align-items:baseline;gap:6px;min-width:0}
+.tile label{font-size:11px;color:var(--muted);white-space:nowrap}
+.tile b{font-size:16px;font-weight:600;margin-left:auto;white-space:nowrap}
+.tile small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.spark{height:74px} .tile.spark .cv{margin-top:2px}
+.tile.ok{border-color:var(--ok)} .tile.warn{border-color:var(--warn)} .tile.bad{border-color:var(--bad)}
+.counts{display:flex;flex-wrap:nowrap;gap:4px 12px;font-size:12px;margin-top:5px;white-space:nowrap;overflow:hidden}
+.counts span b{font-family:var(--mono)}
+
+/* ★2026-10-19 穿环卡片: 高度固定 */
+#card-gate{flex:none}
+.gate-body{display:grid;grid-template-columns:minmax(170px,32%) minmax(0,1fr);gap:8px}
+#cvw-tgt{flex:none;height:178px;background:var(--panel2);border:1px solid var(--line);border-radius:7px}
+.gate-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-content:start}
+.gate-tiles .tile{height:54px}
+#card-gate.idle .gate-tiles,#card-gate.idle .counts{opacity:.45}
+.src-tag{font-size:10.5px;padding:0 6px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);margin-left:4px;white-space:nowrap}
+.src-tag.ctl{border-color:var(--sp);color:var(--sp)} .src-tag.per{border-color:var(--tgt);color:var(--tgt)}
+
+/* 识别画面上的叠加层 (环 / 红点 / 计划路径), 在检测数字下面 */
+#cam-ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* 事件 */
+#ev-list{list-style:none;margin:0;padding:0;flex:1 1 0;min-height:0;overflow:auto;font-size:12.5px}
+#ev-list li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding:2px 2px;border-bottom:1px solid var(--line);word-break:break-all}
+#ev-list li time{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+#ev-list li.WARN{color:var(--warn)} #ev-list li.ERROR{color:var(--bad);font-weight:600}
+#ev-list li.PHASE{color:var(--info)}
+#ev-list.noinfo li.INFO{display:none}
+
+@media (max-height:760px){
+  .chip small{display:none}
+  .tile.spark{height:62px}
+  .tile small{display:none}
+  .srow{height:18px}
+  #cvw-tgt{height:140px} .gate-tiles .tile{height:42px}
+}
+
+/* ================== 回放 ================== */
+#tab-rep.on{display:grid;grid-template-columns:clamp(220px,20vw,300px) minmax(0,1fr);gap:8px}
+#rep-list{flex:1 1 0;min-height:0;overflow:auto;font-size:12.5px}
+#rep-list .fl{padding:5px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:5px}
+#rep-list .fl:hover{background:var(--panel2)} #rep-list .fl.on{background:var(--info-bg)}
+#rep-list .fl b{font-family:var(--mono);font-weight:500;font-size:12px}
+#rep-list .fl small{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-body{flex:1 1 0;min-height:0;display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:10px}
+.rep-charts{display:grid;grid-template-rows:repeat(2,minmax(0,1fr));gap:8px;min-height:0}
+.rep-charts>div{display:flex;flex-direction:column;min-height:0}
+.rep-charts .lab{flex:none;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-cols{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;max-height:46px;overflow:auto;margin:2px 0 4px}
+.rep-cols label{white-space:nowrap;cursor:pointer}
+.rep-ctl{flex:none;display:flex;gap:10px;align-items:center;margin-top:6px}
+.rep-ctl input[type=range]{flex:1}
+
+/* ================== 详情页 ================== */
+#tab-det.on{display:grid;grid-template-columns:minmax(0,1fr) clamp(300px,26vw,440px);gap:8px}
+.det-charts{flex:1 1 0;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(3,minmax(0,1fr));gap:8px 12px}
+.det-charts>div{display:flex;flex-direction:column;min-height:0;min-width:0}
+.det-charts .lab{flex:none;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.det-charts .lab i{display:inline-block;width:10px;height:3px;vertical-align:3px;margin:0 3px 0 8px}
+#det-raw{flex:1 1 0;min-height:0;overflow:auto}
+.kvt{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+.kvt caption{text-align:left;font-weight:600;color:var(--muted);padding:4px 0;font-size:12px}
+.kvt td{padding:1px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.kvt td:first-child{color:var(--muted);white-space:nowrap;width:42%}
+.kvt td:last-child{font-family:var(--mono);word-break:break-all}
+
+/* ================== 机况检查 ================== */
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:500}
+.st-p{display:inline-block;min-width:46px;text-align:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.st-p.ok{background:var(--ok-bg)} .st-p.warn{background:var(--warn-bg)} .st-p.fail{background:var(--bad-bg);color:var(--bad)} .st-p.info{background:var(--info-bg);color:var(--info)}
+#chk-sum{margin-left:auto;font-weight:600}
+
+/* ================== 起飞配置: 两栏各自滚动, 保存栏钉在右栏底部 ================== */
+#tab-cfg.on{display:grid;grid-template-columns:minmax(300px,440px) minmax(0,1fr);gap:8px}
+#tab-cfg .card{overflow:auto}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+textarea{font-family:var(--mono);font-size:12.5px;min-height:70px;resize:vertical}
+fieldset{border:1px solid var(--line);border-radius:8px;margin:10px 0 0;padding:6px 10px 10px}
+legend{font-size:12px;color:var(--muted);padding:0 4px}
+.f{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;align-items:center;margin-top:8px}
+.f .fl{font-size:13px} .f .fl em{font-style:normal;color:var(--muted);font-size:11px;margin-left:3px}
+.f small{grid-column:2;color:var(--muted);font-size:11.5px;line-height:1.35}
+.f.chg input,.f.chg select{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.f.other-task{opacity:.65}  /* ★别的任务的旋钮 (填了值才显示, dry-run 会报错) */
+.f.err input,.f.err select{border-color:var(--bad)}
+details summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:10px}
+.verdict{padding:8px 12px;border-radius:8px;font-weight:600;margin-bottom:8px}
+.verdict.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
+.verdict.bad{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad)}
+.verdict.busy{background:var(--panel2);color:var(--muted);border:1px dashed var(--line2)}
+ul.msgs{margin:6px 0;padding-left:18px} ul.msgs li{margin:3px 0}
+ul.msgs.e li{color:var(--bad)} ul.msgs.w li{color:var(--warn)}
+.env{display:grid;grid-template-columns:110px 1fr;gap:3px 10px;font-size:13px}
+.env dt{color:var(--muted)} .env dd{margin:0}
+.prev-cv{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;margin-top:8px;height:280px;flex:none}
+.prev-cv .cv{height:100%}
+#sv-box{position:sticky;bottom:-7px;background:var(--panel);margin:10px -10px -7px;padding:8px 10px 10px;border-top:1px solid var(--line);z-index:1}
+.cmd{display:flex;gap:6px;align-items:center;margin-top:6px;min-width:0}
+.cmd code{flex:1;min-width:0;font-family:var(--mono);background:var(--panel2);border:1px solid var(--line2);border-radius:6px;padding:6px 8px;overflow:auto;white-space:nowrap}
+.ln{margin-top:8px;padding:6px 8px;border-radius:7px;border:1px solid var(--line);font-size:12.5px}
+.ln.ok{border-color:var(--ok);background:var(--ok-bg)} .ln.warn{border-color:var(--warn);background:var(--warn-bg)}
+.ln.bad{border-color:var(--bad);background:var(--bad-bg)} .ln:empty{display:none}
+.ln .row{margin-top:4px} .ln b.st{font-weight:600}
+.kv{font-family:var(--mono);font-size:12px;columns:2;column-gap:20px} .kv div{break-inside:avoid}
+.note{font-size:12.5px;color:var(--muted);border-left:3px solid var(--line2);padding:4px 10px;margin:8px 0}
+.sw{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;margin:2px 4px 2px 0;border:1px solid var(--line2)}
+.sw.danger{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.sw.okk{background:var(--ok-bg);border-color:transparent}
+
+/* ================== 帮助 ================== */
+.help{display:grid;gap:12px;max-width:1000px;padding-bottom:20px}
+.help .card{display:block}
+.help p,.help li{line-height:1.65}
+.help p{margin:6px 0}
+.help ol,.help ul{margin:6px 0;padding-left:20px}
+.help .sub{font-size:12.5px;color:var(--muted);margin:2px 0 0}
+.help table td,.help table th{font-size:13px}
+.help .cmd code{white-space:pre}
+.hp-step{display:grid;grid-template-columns:28px minmax(0,1fr);gap:4px 10px;margin-top:12px}
+.hp-step>.n{width:24px;height:24px;border-radius:50%;background:var(--info-bg);color:var(--info);
+  display:flex;align-items:center;justify-content:center;font-weight:650;font-size:13px}
+.hp-step>div{min-width:0}
+.hp-step b.t{display:block;margin-top:2px}
+.callout{border-left:3px solid var(--bad);background:var(--bad-bg);padding:8px 12px;border-radius:6px;margin:6px 0}
+.callout.w{border-color:var(--warn);background:var(--warn-bg)}
+.callout.i{border-color:var(--info);background:var(--info-bg)}
+.hp-in{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+.hp-in input,.hp-in select{width:auto;min-width:180px}
+kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(--line2);
+  border-bottom-width:2px;border-radius:4px;background:var(--panel2);white-space:nowrap}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.flow span{padding:3px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line)}
+.flow i{font-style:normal;color:var(--dim)}
+
+/* 窄屏兜底 (手机/竖屏): 改成上下堆叠, 这时允许监控页整体滚动 */
+@media (max-width:1000px){
+  #tab-mon.on,#tab-det.on,#tab-cfg.on,#tab-rep.on{display:flex;flex-direction:column;overflow:auto}
+  .gate-body{grid-template-columns:1fr} #cvw-tgt{height:220px}
+  #card-rep-list{flex:none;height:30vh} .rep-body{flex:none;grid-template-columns:1fr;height:120vh}
+  #slot-main{flex:none;height:62vh} #slot-side{flex:none;height:56vh}
+  #card-ev{flex:none;height:40vh}
+  .det-charts{flex:none;height:150vh} #det-raw{flex:none;height:70vh}
+  #tab-cfg .card{overflow:visible}
+}

@@ -20,7 +20,7 @@ from vb09.common import geom  # noqa: E402
 
 
 def js_source():
-    for p in (os.path.join(ROOT, "vb09", "web", "core.js"), os.path.join(ROOT, "monitor.html")):
+    for p in (os.path.join(ROOT, "vb09", "web", "kinds", "ring.js"), os.path.join(ROOT, "vb09", "web", "core.js")):
         if os.path.exists(p):
             s = open(p, encoding="utf-8").read()
             if "function gateAxes" in s:

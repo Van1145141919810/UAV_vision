@@ -354,7 +354,8 @@ def paths_info(args):
                      "exists": ok, "kind": kind, "note": note})
 
     add("监控程序目录", HERE, "flight_monitor.py 所在目录; 下面同目录的文件都从这里找", "dir")
-    add("monitor.html", os.path.join(HERE, "monitor.html"), "网页本身, 必须和 flight_monitor.py 同目录")
+    add("网页 vb09/web/", os.path.join(HERE, "vb09", "web", "monitor.html"),
+        "网页本身 (monitor.html + monitor.css + *.js), 在 flight_monitor.py 同目录的 vb09/web/ 下")
     fp_path = (getattr(fp, "__file__", "") if fp else "") or os.path.join(HERE, "flight_profile.py")
     add("flight_profile.py", fp_path,
         "现场档案的解析/校验。监控和飞行脚本各自从**自己所在目录** import 它")
