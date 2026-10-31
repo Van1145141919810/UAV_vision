@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-vb09/flight/steps/standoff.py —— 停靠: STANDOFF 飞到目标前方停住对正 / HOLD 悬停记录检测
+vb09/flight/steps/dock.py —— 停靠: STANDOFF 飞到目标前方停住对正 / HOLD 悬停记录检测
 ===============================================================================
 2026-10-31 (PLAN_refactor_v2 第 7 步)。MODES["dock"] = [Acquire, StandOff, Hold]。环当目标; 步骤里没有
 目标类型判断 —— 只用 Lock 的 aim / n (以后 ArUco / 红点给同样的 Lock 就能直接用)。
 
 StandOff  停靠点 S = aim − dir·GATE_DOCK_D (水平), 高度 = aim 的高度
             dir = −n 的水平分量 (朝目标飞为正); Lock 没有 n → 用当前视线方向
-          复用 reposition.move_to (≤ GATE_REPO_V, 机头盯目标, 全程在目标前 ≥ |REPO_X_MAX|) + turn_to 对正
+          复用 common.move_to (≤ GATE_REPO_V, 机头盯目标, 全程在目标前 ≥ |REPO_X_MAX|) + turn_to 对正
           S 出了水平范围 (GATE_XY_MAX) / 高度带 [GATE_Z_MIN_DZ, GATE_Z_MAX_DZ] → 放弃 (回手动段)
 Hold      在 S 悬停 GATE_DOCK_HOLD_S 秒; gate.csv 照常每拍一行。结束时打印验收数:
             停靠误差 (飞机位置离 S, 中位数 / 最大)   要求 < 20 cm
@@ -21,7 +21,7 @@ import gate_plan as gp
 from vb09.common import geom
 from vb09.flight import config as C
 from vb09.flight.steps.base import Step
-from vb09.flight.steps.reposition import move_to, turn_to
+from vb09.flight.steps.common import move_to, turn_to
 
 DOCK_ERR_OK_CM = 20.0          # 验收线 (PLAN_refactor_v2 第 7 步), 只用于打印 ✓ / ✗
 DOCK_AIM_SD_OK_CM = 3.0

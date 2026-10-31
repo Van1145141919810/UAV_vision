@@ -8,14 +8,10 @@ run_mission(ctx, MODES[mode]) 依次执行; 放弃 / 回手动段 / 收尾都在
   dock    停靠: 识别 → 飞到目标前 GATE_DOCK_D 停住对正 → 悬停 GATE_DOCK_HOLD_S 记录检测 → 回手动段 (第 7 步)
 以后: 红点的 Detect / Select / Approach / Confirm。
 """
-from vb09.flight.steps.acquire import Acquire
-from vb09.flight.steps.align import Align, AlignHere
-from vb09.flight.steps.commit import Commit
-from vb09.flight.steps.dash import Dash
-from vb09.flight.steps.plan_dash import PlanDash
-from vb09.flight.steps.reposition import Reposition
-from vb09.flight.steps.shadow import Shadow
-from vb09.flight.steps.standoff import Hold, StandOff
+from vb09.flight.steps.common import Acquire
+from vb09.flight.steps.dash import Align, Commit, Dash, PlanDash, Reposition
+from vb09.flight.steps.dock import Hold, StandOff
+from vb09.flight.steps.shadow import AlignHere, Shadow
 
 MODES = {
     "dash": [Acquire(), PlanDash("粗规划"), Reposition(), Align(), Commit(), Dash()],
