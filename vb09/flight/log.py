@@ -12,6 +12,7 @@ import json
 import logging
 import math
 import re
+import sys
 import threading
 import time
 from collections import deque
@@ -129,7 +130,7 @@ def init_log_dir():
     try:
         with open(os.path.join(F.log_dir, "run_info.txt"), "w", encoding="utf-8") as f:
             f.write("flight_seq   = %d\n" % flight_seq)
-            f.write("script       = %s\n" % os.path.basename(__file__))
+            f.write("script       = %s\n" % os.path.basename(sys.argv[0]))
             f.write("clock_local  = %s   # 飞机时钟, 重启后会重置, 不能当真实日期\n" % ts)
             f.write("ros_time     = %.3f\n" % rospy.Time.now().to_sec())
             f.write("uptime_s     = %.0f   # 本次开机至今; 同一次开机里的几次飞行可按它排先后\n" % up)
