@@ -661,7 +661,9 @@ class GateFuseWorker(object):
             # 同 GateWorker: 旧状态 → 重建估计器, 用这一帧的观测重新初始化
             self.n_reset += 1
             rospy.logwarn("[gate_gcs] 环估计 %.1fs 没更新 → 重置 (第 %d 次)" % (fr.target.age, self.n_reset))
-            self.fuser = self.Locator(self.gcfg, f, R1)
+            old, self.fuser = self.fuser, self.Locator(self.gcfg, f, R1)
+            if hasattr(self.fuser, "inherit"):
+                self.fuser.inherit(old)         # 红点: 带上已估好的直径 (和估计器状态无关), 重建后不再回到标称直径
             fr = self.codec.frame_from_msg(g)
             self.fuser.update(fr, T_WC, t)
         ground_sim = bool(det.get("sim", True))

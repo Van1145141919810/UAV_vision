@@ -10,8 +10,9 @@ vb09/perception/reddot/config.py —— 红点检测 + 机上定位的全部参�
   * 红点在 r = R − max(G,B) 上平台值 90–145; 填充率 0.74–0.80 (正圆盘 π/4); 圆度 0.90–0.93
   * 泡沫块填充率 > 0.9 (方的), 红桶直径 28 cm → 物理直径 + 形状就能把它们分开
   * 双目视差: 比 VIO 射线交会真值偏小约 1 px (均值), 单帧噪声约 ±0.7 px —— 远比理想的 0.15 px 大
-  * 用长轴算的物理直径 13.7 ± 0.3 cm (标称 15 cm, 差 9%, 原因没查清: 实物尺寸 / VIO 尺度 / 外参),
-    所以尺寸测距用"近处双目自校准"的有效直径 D_eff (见 locate.py), 量到实物后填 dot_d_cal 就不再自校准
+  * 实物直径 15 cm (卷尺)。旧的软权重矩长轴偏小 (28 px −4…−7%) → 反推 13.7 cm; 改成面积法后 14.1–15.1 cm
+  * 2026-11-05 起**不假设直径**: 每条轨迹用自己的近处双目帧估直径 (locate.py), 估好之前只用双目;
+    dot_d 只给"远处刚发现、没有双目"的帧当很宽的先验 (size_prior_rel)
 这些阈值是看着这批数据定的, **没有留出验证集** (见 RESULT 文档), 上场前要用新数据复核。
 """
 from __future__ import annotations
@@ -23,9 +24,10 @@ from dataclasses import asdict, dataclass, fields
 @dataclass
 class DotConfig:
     # ---- 物理 ----
-    dot_d: float = 0.15             # m, 红点标称直径
-    dot_d_cal: float = 0.0          # m, >0: 量到的有效直径, 直接用, 不再用近处双目自校准
-    size_tol: float = 0.30          # 双目算出的物理直径离 dot_d 超过 ±30% → 不是红点
+    dot_d: float = 0.15             # m, 标称直径: 只当没有双目时的宽先验 (σ = size_prior_rel), 不参与有双目时的测距
+    dot_d_cal: float = 0.0          # m, >0: 所有轨迹都用这个直径 (不再按轨迹估)。一般不填
+    d_min: float = 0.08             # m, 双目算出的物理直径必须在 [d_min, d_max] (红点 10–21 cm; 红桶 28 cm、红格子 2–3 cm 过不了)
+    d_max: float = 0.24
 
     # ---- 分割 (地面检测端) ----
     ref_f: float = 1626.6           # 参考焦距 (全分辨率校正左目, 2026-11-04 标定)。下面标 "(ref px)" 的门限 × (f / ref_f)
@@ -58,14 +60,23 @@ class DotConfig:
     sigma_disp: float = 0.7         # (ref px) 视差噪声 (实测)
     sigma_px: float = 0.4           # (ref px) 圆心像素噪声
 
-    # ---- 尺寸测距 (直径固定 → 单目测距, 远场比视差好) ----
+    # ---- 尺寸测距 (按轨迹估直径 → 单目测距, 远场比视差好; 2026-11-05 改) ----
+    # 每条轨迹自己攒近处 (视差 ≥ cal_disp_min)、静止 (角速度 < rate_max_deg) 双目帧的 D_st = Z_st·dmaj/f, 中位数 = 这条轨迹的直径。
+    # 攒够 cal_min_n 之前: 有双目 → 只用双目; 没双目 → dot_d 宽先验 (锁不了, 只够"发现")。
+    # 直径按世界位置记住 (d_mem_radius), 估计器重建 / 轨迹删掉后再看到同一处的红点直接用 —— 不再出现
+    #   "丢失 1 s 后回到标称直径 → 距离偏长 30 cm 几秒" (2026-11-05 实测 4.4x m → 4.05 m)。
     size_sigma_floor: float = 0.02  # 尺寸测距相对误差下限
     size_edge_px: float = 0.6       # (ref px) 直径量测的边缘噪声 → 相对误差 = edge/d
-    cal_disp_min: float = 18.0      # (ref px) 视差 ≥ 此值 (≈ 5.4 m 内) 的双目帧才用来自校准有效直径
-    cal_min_n: int = 8              # 至少这么多样本才启用 D_eff
-    cal_clamp: float = 0.20         # D_eff 限制在 dot_d·(1 ± 此值)
-    consist_k: float = 4.0          # 双目 Z 和尺寸 Z 差超过 k·σ → 拒绝 (有一个不是红点)
+    size_prior_rel: float = 0.40    # 没有轨迹直径时, 用 dot_d 当先验的相对 σ (10–21 cm 都在 ±1σ 左右)
+    cal_disp_min: float = 18.0      # (ref px) 视差 ≥ 此值 (≈ 5.4 m 内) 的双目帧才用来估直径
+    cal_min_n: int = 8              # 至少这么多样本才启用轨迹直径
+    cal_buf: int = 60               # 每条轨迹最多留多少个直径样本
+    d_mem_radius: float = 0.5       # m, 记住的直径按位置匹配的半径
+    consist_k: float = 4.0          # 双目 Z 和尺寸 Z 差超过 k·σ → 这一帧只用双目 (不融合, 也不拒绝)
     mono_score_min: float = 0.80    # 没有有效立体 (只有尺寸) 时, 单帧分至少这么高并且有白边才接受
+    rate_max_deg: float = 15.0      # °/s, 相机角速度 (由相邻帧位姿算) 超过 → 这帧算"在转": 不用尺寸测距、不攒直径
+                                    #   (运动模糊把长轴拉长 → 尺寸距离偏短, 2026-11-05 转头回来时轨迹被拉近 ~5 cm)
+    motion_dt: float = 0.05         # s, 转动时观测横向协方差加 (Z·ω·motion_dt)² (曝光 + 时间戳误差)
 
     # ---- 世界系估计 (和 ring GateConfig 同名同义) ----
     q_pos: float = 0.02             # m/√s, 红点固定 → 小

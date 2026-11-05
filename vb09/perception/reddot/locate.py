@@ -7,11 +7,14 @@ vb09/perception/reddot/locate.py —— 机上: 候选像素量 → 门限 / 深
 
   1. 逐候选门限 (理由写进 fr.rejected): partial / fill / circ / axr / red / size / zmismatch / mono_weak
        · 形状: 填充率 [0.70, 0.86] (圆盘 π/4; 方块 ≈ 1)、圆度、长短轴比 —— 小目标 (< shape_px) 放宽
-       · size: 双目 Z 算出的物理直径 D_st = Z·dmaj/f 必须在 dot_d·(1 ± size_tol) 里 (红桶 28 cm、泡沫块、红格子 2–3 cm 都过不了)
-  2. 深度 = 双目视差 Z_st 和 尺寸 Z_sz = f·D_eff/dmaj 按方差加权融合
-       · 直径固定 → 像素直径是不依赖右目的单目测距, 远场 (> ~6 m) 比 0.7 px 的视差噪声更好
-       · D_eff: 近处 (视差 ≥ cal_disp_min) 双目帧的 Z_st·dmaj/f 的中位数 (自校准); 填了 dot_d_cal 就固定用它
-       · 两个 Z 差超过 consist_k·σ → 拒绝 (其中一个不是红点); 没有有效立体时只接受高分 + 有白边的 (src = size)
+       · size: 双目 Z 算出的物理直径 D_st = Z·dmaj/f 必须在 [d_min, d_max] = 8–24 cm 里 (红桶 28 cm、红格子 2–3 cm 过不了; 不假设具体直径)
+  2. 深度 (2026-11-05 改, **不假设红点直径**):
+       · 双目 Z_st 是主测距。物理直径 D_st = Z_st·dmaj/f 只卡物理范围 [d_min, d_max]
+       · 每条轨迹自己估直径 D_trk = 近处、静止双目帧 D_st 的中位数 (≥ cal_min_n 个才算数), 按世界位置记住
+         (估计器重建后同一处的红点直接用, inherit())。D_trk 有了以后才融合尺寸测距 Z_sz = f·D_trk/dmaj
+       · 两个 Z 差超过 consist_k·σ → 这帧只用双目; 相机在转 (rate_max_deg) → 不用尺寸 (模糊把长轴拉长)
+       · 没有有效立体: 有 D_trk 用它; 没有就用 dot_d 当宽先验 (size_prior_rel, 只够发现, 锁不了);
+         只接受高分 + 有白边的 (src = size / size_prior)
   3. 世界系: R_WR = R_WC·R1ᵀ (★漏乘 R1ᵀ = 5 m 处横向偏约 25 cm, 见 PLAN_refactor_v2 §5), 每个候选一条轨迹
      (常位置 + 随机游走, 马氏距离关联)。轨迹分 = 单帧像素分滑动平均 × 命中数 × 稳定度。
      2026-11-05: 观测协方差加下限 (obs_ang_floor_deg / obs_pos_floor: 外参 / VIO 误差), χ² 不过但在 track_radius
@@ -36,6 +39,10 @@ from .config import DotConfig
 from .frame import DotFrame, DotObs, TargetState
 
 _I3 = np.eye(3)
+
+
+def _r4(v):
+    return None if v is None else round(float(v), 4)
 
 
 def _cov_along_ray(u, s_lat, s_z):
@@ -63,6 +70,16 @@ class _Track(object):
         self.chi2 = deque(maxlen=8)
         self.ns = {}                         # 视角桶 → (n1_w, n2_w, σ_deg, los_w, t)。按视角存: 悬停几百帧只占一桶
         self.last = info
+        self.dsamp = deque(maxlen=60)        # 直径样本 (近处静止双目帧的 D_st)
+        self.D_seed = None                   # 按位置记住的直径 (估计器重建前 / 删掉的轨迹留下的)
+
+    def D(self, cfg):
+        """这条轨迹的直径 (m) 或 None。dot_d_cal > 0 → 用它; 样本够 → 中位数; 否则记住的值。"""
+        if cfg.dot_d_cal > 0:
+            return cfg.dot_d_cal
+        if len(self.dsamp) >= cfg.cal_min_n:
+            return float(np.median(self.dsamp))
+        return self.D_seed
 
     def add_normal(self, n1, n2, sig, los, t, cfg):
         az = math.degrees(math.atan2(los[1], los[0]))
@@ -85,6 +102,9 @@ class _Track(object):
         for k, v in other.ns.items():
             if k not in self.ns or v[4] > self.ns[k][4]:
                 self.ns[k] = v
+        self.dsamp.extend(other.dsamp)
+        if self.D_seed is None:
+            self.D_seed = other.D_seed
 
     def predict(self, t, q):
         if t > self.t:
@@ -200,7 +220,8 @@ class DotLocator(object):
         self.s = self._f / cfg.ref_f
         self.tracks = []
         self.next_id = 1
-        self.cal = deque(maxlen=60)          # 近处双目帧的 D_st 样本
+        self.dmem = []                       # [(世界位置, 直径)]: 估过直径的红点 (轨迹删掉 / 估计器重建后还在)
+        self._prev = None                    # (R_WR, t) 上一帧, 算相机角速度
 
     # ---- 接口 ----
     @property
@@ -220,17 +241,48 @@ class DotLocator(object):
 
     def reset(self):
         self.tracks, self.next_id = [], 1
-        self.cal.clear()
+        self._prev = None                    # dmem 保留: 红点直径和估计器状态无关
 
-    @property
-    def D_eff(self):
+    def inherit(self, old):
+        """估计器重建时 (桥的 _stale 重置) 从旧的 Locator 带过来已经估好的直径。轨迹 / 位置不带。"""
+        try:
+            self._remember(old)
+            self.dmem = list(old.dmem)[-16:]
+        except Exception:
+            pass
+        return self
+
+    def _remember(self, src=None):
+        """把估好直径的轨迹记进 dmem (按位置去重, 新的覆盖旧的)。"""
+        src = src or self
         cfg = self.cfg
-        if cfg.dot_d_cal > 0:
-            return cfg.dot_d_cal
-        if len(self.cal) >= cfg.cal_min_n:
-            lo, hi = cfg.dot_d * (1 - cfg.cal_clamp), cfg.dot_d * (1 + cfg.cal_clamp)
-            return float(min(hi, max(lo, np.median(self.cal))))
-        return cfg.dot_d
+        for tr in src.tracks:
+            if len(tr.dsamp) < cfg.cal_min_n:
+                continue
+            D = float(np.median(tr.dsamp))
+            mem = [(x, d) for x, d in src.dmem if np.linalg.norm(x - tr.x) >= cfg.d_mem_radius]
+            mem.append((tr.x.copy(), D))
+            src.dmem = mem[-16:]
+
+    def _recall(self, x):
+        best = None
+        for xm, d in self.dmem:
+            dd = float(np.linalg.norm(xm - x))
+            if dd < self.cfg.d_mem_radius and (best is None or dd < best[0]):
+                best = (dd, d)
+        return best[1] if best else None
+
+    def _rate(self, R_WR, t):
+        """相机角速度 (°/s), 由相邻两帧的位姿算; 间隔太长 / 第一帧 → 0。"""
+        prev, self._prev = self._prev, (R_WR, t)
+        if prev is None or not (0.0 < t - prev[1] < 0.5):
+            return 0.0
+        c = (float(np.trace(prev[0].T @ R_WR)) - 1.0) / 2.0
+        return math.degrees(math.acos(max(-1.0, min(1.0, c)))) / (t - prev[1])
+
+    def D_of(self, tr):
+        """给显示 / 状态用: 轨迹直径 (m) 或 None。"""
+        return tr.D(self.cfg) if tr is not None else None
 
     # ---- 单个候选 → 观测 (rect 系) 或 拒绝原因 ----
     def _obs(self, c):
@@ -257,29 +309,19 @@ class DotLocator(object):
             Zst = c.fb / disp
             sst = max(Zst * Zst / c.fb * cfg.sigma_disp * s, 0.02 * Zst)
             Dst = Zst * c.dmaj / f
-            if not (cfg.dot_d * (1 - cfg.size_tol) <= Dst <= cfg.dot_d * (1 + cfg.size_tol)):
+            if not (cfg.d_min <= Dst <= cfg.d_max):
                 return None, "size"
-        # 尺寸测距
-        Zsz = f * self.D_eff / c.dmaj
-        ssz = Zsz * math.sqrt(cfg.size_sigma_floor ** 2 + (cfg.size_edge_px * s / c.dmaj) ** 2)
-        if Zst is not None:
-            if abs(Zst - Zsz) > cfg.consist_k * math.sqrt(sst ** 2 + ssz ** 2):
-                return None, "zmismatch"
-            wst, wsz = 1.0 / sst ** 2, 1.0 / ssz ** 2
-            Z, sZ, src = (wst * Zst + wsz * Zsz) / (wst + wsz), 1.0 / math.sqrt(wst + wsz), "fused"
+            Z, sZ, src = Zst, sst, "stereo"               # 先只用双目; 轨迹有直径后在 _refine 里融合尺寸
         else:
             if c.nw < cfg.white_min or score < cfg.mono_score_min:
                 return None, "mono_weak"
-            Z, sZ, src = Zsz, ssz, "size"
+            Z = f * cfg.dot_d / c.dmaj                    # 宽先验; 关联到有直径的轨迹后在 _refine 里换成轨迹直径
+            sZ, src = Z * cfg.size_prior_rel, "size_prior"
         ray = np.array([c.xn, c.yn, 1.0])
-        p = Z * ray                                       # rect 系, Z = 沿光轴深度
         rn = float(np.linalg.norm(ray))
-        s_lat = Z * cfg.sigma_px * s / f
-        Rc = _cov_along_ray(ray, s_lat, sZ * rn)
-        s_ang = Z * rn * math.radians(cfg.obs_ang_floor_deg)              # 外参 / VIO 误差 (只用于关联和融合)
-        Rc = Rc + s_ang ** 2 * (_I3 - np.outer(ray, ray) / rn ** 2) + cfg.obs_pos_floor ** 2 * _I3
-        o = dict(p=p, Rc=Rc, score=score, src=src, Z=Z, sZ=sZ, Zst=Zst, Zsz=Zsz, Dst=Dst, D=Z * c.dmaj / f,
-                 d_px=c.dmaj, u=c.u, v=c.v, disp=disp if st_ok else None, s_lat=s_lat)
+        o = dict(score=score, Zst=Zst, sst=sst, Zsz=None, Dst=Dst, d_px=c.dmaj, u=c.u, v=c.v,
+                 disp=disp if st_ok else None, ray=ray, rn=rn, s_lat=Z * cfg.sigma_px * s / f)
+        self._set_depth(o, Z, sZ, src)
         # 法向候选 (rect 系)
         o["nc"] = None
         if c.dmaj >= cfg.normal_min_px * s:
@@ -295,6 +337,46 @@ class DotLocator(object):
                 o["n_sig"] = max(1.0, math.degrees(max(0.02, cfg.normal_sig_r * s / c.dmaj) / max(math.sin(th), 0.1)))
         return o, "ok"
 
+    def _set_depth(self, o, Z, sZ, src, s_mov=0.0):
+        """按深度 Z (σ sZ) 填观测的 rect 系位置和协方差 (含外参 / VIO 下限和转动项)。"""
+        cfg, ray, rn = self.cfg, o["ray"], o["rn"]
+        s_lat = Z * cfg.sigma_px * self.s / self._f
+        Rc = _cov_along_ray(ray, s_lat, sZ * rn)
+        s_ang = Z * rn * math.radians(cfg.obs_ang_floor_deg)              # 外参 / VIO 误差 (只用于关联和融合)
+        lat = _I3 - np.outer(ray, ray) / rn ** 2
+        Rc = Rc + (s_ang ** 2 + s_mov ** 2) * lat + cfg.obs_pos_floor ** 2 * _I3
+        o.update(p=Z * ray, Rc=Rc, Z=Z, sZ=sZ, src=src, D=Z * o["d_px"] / self._f, s_lat=s_lat)
+
+    def _refine(self, o, tr, rate, R_WR, t_WR):
+        """关联到轨迹 tr (或新轨迹, tr = None) 之后: 用这条轨迹的直径融合尺寸测距; 攒直径样本。"""
+        cfg, f = self.cfg, self._f
+        moving = rate > cfg.rate_max_deg
+        D = tr.D(cfg) if tr is not None else None
+        s_mov = o["Z"] * o["rn"] * math.radians(rate) * cfg.motion_dt
+        if D is not None:
+            Zsz = f * D / o["d_px"]
+            ssz = Zsz * math.sqrt(cfg.size_sigma_floor ** 2 + (cfg.size_edge_px * self.s / o["d_px"]) ** 2)
+            o["Zsz"] = Zsz
+            if o["Zst"] is not None:
+                if moving or abs(o["Zst"] - Zsz) > cfg.consist_k * math.sqrt(o["sst"] ** 2 + ssz ** 2):
+                    self._set_depth(o, o["Zst"], o["sst"], "stereo", s_mov)          # 只用双目
+                else:
+                    wst, wsz = 1.0 / o["sst"] ** 2, 1.0 / ssz ** 2
+                    self._set_depth(o, (wst * o["Zst"] + wsz * Zsz) / (wst + wsz), 1.0 / math.sqrt(wst + wsz),
+                                    "fused", s_mov)
+            else:
+                self._set_depth(o, Zsz, ssz * (2.0 if moving else 1.0), "size", s_mov)
+        elif s_mov > 0:
+            self._set_depth(o, o["Z"], o["sZ"], o["src"], s_mov)
+        o["zw"] = R_WR @ o["p"] + t_WR
+        o["Rw"] = R_WR @ o["Rc"] @ R_WR.T
+        o["moving"] = moving
+        o["D_trk"] = D
+        # 攒直径样本: 要比"不用尺寸测距"更静 (半个 rate_max_deg) —— 慢转时的轻微模糊也会把长轴拉长
+        if tr is not None and rate <= 0.5 * cfg.rate_max_deg and o["Dst"] is not None and o["disp"] is not None \
+                and o["disp"] >= cfg.cal_disp_min * self.s:
+            tr.dsamp.append(o["Dst"])
+
     # ---- 主入口 ----
     def update(self, fr: DotFrame, T_WC, t):
         cfg = self.cfg
@@ -307,12 +389,15 @@ class DotLocator(object):
             else:
                 obs.append(o)
         fr.rejected = ["%s×%d" % (k, v) for k, v in sorted(rej.items())]
-        fr.diag.update(n_cand=len(fr.cands), n_pass=len(obs), D_eff_cm=round(self.D_eff * 100, 2))
+        fr.diag.update(n_cand=len(fr.cands), n_pass=len(obs))
         R_WR, t_WR = self.T_WR(T_WC)
         if R_WR is None:
             fr.target, fr.stage = TargetState(), "search"
             fr.dbg["dot"] = {}
             return fr
+        rate = self._rate(R_WR, t)
+        fr.diag["rate_dps"] = round(rate, 1)
+        self._remember()
         self.tracks = [tr for tr in self.tracks if t - tr.t_upd <= cfg.track_timeout]
         for tr in self.tracks:
             tr.predict(t, cfg.q_pos)
@@ -335,14 +420,19 @@ class DotLocator(object):
             if best is None and near is not None:      # χ² 不过但离得近: 同一个红点换了视角 (外参 / VIO 偏差)
                 best = (min(near[2], cfg.gate_chi2), near[1])    # χ² 记成门限值: 不因偏差把轨迹分压没
             if best is not None:
-                best[1].update(o["zw"], o["Rw"], t, o, best[0])
                 tr = best[1]
+                self._refine(o, tr, rate, R_WR, t_WR)           # 用这条轨迹的直径融合尺寸测距
+                c2 = tr.chi2_to(o["zw"], o["Rw"])
+                tr.update(o["zw"], o["Rw"], t, o, min(c2, cfg.gate_chi2) if best[0] >= cfg.gate_chi2 else c2)
             else:
                 if any(np.linalg.norm(o["zw"] - tr.x) < cfg.track_radius and tr.id in updated for tr in self.tracks):
                     continue                           # 已更新过的轨迹旁边的重复观测
                 if len(self.tracks) >= cfg.max_tracks:
                     self.tracks.remove(min(self.tracks, key=lambda x: x.score))
                 tr = _Track(self.next_id, o["zw"], o["Rw"], t, o)
+                tr.D_seed = self._recall(o["zw"])               # 这里以前估过直径 → 直接用
+                self._refine(o, tr, rate, R_WR, t_WR)
+                tr.x, tr.P, tr.last = o["zw"].copy(), o["Rw"].copy(), o
                 self.next_id += 1
                 self.tracks.append(tr)
             updated[tr.id] = o
@@ -360,11 +450,10 @@ class DotLocator(object):
         if best is None:
             fr.target, fr.stage = TargetState(), ("lost" if self.tracks else "search")
             return fr
-        # 自校准有效直径: 只用被选中的、命中够多的轨迹里的近处双目帧
         o = updated.get(best.id)
-        if o is not None and best.n_hit >= 5 and best.score >= 0.7 and o["Dst"] is not None \
-                and o["disp"] is not None and o["disp"] >= cfg.cal_disp_min * self.s:
-            self.cal.append(o["Dst"])
+        Db = best.D(cfg)
+        fr.diag["D_trk_cm"] = round(Db * 100, 2) if Db else -1.0
+        fr.diag["D_n"] = len(best.dsamp)
         age = t - best.t_upd
         tg = TargetState(valid=True, pos_w=best.x.copy(),
                          cov_w=best.P + (cfg.q_pos ** 2) * max(0.0, t - best.t) * _I3,
@@ -372,11 +461,12 @@ class DotLocator(object):
         fr.target = tg
         if o is not None:
             fr.used.append("dot_" + o["src"])
-            fr.dots.append(DotObs(ok=True, src="stereo" if o["src"] == "fused" else "mono", p=o["p"],
+            fr.dots.append(DotObs(ok=True, src="stereo" if o["src"] in ("fused", "stereo") else "mono", p=o["p"],
                                   pix=(o["u"], o["v"]), diam_px=o["d_px"], metric_d=o["D"],
                                   sigma_lat=o["s_lat"], sigma_z=o["sZ"]))
             fr.diag.update(trk_id=best.id, trk_hits=best.n_hit, score=round(best.score, 3), z=round(o["Z"], 3),
-                           z_st=round(o["Zst"], 3) if o["Zst"] else -1.0, z_sz=round(o["Zsz"], 3),
+                           z_st=round(o["Zst"], 3) if o["Zst"] else -1.0,
+                           z_sz=round(o["Zsz"], 3) if o["Zsz"] else -1.0,
                            d_est_cm=round(o["D"] * 100, 2), sel_u=round(o["u"], 1), sel_v=round(o["v"], 1))
             if "tilt" in o:
                 fr.diag["tilt_deg"] = round(o["tilt"], 1)
@@ -414,7 +504,7 @@ class DotLocator(object):
 
     # ---- /gate/status 附加字段 ----
     def extra(self, fr, T_WC, warn=None):
-        """kind / aim / aim_sd_cm / D_est / D_eff / score / trk_id / n_hit / n_cand / cands / n / n_sd_deg"""
+        """kind / aim / aim_sd_cm / D_est / D_trk (D_eff) / D_n / score / trk_id / n_hit / n_cand / cands / n / n_sd_deg"""
         out = {"kind": "reddot"}
         try:
             R_WR, t_WR = self.T_WR(T_WC)
@@ -425,13 +515,16 @@ class DotLocator(object):
             tg = fr.target
             out.update(aim=[round(float(v), 4) for v in tg.pos_w],
                        aim_sd_cm=[round(float(v) * 100, 2) for v in np.sqrt(np.maximum(np.diag(tg.cov_w), 0))],
-                       D_est=round(float(best.last["D"]), 4), D_eff=round(float(self.D_eff), 4),
+                       D_est=round(float(best.last["D"]), 4),
+                       # D_trk = 这条轨迹估出的直径 (没估好 = None, 这时只用双目); D_eff 是旧名字, 同值 (gcs_view 在读)
+                       D_trk=_r4(best.D(self.cfg)), D_eff=_r4(best.D(self.cfg)), D_n=len(best.dsamp),
                        score=round(float(best.score), 3), trk_id=int(best.id), n_hit=int(best.n_hit),
                        n_cand=len([tr for tr in info["tracks"] if tr.n_hit >= self.cfg.min_hits]),
                        cands=[{"id": int(tr.id), "aim": [round(float(v), 3) for v in tr.x],
                                "score": round(float(tr.score), 3), "D": round(float(tr.last["D"]), 4),
                                "Z_st": round(float(tr.last["Zst"]), 3) if tr.last["Zst"] else None,
-                               "Z_sz": round(float(tr.last["Zsz"]), 3), "d_px": round(float(tr.last["d_px"]), 1),
+                               "Z_sz": round(float(tr.last["Zsz"]), 3) if tr.last.get("Zsz") else None,
+                               "D_trk": _r4(tr.D(self.cfg)), "d_px": round(float(tr.last["d_px"]), 1),
                                "uv": [round(float(tr.last["u"]), 1), round(float(tr.last["v"]), 1)],
                                "hits": int(tr.n_hit)} for tr in info["tracks"][:5]])
             why = {}

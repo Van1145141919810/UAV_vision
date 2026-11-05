@@ -111,7 +111,14 @@ def half_max_moments(rm, u0, v0, Req):
     ev = np.maximum(ev, 1e-9)
     mdir = evec[:, 0]                       # 短轴方向
     partial = bool(px.min() <= 1 or py.min() <= 1 or px.max() >= W - 2 or py.max() >= H - 2)
-    return dict(u=float(mu[0]), v=float(mu[1]), dmaj=float(4 * np.sqrt(ev[1])), dmin=float(4 * np.sqrt(ev[0])),
+    # 长 / 短轴 (2026-11-05 改): 半高掩膜**面积** + 二阶矩轴比。
+    #   以前 dmaj = 4·σ_major (软权重矩): 边缘权重 < 1 把 σ 压小, 长轴系统性偏小 —— 28 px 时 −4…−7%,
+    #   60 px −2…−3% (合成圆盘 + JPEG), 随距离 / 模糊变, 尺寸测距因此偏长且自校准的直径随距离漂。
+    #   半高阈值对对称模糊不移动边缘 → 面积几乎无偏 (28 px −1…−2%, ≥ 40 px < 1%)。
+    #   椭圆 A = π/4·a·b, 轴比 r = b/a 取自矩 (比值对模糊不敏感) → a = √(4A / (π r)), b = r·a。dmin/dmaj 不变 (法向不受影响)。
+    r_ax = float(np.sqrt(ev[0] / ev[1]))
+    dmaj = float(np.sqrt(4.0 * float(m.sum()) / (np.pi * max(r_ax, 0.05))))
+    return dict(u=float(mu[0]), v=float(mu[1]), dmaj=dmaj, dmin=dmaj * r_ax,
                 mx=float(mdir[0]), my=float(mdir[1]), partial=partial)
 
 

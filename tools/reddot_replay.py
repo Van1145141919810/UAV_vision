@@ -5,7 +5,7 @@ tools/reddot_replay.py —— 红点识别离线回放 (reddot_exp 目录: *.jpg
     python3 tools/reddot_replay.py <数据目录> [--cam 俯仰 横滚 偏航] [--lever x y z] [--truth 0-10] [--seq] [--save 目录]
 
   默认逐帧: 每帧新建一个 DotLocator, 只看单帧门限 + 深度融合 (不依赖时序)。
-  --seq   按时间顺序喂同一个 locator (轨迹 / 自校准 D_eff / 法向一致性)。
+  --seq   按时间顺序喂同一个 locator (轨迹 / 按轨迹估直径 / 法向一致性)。
   --dt 0.2 --rep 10   (配 --seq) 稀疏快照的时间压缩: 每帧当成悬停 rep 帧、间隔 dt 秒喂进去 (位姿仍按真实 t_cap)。
           reddot_exp 的快照隔 6–13 s, 超过 track_timeout, 不压缩的话每帧都是新目标, 测不出轨迹和多视角法向。
   --truth a-b  这个范围的帧(含)里应该看到红点, 其余不该有; 汇总 检出 / 误检。
