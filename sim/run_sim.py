@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 stage14_mission.py (原 stage12_gate.py) 离线仿真: 桩 rospy + 一个粗糙的 PX4 位置环 + 假识别 (延迟/噪声) + 纸。
-  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring|lowbatt|dock|dock_nonormal|dock_vscan  [--set K=V ...]
+  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring|lowbatt|dock|dock_nonormal|dock_vscan|dock_reddot  [--set K=V ...]
 不是飞行动力学仿真 —— 只用来跑通状态机、检查时间表/停止点/遥测字段和日志。
 """
 import json
@@ -60,8 +60,10 @@ with open(os.path.join(sites, "sim.conf"), "w") as f:
             % (D_BACK, L_F, L_R))
     if scenario.startswith("dock"):
         f.write("mode=停靠\ndock_hold=6\n")          # 停靠: 字符串旋钮只能写在档案里
-    if scenario == "dock_vscan":
+    if scenario in ("dock_vscan", "dock_reddot"):
         f.write("vscan=0.3\n")                      # 停靠后上下扫描 (2026-11-05)
+    if scenario == "dock_reddot":
+        f.write("target=红点\n")                    # 飞行侧用红点判定 (reddot/judge.py)
 os.environ["HOME"] = tempfile.mkdtemp()
 sets = ["--set", "GATE_CONFIRM_DASH=False"]
 if scenario == "shadow":
@@ -301,7 +303,12 @@ def sim_loop():
                           dist=round(dist, 3), sd_cm=[sd, sd, sd], published=True,
                           aim=[AIM[i] + random.gauss(0, sd / 200) for i in range(3)],
                           n_sd_deg=1.0)
-                if scenario == "dock_vscan":
+                if scenario == "dock_reddot":
+                    # 红点格式 (reddot/locate.py extra): 来源 dot_*, 分数 / 命中 / 轨迹号; 没有环字段
+                    st.update(kind="reddot", src="dot_fused", score=0.93, n_hit=50, trk_id=1, n_cand=1, age_ms=30.0,
+                              D_est=0.146, cov=[(sd / 100) ** 2, 0, 0, 0, (sd / 100) ** 2, 0, 0, 0, (sd / 100) ** 2])
+                    st["target"] = st["aim"]
+                if scenario in ("dock_vscan", "dock_reddot"):
                     # 红点: 单个视角法向分不开 → 飞机高度扫过 0.4 m 以上才给 n (感知侧见 reddot/locate.normal_consensus)
                     zr = SCAN_Z                       # 起飞到位 (≥ 1.45 m) 之后才算: 爬升本身不算换视角
                     if p[2] >= 1.45 or zr[0] < 1e8:

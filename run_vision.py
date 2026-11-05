@@ -171,6 +171,10 @@ def main():
     print("=" * 70)
 
     missing = [f for f in NEED[args.mode] if not os.path.exists(os.path.join(HERE, f))]
+    if args.mode in ("gate", "gate_gcs") and args.target != "ring":
+        pdir = os.path.join("vb09", "perception", args.target)      # 2026-11-05: 别的目标的插件目录也要在
+        if not os.path.isfile(os.path.join(HERE, pdir, "plugin.py")):
+            missing.append(pdir + "/")
     if missing:
         sys.exit("  ✗ %s 模式需要同目录的 %s" % (args.mode, ", ".join(missing)))
     if args.mode != "aruco" and not os.path.exists(os.path.join(HERE, "gate_params.json")):

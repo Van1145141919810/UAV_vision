@@ -17,7 +17,7 @@ import _compat  # noqa: E402
 import _util  # noqa: E402
 
 SCENARIOS = ["normal", "stuck", "shadow", "virtual", "nonormal", "oblique", "noring", "lowbatt", "dock", "dock_nonormal",
-             "dock_vscan"]
+             "dock_vscan", "dock_reddot"]
 # dock / dock_nonormal (没有法向 → 按视线停靠): 第 7 步新功能, golden 是第 7 步当时写的 (sim_check.py --write dock), 之前的提交没有这个场景
 # dock_vscan (2026-11-05): 停靠 + 上下扫描 ±0.3 m; 假识别在飞机高度扫过 0.4 m 之前不给法向 (模拟红点单视角分不开)
 EXTRA = {"virtual": ["--set", "DASH_V=1.4"]}     # 虚拟环 2.6 m 只够 1.4 m/s (否则预检要人按 c)
