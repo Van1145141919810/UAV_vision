@@ -24,18 +24,23 @@ import importlib
 
 CODECS = {
     "ring": "vb09.perception.ring.wire",
+    "reddot": "vb09.perception.reddot.wire",
 }
 CONFIGS = {
     "ring": "vb09.perception.ring.config:GateConfig",
+    "reddot": "vb09.perception.reddot.config:DotConfig",
 }
 DETECTORS = {
     "ring": "vb09.perception.ring.plugin:RingDetector",
+    "reddot": "vb09.perception.reddot.plugin:RedDotDetector",
 }
 LOCATORS = {
     "ring": "vb09.perception.ring.plugin:RingLocator",
+    "reddot": "vb09.perception.reddot.plugin:RedDotLocator",
 }
 JUDGES = {
     "ring": "vb09.perception.ring.judge:RingJudge",
+    "reddot": "vb09.perception.reddot.judge:RedDotJudge",
 }
 
 _TABLE_NAME = {id(CODECS): "CODECS", id(CONFIGS): "CONFIGS", id(DETECTORS): "DETECTORS",
