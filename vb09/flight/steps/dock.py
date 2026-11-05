@@ -2,13 +2,19 @@
 """
 vb09/flight/steps/dock.py —— 停靠: STANDOFF 飞到目标前方停住对正 / HOLD 悬停记录检测
 ===============================================================================
-2026-10-31 (PLAN_refactor_v2 第 7 步)。MODES["dock"] = [Acquire, StandOff, Hold]。环当目标; 步骤里没有
-目标类型判断 —— 只用 Lock 的 aim / n (以后 ArUco / 红点给同样的 Lock 就能直接用)。
+2026-10-31 (PLAN_refactor_v2 第 7 步)。MODES["dock"] = [Acquire, StandOff, VScan, Hold]。步骤里没有
+目标类型判断 —— 只用 Lock 的 aim / n (ArUco / 红点给同样的 Lock 就能直接用)。
 
 StandOff  停靠点 S = aim − dir·GATE_DOCK_D (水平), 高度 = aim 的高度
             dir = −n 的水平分量 (朝目标飞为正); Lock 没有 n → 用当前视线方向
           复用 common.move_to (≤ GATE_REPO_V, 机头盯目标, 全程在目标前 ≥ |REPO_X_MAX|) + turn_to 对正
           S 出了水平范围 (GATE_XY_MAX) / 高度带 [GATE_Z_MIN_DZ, GATE_Z_MAX_DZ] → 放弃 (回手动段)
+VScan     (2026-11-05, GATE_VSCAN_DZ > 0 才做; = 0 时什么都不做, 也不改遥测段)
+          在 S 只改高度: 降到 S−dz → 升到 S+dz → 回 S (GATE_VSCAN_V, 机头盯目标), 高度夹在手动段高度带里。
+          目的是给感知换视角: 红点椭圆的法向单个视角有两个镜像解, 视线变 ≥ 10° 才分得开
+          (3 m 处 ±0.3 m ≈ 11°; 原地转头不行 —— 光心只挪几 cm)。扫完再等 GATE_VSCAN_WAIT_S 秒拿法向:
+            拿到 → lock["n"] 换成它 (以后的冲刺按法向进入), 打印它和停靠方向的夹角
+            没拿到 → 打印原因 (/gate/status 的 n_why), 照旧按视线方向, 不算失败
 Hold      在 S 悬停 GATE_DOCK_HOLD_S 秒; gate.csv 照常每拍一行。结束时打印验收数:
             停靠误差 (飞机位置离 S, 中位数 / 最大)   要求 < 20 cm
             aim 横向抖动 (每帧观测投到靶面 h / v 的标准差)   要求 < 3 cm
@@ -65,6 +71,73 @@ class StandOff(Step):
         turn_to(ctx, gp.yaw_of(d_in), S, "对正目标")
         lock.standoff = S                    # 属性, 不进 dict (遥测 / gate.csv 不变)
         lock.d_in = d_in
+        return lock
+
+
+class VScan(Step):
+    name = "align"
+    vel_lim = "pre"
+
+    def run(self, ctx, lock):
+        dz = float(C.GATE_VSCAN_DZ)
+        if dz <= 0 or lock is None:
+            return lock                                  # 不扫: 不改段名, 不打日志 (和以前一模一样)
+        S = getattr(lock, "standoff", None) or ctx.pos()
+        aim = tuple(float(v) for v in lock.aim[:3])
+        d_in = getattr(lock, "d_in", None) or geom.hunit(geom.vsub(aim, S))
+        if d_in is None:
+            ctx.fail("上下扫描: 目标在正上 / 正下方")
+        o = ctx.origin
+        z_lo = max(S[2] - dz, o[2] + C.TELEOP_DZ_MIN)
+        z_hi = min(S[2] + dz, o[2] + C.TELEOP_DZ_MAX)
+        info = {"dz": round(dz, 3), "z": [round(z_lo, 3), round(z_hi, 3)], "span_deg": None,
+                "n": None, "n_sd_deg": None, "dev_deg": None, "why": None, "done": False}
+        if ctx.dock is not None:
+            ctx.dock["vscan"] = info
+        if z_hi - z_lo < 0.2:
+            info.update(why="高度带太窄", done=True)
+            rospy.logwarn(f"[gate] 上下扫描: 高度带只剩 {z_hi - z_lo:.2f}m (起飞点 +{C.TELEOP_DZ_MIN:.1f} … "
+                          f"+{C.TELEOP_DZ_MAX:.1f}m), 不扫")
+            return lock
+        dh = math.hypot(aim[0] - S[0], aim[1] - S[1])
+        span = math.degrees(math.atan2(z_hi - aim[2], dh) - math.atan2(z_lo - aim[2], dh))
+        info["span_deg"] = round(span, 1)
+        clip = "" if (z_lo, z_hi) == (S[2] - dz, S[2] + dz) else "  (被高度带截了)"
+        rospy.loginfo(f"[gate] 上下扫描: 高度 {z_lo:.2f} → {z_hi:.2f} → {S[2]:.2f}m{clip}, "
+                      f"离目标 {dh:.2f}m → 视角跨度 ≈ {span:.1f}°")
+        if span < C.GATE_VSCAN_SPAN_DEG:
+            rospy.logwarn(f"[gate] 上下扫描: 视角跨度 {span:.1f}° < {C.GATE_VSCAN_SPAN_DEG:.0f}°, 法向可能定不下来 "
+                          f"(加大扫描幅度 vscan, 或停近一点)")
+        t0 = rospy.Time.now().to_sec()
+        ref = (aim, d_in)
+        for z, lab in ((z_lo, "上下扫描: 下降"), (z_hi, "上下扫描: 上升"), (S[2], "上下扫描: 回停靠点")):
+            move_to(ctx, (S[0], S[1], z), "ring", C.GATE_REPO_TIMEOUT, lab, ref=ref, v=C.GATE_VSCAN_V)
+        ctx.set_seg("align", f"上下扫描: 等法向 (≤ {C.GATE_VSCAN_WAIT_S:.0f}s)")
+        t_end = rospy.Time.now().to_sec() + C.GATE_VSCAN_WAIT_S
+        smp_n = None
+        while rospy.Time.now().to_sec() < t_end:
+            ctx.hold(S)
+            got = [s for s in ctx.gate_in.valid_since(t0) if s.get("n") is not None]
+            if got:
+                smp_n = got[-1]
+                break
+            ctx.tick()
+        if smp_n is None:
+            last = ctx.gate_in.last or {}
+            why = last.get("n_why") or ("法向不确定度 %.1f° > %.0f°" % (last["n_sd_deg"], C.GATE_N_SD_MAX_DEG)
+                                        if isinstance(last.get("n_sd_deg"), (int, float)) else "没有法向")
+            info.update(why=why, done=True)
+            rospy.logwarn(f"[gate] ★ 上下扫描: 没拿到法向 ({why}) —— 照旧按视线方向")
+            return lock
+        n = tuple(float(v) for v in smp_n["n"][:3])
+        n_sd = smp_n.get("n_sd")
+        dev = gp.ang_deg(geom.hunit(geom.vmul(n, -1.0)), d_in) if geom.hunit(n) else None
+        info.update(n=_r(n, 4), n_sd_deg=round(float(n_sd), 2) if isinstance(n_sd, (int, float)) else None,
+                    dev_deg=round(dev, 1) if dev is not None else None, done=True)
+        lock["n"] = n                                    # 以后的步骤 / 冲刺按这个法向
+        rospy.logwarn(f"[gate] ★ 上下扫描: 法向 ({n[0]:+.3f},{n[1]:+.3f},{n[2]:+.3f})"
+                      + (f" ±{n_sd:.1f}°" if isinstance(n_sd, (int, float)) else "")
+                      + (f", 和现在的停靠方向差 {dev:.1f}°" if dev is not None else ""))
         return lock
 
 

@@ -70,7 +70,11 @@ class DotConfig:
     # ---- 世界系估计 (和 ring GateConfig 同名同义) ----
     q_pos: float = 0.02             # m/√s, 红点固定 → 小
     gate_chi2: float = 16.0
-    track_radius: float = 0.30      # m, 新观测离已有轨迹超过这么远 (且 χ² 不过) → 新轨迹
+    track_radius: float = 0.30      # m, χ² 不过但离轨迹在这么近以内 → 仍并进这条轨迹; 两条轨迹靠这么近 → 合并
+    # 观测协方差下限 (2026-11-05): 像素噪声 (sigma_px) 只有零点几 cm, 但外参 / VIO / 时间戳带来的误差是 cm 级,
+    #   且随视角变。只用像素噪声 → 换个视角 χ² 就不过 → 同一个红点被拆成好几条轨迹 (reddot_exp 实测 11 个视点 6–8 条)
+    obs_ang_floor_deg: float = 0.5  # °, 横向: 相当于外参误差 (重标 T1 之前旧外参误差 ~6°, 只能靠 track_radius 兜)
+    obs_pos_floor: float = 0.02     # m, 各向
     track_timeout: float = 3.0      # s, 轨迹这么久没更新就删
     max_tracks: int = 8
     min_hits: int = 2               # 轨迹至少这么多次命中才发布
@@ -78,11 +82,20 @@ class DotConfig:
     lost_timeout: float = 0.5       # s
     blind_dist: float = 0.3         # m
 
-    # ---- 法向 (椭圆, 多帧一致) ----
+    # ---- 法向 (椭圆 + 多视角, 2026-11-05 改) ----
+    # 单帧椭圆给两个候选, 互为关于视线的镜像, 单个视角分不开 (reddot_exp: 0004 / 0007 选错 73–84°)。
+    # 视线方向变 δ, 错的候选移动 ≈ 2δ·cosθ, 对的不动 → 要求不同视角的样本里只有一个解一致。
+    # 视角变化可以是竖直的 (停靠后上下扫描, flight 的 GATE_VSCAN_DZ): 3 m 处 ±0.3 m ≈ 11°。
+    # reddot_exp 两帧配对: 视角差 ≥ 10° 时 25/25 对, 余量 ≥ 15°; 5–10° 时 6/6 对但余量只有 5–12°
     normal_min_px: float = 25.0     # (ref px) 直径小于此值不出法向 (椭圆扁率被模糊和噪声主导)
-    normal_buf: int = 20            # 每条轨迹留多少帧的候选
+    normal_buf: int = 40            # 每条轨迹按视角分桶最多留多少桶 (每桶留最新一帧)
+    normal_bin_deg: float = 1.5     # 视角分桶大小 (按视线方向; 悬停时的几百帧只占 1 桶, 不会把多视角挤掉)
     normal_inlier_deg: float = 12.0
-    normal_min_k: int = 3           # 至少这么多帧一致
+    normal_min_k: int = 3           # 至少这么多个视角桶一致
+    normal_view_min_deg: float = 10.0   # 一致的样本里视线方向的跨度至少这么大 (不够 → 不发 n)
+    normal_lr_min: float = 16.0     # 两个假设的拟合代价差 (Σ 残差²/σ², ≈ 似然比 χ²) 至少这么大才发 n。
+                                    #   竖直扫描时错解只被拖开 ±2ε·cosθ (3 m、±0.3 m ≈ ±9°), 数内点分不开, 要比残差
+    normal_sig_r: float = 1.2       # (ref px) 单帧法向噪声: σ_cosθ = max(0.02, 此值/长轴), σ_θ = σ_cosθ / sinθ
     normal_floor_deg: float = 2.0   # n_sd_deg 下限 (实测一致帧与多帧法向差 1–6°)
 
     @classmethod

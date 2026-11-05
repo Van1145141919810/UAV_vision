@@ -11,6 +11,10 @@ from vb09.common import geom
 
 class RedDotJudge(object):
     kind = "reddot"
+    # 环的 judge 没有的拒绝原因 (flight/target_in.py 合进计数和日志说明)
+    REASONS = ("stale", "src", "score", "hits", "ambig")
+    REJ_TXT = {"stale": "估计太旧", "src": "不是红点来源", "score": "分数低", "hits": "命中太少",
+               "ambig": "多个红点分不清"}
 
     def __init__(self, C):
         self.C = C
@@ -53,19 +57,21 @@ class RedDotJudge(object):
                 if float(x.get("score", 0.0)) >= 0.7 * float(st.get("score", 1.0)) and x.get("aim"):
                     if geom.vnorm(geom.vsub(tuple(x["aim"][:3]), c)) > 0.5:
                         return None, "ambig"
+            # 法向是多视角才有的附加量 (locate.normal_consensus): 不可信就只丢法向, 位置样本照用
+            #   (环的 judge 是整帧拒绝; 红点的位置和法向来源不同, 不该连坐)
             n = st.get("n")
             if n is not None:
                 n = geom.vunit(tuple(float(v) for v in n[:3]))
                 nsd = st.get("n_sd_deg")
                 if isinstance(nsd, (int, float)) and nsd > C.GATE_N_SD_MAX_DEG:
-                    return None, "n_sd"
-                if p_now is not None:
-                    los = geom.vsub(p_now, c)
-                    if geom.vdot(los, n) < 0:
-                        n = geom.vmul(n, -1.0)
-                    if geom.ang_deg(los, n) > C.GATE_VIEW_ANG_MAX:
-                        return None, "view"
-            elif C.GATE_REQUIRE_NORMAL:
+                    n = None
+            if n is not None and p_now is not None:
+                los = geom.vsub(p_now, c)
+                if geom.vdot(los, n) < 0:
+                    n = geom.vmul(n, -1.0)
+                if geom.ang_deg(los, n) > C.GATE_VIEW_ANG_MAX:
+                    return None, "view"
+            if n is None and C.GATE_REQUIRE_NORMAL:
                 return None, "no_n"
             d_in = geom.hunit(geom.vmul(n, -1.0)) if n is not None else None
             if d_in is None and p_now is not None:

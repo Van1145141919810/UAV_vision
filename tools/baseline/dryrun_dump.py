@@ -42,7 +42,7 @@ EXPECT_CHANGED = {
     "dock_hold_zero_cli": ("--set GATE_DOCK_HOLD_S=0 → 报错 (必须是正数)", 1, "GATE_DOCK_HOLD_S=0"),
 }
 # 第 7 步新增的参数 (停靠): 所有用例的 params 里都多了它们 —— 比较前两边去掉
-_NEW_KEY = re.compile(r"^GATE_DOCK_")
+_NEW_KEY = re.compile(r"^GATE_(DOCK|VSCAN)_")          # 新参数: 停靠 (第 7 步), 上下扫描 (2026-11-05)
 
 
 def cases():
@@ -106,7 +106,7 @@ def _drop_json(x):
 
 def _drop_txt(s):
     s = s.replace("穿环 (stage12)", "穿环 (模式见下面 开关 / 档案 mode)")      # 4.6 改名后的措辞
-    return "\n".join(ln for ln in s.splitlines() if "戳" not in ln and "POKE" not in ln and "GATE_DOCK_" not in ln)
+    return "\n".join(ln for ln in s.splitlines() if "戳" not in ln and "POKE" not in ln and "GATE_DOCK_" not in ln and "GATE_VSCAN_" not in ln)
 
 
 CHANGE_FAIL = []

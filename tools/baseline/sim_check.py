@@ -16,11 +16,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _compat  # noqa: E402
 import _util  # noqa: E402
 
-SCENARIOS = ["normal", "stuck", "shadow", "virtual", "nonormal", "oblique", "noring", "lowbatt", "dock", "dock_nonormal"]
+SCENARIOS = ["normal", "stuck", "shadow", "virtual", "nonormal", "oblique", "noring", "lowbatt", "dock", "dock_nonormal",
+             "dock_vscan"]
 # dock / dock_nonormal (没有法向 → 按视线停靠): 第 7 步新功能, golden 是第 7 步当时写的 (sim_check.py --write dock), 之前的提交没有这个场景
+# dock_vscan (2026-11-05): 停靠 + 上下扫描 ±0.3 m; 假识别在飞机高度扫过 0.4 m 之前不给法向 (模拟红点单视角分不开)
 EXTRA = {"virtual": ["--set", "DASH_V=1.4"]}     # 虚拟环 2.6 m 只够 1.4 m/s (否则预检要人按 c)
 TOL = {"cross_v": 0.15, "cross_h": 0.04, "cross_vv": 0.04, "max_past": 0.2, "pts": 0.2, "max_tilt": 4.0,
-       "dock_err_cm": 5.0, "dock_S": 0.2}
+       "dock_err_cm": 5.0, "dock_S": 0.2, "vscan_z": 0.05, "vscan_span": 1.0}
 
 
 def run_one(sc):
@@ -60,6 +62,9 @@ def summarize(sc, prc, out):
         s["dock_d"], s["dock_dir"] = float(m.group(2)), m.group(3)
         s["dock_err_cm"] = float(m.group(4))
         s["dock_done"], s["dock_ok"], s["tel_mode"] = m.group(6), m.group(7), m.group(8)
+    m = re.search(r"上下扫描: 高度 (\[.*?\]) 视角跨度 (\S+)° 法向 (\S+) ", out)
+    if m:
+        s["vscan_z"], s["vscan_span"], s["vscan_n"] = eval(m.group(1)), float(m.group(2)), m.group(3)   # noqa: S307
     m = re.search(r"config task=(\S+)\s+derived\.gate=(\S+)", out)
     s["config"] = list(m.groups()) if m else None
     m = re.search(r"gate\.csv (\d+) 行, 列 (\d+)", out)
@@ -85,9 +90,9 @@ def compare(g, n):
         if k in TOL and isinstance(a, (int, float)) and isinstance(b, (int, float)):
             if abs(float(a) - float(b)) > TOL[k]:
                 diffs.append("%s %s → %s (tol %s)" % (k, a, b, TOL[k]))
-        elif k == "dock_S" and isinstance(a, list) and isinstance(b, list):
+        elif k in ("dock_S", "vscan_z") and isinstance(a, list) and isinstance(b, list):
             if len(a) != len(b) or any(abs(x - y) > TOL[k] for x, y in zip(a, b)):
-                diffs.append("dock_S %s → %s" % (a, b))
+                diffs.append("%s %s → %s" % (k, a, b))
         elif k == "pts" and isinstance(a, list) and isinstance(b, list):
             if len(a) != len(b) or any(abs(x - y) > TOL["pts"] for pa, pb in zip(a, b) for x, y in zip(pa, pb)):
                 diffs.append("pts %s → %s" % (a, b))

@@ -6,6 +6,8 @@ tools/reddot_replay.py —— 红点识别离线回放 (reddot_exp 目录: *.jpg
 
   默认逐帧: 每帧新建一个 DotLocator, 只看单帧门限 + 深度融合 (不依赖时序)。
   --seq   按时间顺序喂同一个 locator (轨迹 / 自校准 D_eff / 法向一致性)。
+  --dt 0.2 --rep 10   (配 --seq) 稀疏快照的时间压缩: 每帧当成悬停 rep 帧、间隔 dt 秒喂进去 (位姿仍按真实 t_cap)。
+          reddot_exp 的快照隔 6–13 s, 超过 track_timeout, 不压缩的话每帧都是新目标, 测不出轨迹和多视角法向。
   --truth a-b  这个范围的帧(含)里应该看到红点, 其余不该有; 汇总 检出 / 误检。
   --cam   外参 (俯仰向下为正, 单位度)。默认读 meta.json 里的 cam_extrinsics —— 那是拍摄时的旧值,
           更新过外参后必须显式传新值。
@@ -65,6 +67,8 @@ def main():
     ap.add_argument("--lever", type=float, nargs=3, default=[0.08, 0.03, -0.115])
     ap.add_argument("--truth", default="")
     ap.add_argument("--seq", action="store_true")
+    ap.add_argument("--dt", type=float, default=0.0)
+    ap.add_argument("--rep", type=int, default=1)
     ap.add_argument("--save", default="")
     ap.add_argument("--cfg", default="")
     a = ap.parse_args()
@@ -90,15 +94,23 @@ def main():
         L, R = rig.rectify(*rig.split(im))
         t = float(row["t_cap"])
         fr = det.process(L, R, t)
+        fr0 = fr
         T_WC = pose_at(P, t) @ T_BC
         if not a.seq:
             loc = DotLocator(cfg, rig.f, rig.R1)
             # 单帧模式没有时序: 同一帧喂两次让 min_hits 过
             loc.update(fr, T_WC, t)
             loc.update(fr, T_WC, t + 1e-3)
+        elif a.dt > 0:
+            import copy
+            for _ in range(max(1, a.rep)):
+                t_seq = getattr(main, "_t", 0.0) + a.dt
+                main._t = t_seq
+                fr = copy.deepcopy(fr0)
+                loc.update(fr, T_WC, t_seq)
         else:
             loc.update(fr, T_WC, t)
-        found = fr.target.valid
+        found = fr.target.valid and fr.stage not in ("lost", "search")    # 和桥 GateOut.emit 的 published 一致
         line = "%s %-6s ncand=%d pass=%s rej=[%s]" % (row["file"], fr.stage, len(fr.cands),
                                                        fr.diag.get("n_pass"), " ".join(fr.rejected))
         if found:
@@ -107,7 +119,10 @@ def main():
                 fr.diag.get("z", -1), fr.diag.get("z_st", -1), fr.diag.get("z_sz", -1), fr.diag.get("d_est_cm", -1),
                 ex.get("aim"), ex.get("aim_sd_cm"), ex.get("score", 0))
             if "n" in ex:
-                line += " n=%s ±%.1f°" % (ex["n"], ex["n_sd_deg"])
+                line += " n=%s ±%.1f° 跨度%.0f°" % (ex["n"], ex["n_sd_deg"], ex.get("n_span_deg", 0))
+            elif ex.get("n_why"):
+                line += " (没有 n: %s)" % ex["n_why"]
+            line += " 轨迹%d" % len(loc.tracks)
         print(line)
         if truth is not None:
             inside = truth[0] <= k <= truth[1]

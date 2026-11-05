@@ -49,6 +49,10 @@ GATE_KNOBS = [
     dict(key="dock_hold", tasks=["gate"], type="float", unit="s", label="停靠悬停", group="穿环",
          min=3.0, max=300.0,
          help="mode = 停靠: 在停靠点悬停多久 (默认 20), 期间 gate.csv 照常记录; 结束打印停靠误差和 aim 抖动"),
+    dict(key="vscan", tasks=["gate"], type="float", unit="m", label="上下扫描", group="穿环",
+         min=0.0, max=0.6,
+         help="mode = 停靠: 到停靠点后先降、再升这么多、回停靠点 (只改高度, 不横移), 给识别换视角定法向 "
+              "(红点必须: 单个视角法向有两个解)。3 m 处 0.3 ≈ 视角跨度 11°, 至少要 10°。不填 / 0 = 不扫"),
     dict(key="allow_slow", tasks=["gate"], type="choice", unit="", label="场地不够时降速", group="穿环",
          choices=["否", "确认", "是"],
          help="场地放不下设定的冲刺速度时: 否 = 规划失败回手动段 (说明卡在哪、最高能冲多快); "
@@ -93,7 +97,7 @@ GATE_KNOB_PARAM = {
     "v_tear_min": "V_TEAR_MIN", "entry_ang_max": "ENTRY_ANG_MAX", "d_straight": "D_STRAIGHT",
     "run_max": "D_RUN_MAX",
     "pass_run": "PASS_RUN", "back_margin": "M_BACK", "brake_over": "BRAKE_OVER_T",
-    "dock_dist": "GATE_DOCK_D_STOP", "dock_hold": "GATE_DOCK_HOLD_S",
+    "dock_dist": "GATE_DOCK_D_STOP", "dock_hold": "GATE_DOCK_HOLD_S", "vscan": "GATE_VSCAN_DZ",
 }
 
 # 穿环 (stage12) 才有的安全项, 只在 _check_gate 里查
@@ -333,6 +337,26 @@ def _check_gate(g):
     if 0 < dd < -get("REPO_X_MAX", -1.5) + 0.3:
         E.append("停靠距离 %.2f m 太近: 摆位时要在目标前 ≥ %.1f m (REPO_X_MAX), 至少给 %.1f m"
                  % (dd, -get("REPO_X_MAX", -1.5), -get("REPO_X_MAX", -1.5) + 0.3))
+    vs = get("GATE_VSCAN_DZ") or 0.0
+    if vs < 0 or vs > 0.6:
+        E.append("上下扫描 GATE_VSCAN_DZ=%.2f m 不在 [0, 0.6]" % vs)
+    elif vs > 0:
+        if get("MISSION_MODE") != "dock" or get("GATE_SHADOW"):
+            W.append("上下扫描 vscan=%.2f m 只在停靠模式里做, 这一趟用不到" % vs)
+        else:
+            th = get("TAKEOFF_HEIGHT") or 0.0
+            lo, hi = get("TELEOP_DZ_MIN") or 0.0, (get("MAX_HEIGHT") or 0.0) - 0.5
+            dd = get("GATE_DOCK_D_STOP") or 0.0
+            d_eff = dd if dd > 0 else max(3.0, get("D_ALIGN_MIN") or 0.0)
+            z_lo, z_hi = max(th - vs, lo), min(th + vs, hi)
+            span = math.degrees(2.0 * math.atan2(max(z_hi - z_lo, 0.0) / 2.0, d_eff))
+            W.append("停靠后上下扫描: 高度约 %.2f → %.2f m (起飞高度 %.2f ± %.2f%s), 离目标 %.2f m → 视角跨度约 %.1f° "
+                     "(扫完拿到法向就按法向, 拿不到按视线)"
+                     % (z_lo, z_hi, th, vs, ", 被高度带截了" if (z_lo, z_hi) != (th - vs, th + vs) else "",
+                        d_eff, span))
+            if span < (get("GATE_VSCAN_SPAN_DEG") or 10.0):
+                W.append("上下扫描视角跨度约 %.1f° < %.0f°: 法向多半定不下来 —— 加大 vscan 或缩短停靠距离"
+                         % (span, get("GATE_VSCAN_SPAN_DEG") or 10.0))
     if (get("GATE_VIRTUAL_OFFSET") or 0) > 0:
         W.append("虚拟环 GATE_VIRTUAL_OFFSET=%.2f m: 真冲刺, 停在纸前 (T3 测试)"
                  % g["GATE_VIRTUAL_OFFSET"])

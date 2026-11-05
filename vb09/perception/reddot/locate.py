@@ -14,8 +14,15 @@ vb09/perception/reddot/locate.py —— 机上: 候选像素量 → 门限 / 深
        · 两个 Z 差超过 consist_k·σ → 拒绝 (其中一个不是红点); 没有有效立体时只接受高分 + 有白边的 (src = size)
   3. 世界系: R_WR = R_WC·R1ᵀ (★漏乘 R1ᵀ = 5 m 处横向偏约 25 cm, 见 PLAN_refactor_v2 §5), 每个候选一条轨迹
      (常位置 + 随机游走, 马氏距离关联)。轨迹分 = 单帧像素分滑动平均 × 命中数 × 稳定度。
-  4. 法向: 椭圆 cosθ = dmin/dmaj + 短轴方向 → 每帧两个候选; 每条轨迹留最近 normal_buf 帧, 找"每帧至少有一个候选
-     落在 normal_inlier_deg 内"的一致解 (圆盘没有正反面, 当轴处理, 符号翻成指向相机一侧)。一致才发 n,
+     2026-11-05: 观测协方差加下限 (obs_ang_floor_deg / obs_pos_floor: 外参 / VIO 误差), χ² 不过但在 track_radius
+     以内也并进去, 两条轨迹靠得比 track_radius 近就合并; 选发布的轨迹时只看 lost_timeout 内更新过的。
+     以前同一个红点换个视角就开一条新轨迹, 发布的却是不再更新的旧轨迹 (stage = coast / lost, aim 是旧值)。
+  4. 法向: 椭圆 cosθ = dmin/dmaj + 短轴方向 → 每帧两个候选, 互为关于视线的镜像, **单个视角分不开**。
+     每条轨迹按视线方向分桶 (normal_bin_deg) 存候选, 找"各桶都有一个候选落在 normal_inlier_deg 内"的一致解
+     (圆盘没有正反面, 当轴处理, 符号翻成指向相机一侧)。只有同时满足才发 n (2026-11-05 改):
+       · 一致的桶 ≥ normal_min_k, 且它们的视线跨度 ≥ normal_view_min_deg (视角不变时错解也"一致")
+       · 替代假设 (离最佳解 > 2×inlier) 的拟合代价比最佳解大 ≥ normal_lr_min: 每个假设把各桶里离它近的候选
+         取平均再算 Σ min(残差, inlier)²/σ²。数内点不够: 竖直扫描时错解只被拖开 ±2ε·cosθ, 也全落在 inlier 内
      n_sd_deg = 各帧 σ_i = 0.02/sinθ 的合并 (近正对时单帧法向误差大) 和一致性散布, 不低于 normal_floor_deg。
 """
 from __future__ import annotations
@@ -54,8 +61,30 @@ class _Track(object):
         self.n_hit = 1
         self.ema = info["score"]
         self.chi2 = deque(maxlen=8)
-        self.ns = deque(maxlen=20)           # (n1_w, n2_w, σ_deg)
+        self.ns = {}                         # 视角桶 → (n1_w, n2_w, σ_deg, los_w, t)。按视角存: 悬停几百帧只占一桶
         self.last = info
+
+    def add_normal(self, n1, n2, sig, los, t, cfg):
+        az = math.degrees(math.atan2(los[1], los[0]))
+        el = math.degrees(math.asin(max(-1.0, min(1.0, float(los[2])))))
+        b = cfg.normal_bin_deg
+        self.ns[(int(round(az / b)), int(round(el / b)))] = (n1, n2, sig, los, t)
+        if len(self.ns) > cfg.normal_buf:                  # 超了 → 丢最旧的桶
+            del self.ns[min(self.ns, key=lambda k: self.ns[k][4])]
+
+    def absorb(self, other):
+        """把另一条 (同一个红点被拆出来的) 轨迹并进来。"""
+        S = self.P + other.P
+        K = self.P @ np.linalg.inv(S)
+        self.x = self.x + K @ (other.x - self.x)
+        self.P = 0.5 * ((_I3 - K) @ self.P + ((_I3 - K) @ self.P).T)
+        self.n_hit += other.n_hit
+        self.ema = max(self.ema, other.ema)
+        if other.t_upd > self.t_upd:
+            self.t_upd, self.last = other.t_upd, other.last
+        for k, v in other.ns.items():
+            if k not in self.ns or v[4] > self.ns[k][4]:
+                self.ns[k] = v
 
     def predict(self, t, q):
         if t > self.t:
@@ -85,46 +114,80 @@ class _Track(object):
         return self.ema * hits / (1.0 + max(0.0, m - 6.0) / 6.0)
 
 
-def normal_consensus(ns, cfg):
-    """ns: [(n1, n2, σ_deg)] (world 单位向量) → (n, n_sd_deg, k) 或 None。n 是轴 (符号任意)。"""
+def _ang(a, b):
+    return math.degrees(math.acos(min(1.0, abs(float(a @ b)))))
+
+
+def _fit(seed, ns, inlier):
+    """假设法向 ≈ seed: 各桶取离它近的候选, 加权平均两次 → (n, 代价 Σ min(残差, inlier)²/σ², 内点下标)。"""
+    n = seed / np.linalg.norm(seed)
+    for _ in range(2):
+        acc = np.zeros(3)
+        for a, b, sg, _l in ns:
+            v = a if abs(float(a @ n)) >= abs(float(b @ n)) else b
+            if _ang(v, n) < inlier:
+                acc += (v if float(v @ n) >= 0 else -v) / sg ** 2
+        if np.linalg.norm(acc) < 1e-12:
+            break
+        n = acc / np.linalg.norm(acc)
+    cost, idx = 0.0, []
+    for i, (a, b, sg, _l) in enumerate(ns):
+        e = min(_ang(n, a), _ang(n, b))
+        cost += min(e, inlier) ** 2 / sg ** 2
+        if e < inlier:
+            idx.append(i)
+    return n, cost, idx
+
+
+def _view_span(los_list):
+    """视线方向两两之间的最大夹角 (°)。"""
+    span = 0.0
+    for i in range(len(los_list)):
+        for j in range(i + 1, len(los_list)):
+            span = max(span, math.degrees(math.acos(max(-1.0, min(1.0, float(los_list[i] @ los_list[j]))))))
+    return span
+
+
+def normal_consensus(ns, cfg, why=None):
+    """
+    ns: [(n1, n2, σ_deg, los)] (world 单位向量; los = 红点 → 相机) → (n, n_sd_deg, k, span_deg) 或 None。n 是轴 (符号任意)。
+    why: 给一个 dict 就把不发 n 的原因写进 why["n_why"] (诊断用)。
+    """
+    def no(r):
+        if why is not None:
+            why["n_why"] = r
+        return None
     if len(ns) < cfg.normal_min_k:
-        return None
-    cos_in = math.cos(math.radians(cfg.normal_inlier_deg))
-    wts = [1.0 / max(sg, 1.0) ** 2 for _, _, sg in ns]
-    tot = sum(wts)
-    best = None
-    for a0, b0, _ in ns:
-        for seed in (a0, b0):
-            acc, wsum, k = np.zeros(3), 0.0, 0
-            for (a, b, _), w in zip(ns, wts):
-                da, db = abs(float(seed @ a)), abs(float(seed @ b))
-                v, dm = (a, da) if da >= db else (b, db)
-                if dm >= cos_in:
-                    acc += w * (v if float(v @ seed) >= 0 else -v)
-                    wsum += w
-                    k += 1
-            if best is None or wsum > best[0]:
-                best = (wsum, k, acc)
-    wsum, k, acc = best
-    if k < cfg.normal_min_k or wsum < 0.6 * tot or np.linalg.norm(acc) < 1e-9:
-        return None
-    n = acc / np.linalg.norm(acc)
-    cos2 = math.cos(math.radians(2.0 * cfg.normal_inlier_deg))
-    w2 = 0.0                                  # 另一簇 (离 n 超过 2×inlier 的解) 也很大 → 分不清
-    for (a, b, _), w in zip(ns, wts):
-        if max(abs(float(n @ a)), abs(float(n @ b))) < cos2:
-            w2 += w
-    if w2 > 0.5 * wsum:
-        return None
-    angs, wi = [], []
-    for (a, b, _), w in zip(ns, wts):
-        d = max(abs(float(n @ a)), abs(float(n @ b)))
-        if d >= cos_in:
-            angs.append(math.degrees(math.acos(min(1.0, d))))
-            wi.append(w)
-    spread = math.sqrt(float(np.mean(np.square(angs)))) if angs else 0.0
+        return no("视角桶 %d < %d" % (len(ns), cfg.normal_min_k))
+    inl = cfg.normal_inlier_deg
+    fits = [_fit(v, ns, inl) for x in ns for v in (x[0], x[1])]
+    n, cost, idx = min(fits, key=lambda z: z[1])
+    if len(idx) < cfg.normal_min_k:
+        return no("一致的视角桶 %d < %d" % (len(idx), cfg.normal_min_k))
+    span = _view_span([ns[i][3] for i in idx])
+    if span < cfg.normal_view_min_deg:
+        return no("视角跨度 %.1f° < %.0f° (单个视角分不开两个解)" % (span, cfg.normal_view_min_deg))
+    alt = [z[1] for z in fits if _ang(z[0], n) > 2.0 * inl]
+    lr = (min(alt) - cost) if alt else float("inf")      # 没有离得远的替代解 (近正对: 两个候选本来就挨着)
+    if lr < cfg.normal_lr_min:
+        return no("两个解都说得通 (代价差 %.1f < %.0f)" % (lr, cfg.normal_lr_min))
+    angs = [min(_ang(n, ns[i][0]), _ang(n, ns[i][1])) for i in idx]
+    wi = [1.0 / ns[i][2] ** 2 for i in idx]
+    spread = math.sqrt(float(np.mean(np.square(angs))))
+    k = len(idx)
     n_sd = math.sqrt(cfg.normal_floor_deg ** 2 + max(1.0 / max(sum(wi), 1e-9), spread ** 2 / max(k, 1)))
-    return n, n_sd, k
+    if not alt:
+        # 近正对: 两个候选相距只有 2θ, 没有"离得远的替代解"可比; 轴比噪声又让小倾角被估大 (acos 在 1 附近有偏,
+        # 合成: 真 5° → 估 11°)。n 只能说"大致沿视线", 不确定度至少是测得的倾角 → judge 按 n_sd 门限丢掉,
+        # 飞行按视线方向进入 (正对时本来就对)
+        tilt = float(np.median([_ang(ns[i][0], ns[i][1]) / 2.0 for i in idx]))
+        n_sd = max(n_sd, tilt)
+        if why is not None:
+            why["n_why"] = "近正对 (倾角 ≈ %.0f°), n 不确定度按倾角报" % tilt
+            return n, n_sd, k, span
+    if why is not None:
+        why["n_why"] = ""
+    return n, n_sd, k, span
 
 
 class DotLocator(object):
@@ -213,6 +276,8 @@ class DotLocator(object):
         rn = float(np.linalg.norm(ray))
         s_lat = Z * cfg.sigma_px * s / f
         Rc = _cov_along_ray(ray, s_lat, sZ * rn)
+        s_ang = Z * rn * math.radians(cfg.obs_ang_floor_deg)              # 外参 / VIO 误差 (只用于关联和融合)
+        Rc = Rc + s_ang ** 2 * (_I3 - np.outer(ray, ray) / rn ** 2) + cfg.obs_pos_floor ** 2 * _I3
         o = dict(p=p, Rc=Rc, score=score, src=src, Z=Z, sZ=sZ, Zst=Zst, Zsz=Zsz, Dst=Dst, D=Z * c.dmaj / f,
                  d_px=c.dmaj, u=c.u, v=c.v, disp=disp if st_ok else None, s_lat=s_lat)
         # 法向候选 (rect 系)
@@ -227,7 +292,7 @@ class DotLocator(object):
                 t = t / tn
                 o["nc"] = (-math.cos(th) * su + math.sin(th) * t, -math.cos(th) * su - math.sin(th) * t)
                 o["tilt"] = math.degrees(th)
-                o["n_sig"] = math.degrees(0.02 / max(math.sin(th), 0.1))
+                o["n_sig"] = max(1.0, math.degrees(max(0.02, cfg.normal_sig_r * s / c.dmaj) / max(math.sin(th), 0.1)))
         return o, "ok"
 
     # ---- 主入口 ----
@@ -257,18 +322,23 @@ class DotLocator(object):
         obs.sort(key=lambda o: -o["score"])
         updated = {}
         for o in obs:
-            best = None
+            best = near = None
             for tr in self.tracks:
                 if tr.id in updated:
                     continue
                 c2 = tr.chi2_to(o["zw"], o["Rw"])
                 if c2 <= cfg.gate_chi2 and (best is None or c2 < best[0]):
                     best = (c2, tr)
+                dd = float(np.linalg.norm(o["zw"] - tr.x))
+                if dd < cfg.track_radius and (near is None or dd < near[0]):
+                    near = (dd, tr, c2)
+            if best is None and near is not None:      # χ² 不过但离得近: 同一个红点换了视角 (外参 / VIO 偏差)
+                best = (min(near[2], cfg.gate_chi2), near[1])    # χ² 记成门限值: 不因偏差把轨迹分压没
             if best is not None:
                 best[1].update(o["zw"], o["Rw"], t, o, best[0])
                 tr = best[1]
             else:
-                if any(np.linalg.norm(o["zw"] - tr.x) < 0.5 * cfg.track_radius and tr.id in updated for tr in self.tracks):
+                if any(np.linalg.norm(o["zw"] - tr.x) < cfg.track_radius and tr.id in updated for tr in self.tracks):
                     continue                           # 已更新过的轨迹旁边的重复观测
                 if len(self.tracks) >= cfg.max_tracks:
                     self.tracks.remove(min(self.tracks, key=lambda x: x.score))
@@ -277,9 +347,13 @@ class DotLocator(object):
                 self.tracks.append(tr)
             updated[tr.id] = o
             if o["nc"] is not None:
-                tr.ns.append((R_WR @ o["nc"][0], R_WR @ o["nc"][1], o["n_sig"]))
+                los = t_WR - o["zw"]
+                los = los / max(float(np.linalg.norm(los)), 1e-9)
+                tr.add_normal(R_WR @ o["nc"][0], R_WR @ o["nc"][1], o["n_sig"], los, t, cfg)
+        self._merge(updated)
         valid = [tr for tr in self.tracks if tr.n_hit >= cfg.min_hits and tr.score >= cfg.min_score]
-        best = max(valid, key=lambda tr: tr.score) if valid else None
+        fresh = [tr for tr in valid if t - tr.t_upd <= cfg.lost_timeout]
+        best = max(fresh or valid, key=lambda tr: tr.score) if valid else None
         info = {"tracks": sorted(self.tracks, key=lambda tr: -tr.score), "best": best, "updated": updated}
         fr.dbg["dot"] = info
         fr.diag["n_trk"] = len(self.tracks)
@@ -317,6 +391,27 @@ class DotLocator(object):
         fr.diag["n_close"] = len(close)
         return fr
 
+    def _merge(self, updated):
+        """靠得比 track_radius 近的轨迹合并 (同一个红点被拆开的), 留命中多的那条的编号。"""
+        r = self.cfg.track_radius
+        changed = True
+        while changed:
+            changed = False
+            for a in self.tracks:
+                for b in self.tracks:
+                    if a is b or float(np.linalg.norm(a.x - b.x)) >= r:
+                        continue
+                    keep, drop = (a, b) if (a.n_hit, -a.id) >= (b.n_hit, -b.id) else (b, a)
+                    keep.absorb(drop)
+                    if drop.id in updated:
+                        o = updated.pop(drop.id)
+                        updated.setdefault(keep.id, o)
+                    self.tracks.remove(drop)
+                    changed = True
+                    break
+                if changed:
+                    break
+
     # ---- /gate/status 附加字段 ----
     def extra(self, fr, T_WC, warn=None):
         """kind / aim / aim_sd_cm / D_est / D_eff / score / trk_id / n_hit / n_cand / cands / n / n_sd_deg"""
@@ -339,12 +434,17 @@ class DotLocator(object):
                                "Z_sz": round(float(tr.last["Zsz"]), 3), "d_px": round(float(tr.last["d_px"]), 1),
                                "uv": [round(float(tr.last["u"]), 1), round(float(tr.last["v"]), 1)],
                                "hits": int(tr.n_hit)} for tr in info["tracks"][:5]])
-            cons = normal_consensus(list(best.ns), self.cfg)
+            why = {}
+            cons = normal_consensus([v[:4] for v in best.ns.values()], self.cfg, why)
+            out["n_bins"] = len(best.ns)
             if cons is not None:
-                n, n_sd, k = cons
+                n, n_sd, k, span = cons
                 if float((t_WR - best.x) @ n) < 0:
                     n = -n                                  # 指向相机一侧 (进近侧)
-                out.update(n=[round(float(v), 5) for v in n], n_sd_deg=round(float(n_sd), 2), n_k=int(k))
+                out.update(n=[round(float(v), 5) for v in n], n_sd_deg=round(float(n_sd), 2), n_k=int(k),
+                           n_span_deg=round(float(span), 1))
+            elif why.get("n_why"):
+                out["n_why"] = why["n_why"]
         except Exception as e:                              # 附加字段出错不能影响主链路
             if warn is not None:
                 warn("[reddot] 附加字段出错: %r" % (e,))

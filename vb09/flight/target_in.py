@@ -43,10 +43,13 @@ class GateInput:
         self.cam = None
         self.cam_recv = None
         self.win = deque(maxlen=900)          # 有效样本 (dict)
-        self.rej = {k: 0 for k in self.REASONS}
         self.n_valid = 0
         # 2026-11-01 接线: 判定按目标类型选 (C.TARGET_KIND → vb09/perception/registry.py JUDGES)
         self._judge = registry.load(registry.JUDGES, C.TARGET_KIND)(C)
+        # 2026-11-05: 判定插件自己的拒绝原因也计数 (以前红点的 stale / score / hits … 被丢掉, 日志只写"没看到")
+        extra = tuple(k for k in getattr(self._judge, "REASONS", ()) if k not in self.REASONS)
+        self.rej = {k: 0 for k in self.REASONS + extra}
+        self.rej_txt = dict(self.REJ_TXT, **getattr(self._judge, "REJ_TXT", {}))
 
     # ---- 回调 ----
     def on_status(self, msg):
@@ -138,7 +141,7 @@ class GateInput:
                     extra = f" (最新一帧环心距 {math.dist(rw[:3], (q.x, q.y, q.z)):.1f}m)"
             except Exception:
                 pass
-        txt = "识别到了但单帧被拒: " + ", ".join(f"{self.REJ_TXT.get(k, k)}×{v}" for k, v in
+        txt = "识别到了但单帧被拒: " + ", ".join(f"{self.rej_txt.get(k, k)}×{v}" for k, v in
                                           sorted(d.items(), key=lambda kv: -kv[1])) + extra
         return (nv, rej), txt
 

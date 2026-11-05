@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 stage14_mission.py (原 stage12_gate.py) 离线仿真: 桩 rospy + 一个粗糙的 PX4 位置环 + 假识别 (延迟/噪声) + 纸。
-  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring|lowbatt|dock|dock_nonormal  [--set K=V ...]
+  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring|lowbatt|dock|dock_nonormal|dock_vscan  [--set K=V ...]
 不是飞行动力学仿真 —— 只用来跑通状态机、检查时间表/停止点/遥测字段和日志。
 """
 import json
@@ -51,6 +51,7 @@ UP = [RIGHT[1] * d_[2] - RIGHT[2] * d_[1], RIGHT[2] * d_[0] - RIGHT[0] * d_[2],
 AIM = [C[i] + 0.08 * RIGHT[i] - 0.05 * UP[i] for i in range(3)]
 D_BACK, L_F, L_R = 4.0, 0.30, 0.30
 V_TEAR = 0.6 if scenario != "stuck" else 99.0
+SCAN_Z = [1e9, -1e9]                       # dock_vscan: 看到目标以来飞机高度的 [最低, 最高]
 
 sites = tempfile.mkdtemp()
 with open(os.path.join(sites, "sim.conf"), "w") as f:
@@ -59,6 +60,8 @@ with open(os.path.join(sites, "sim.conf"), "w") as f:
             % (D_BACK, L_F, L_R))
     if scenario.startswith("dock"):
         f.write("mode=停靠\ndock_hold=6\n")          # 停靠: 字符串旋钮只能写在档案里
+    if scenario == "dock_vscan":
+        f.write("vscan=0.3\n")                      # 停靠后上下扫描 (2026-11-05)
 os.environ["HOME"] = tempfile.mkdtemp()
 sets = ["--set", "GATE_CONFIRM_DASH=False"]
 if scenario == "shadow":
@@ -298,7 +301,16 @@ def sim_loop():
                           dist=round(dist, 3), sd_cm=[sd, sd, sd], published=True,
                           aim=[AIM[i] + random.gauss(0, sd / 200) for i in range(3)],
                           n_sd_deg=1.0)
-                if scenario not in ("nonormal", "dock_nonormal"):
+                if scenario == "dock_vscan":
+                    # 红点: 单个视角法向分不开 → 飞机高度扫过 0.4 m 以上才给 n (感知侧见 reddot/locate.normal_consensus)
+                    zr = SCAN_Z                       # 起飞到位 (≥ 1.45 m) 之后才算: 爬升本身不算换视角
+                    if p[2] >= 1.45 or zr[0] < 1e8:
+                        zr[0], zr[1] = min(zr[0], p[2]), max(zr[1], p[2])
+                    if zr[1] - zr[0] >= 0.4:
+                        st["n"] = nn
+                    else:
+                        st["n_why"] = "视角跨度不够 (sim)"
+                elif scenario not in ("nonormal", "dock_nonormal"):
                     st["n"] = nn
             det_q.append((now + 0.25 + random.uniform(-0.03, 0.08), st))
         while det_q and det_q[0][0] <= now:
@@ -350,6 +362,10 @@ dk = None
 for t in telem:
     if (t.get("gate") or {}).get("dock"):
         dk = t["gate"]["dock"]
+if dk and dk.get("vscan"):
+    vs = dk["vscan"]
+    print("上下扫描: 高度 %s 视角跨度 %s° 法向 %s 和停靠方向差 %s° 原因 %s"
+          % (vs.get("z"), vs.get("span_deg"), "有" if vs.get("n") else "无", vs.get("dev_deg"), vs.get("why")))
 if dk:
     print("停靠: S=%s 距离 %.2fm 方向按%s  误差 中位 %s / 最大 %s cm  aim 抖动 %s  done=%s ok=%s  遥测 mode=%s"
           % (dk.get("S"), dk.get("d"), dk.get("dir_src"), dk.get("err_cm"), dk.get("err_max_cm"),

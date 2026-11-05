@@ -90,13 +90,15 @@ class Acquire(Step):
             dt = ctx.tick()
 
 
-def move_to(ctx, S, yaw_mode, timeout, label, ref=None):
+def move_to(ctx, S, yaw_mode, timeout, label, ref=None, v=None):
     """
-    setpoint 以 GATE_REPO_V 斜坡走直线到 S (3D, 带牵引绳)。yaw_mode:
+    setpoint 以 GATE_REPO_V (或 v) 斜坡走直线到 S (3D, 带牵引绳)。yaw_mode:
       "ring" = 机头盯环心 (保持环在视野里)   数值 = 固定朝向
     全程查"飞机在环前 ≥1.5m" (环系 x ≤ REPO_X_MAX)。
     ref = (aim, dir): 不用冲刺计划时 (停靠) 给目标点和进入方向; 不给 = 用 ctx.plan (冲刺, 和以前一样)。
+    v: 斜坡速度 (m/s), 不给 = GATE_REPO_V (上下扫描用更慢的 GATE_VSCAN_V)。
     """
+    v_ramp = C.GATE_REPO_V if v is None else float(v)
     ctx.set_seg("align", label)
     if ref is None:
         P = ctx.plan
@@ -114,7 +116,7 @@ def move_to(ctx, S, yaw_mode, timeout, label, ref=None):
         p = ctx.pos()
         d = gp.vsub(S, sp)
         dn = gp.vnorm(d)
-        step = C.GATE_REPO_V * dt
+        step = v_ramp * dt
         sp = S if dn <= step else gp.vadd(sp, gp.vmul(d, step / max(dn, 1e-9)))
         lead = gp.vsub(sp, p)
         ln = gp.vnorm(lead)
@@ -126,7 +128,7 @@ def move_to(ctx, S, yaw_mode, timeout, label, ref=None):
                 ctx.yaw_step(math.atan2(c[1] - p[1], c[0] - p[0]), dt)
         else:
             ctx.yaw_step(yaw_mode, dt)
-        vff = gp.vmul(d, C.GATE_REPO_V / dn) if dn > step and ln <= C.GATE_REPO_LEASH else (0.0, 0.0, 0.0)
+        vff = gp.vmul(d, v_ramp / dn) if dn > step and ln <= C.GATE_REPO_LEASH else (0.0, 0.0, 0.0)
         ctx.setpoint.set_zhold_mode(sp[0], sp[1], sp[2], ctx.yaw_sp, vff[0], vff[1])
         x_ring = gp.vdot(gp.vsub(p, ref_aim), fwd)
         if x_ring > C.REPO_X_MAX + 0.3:
