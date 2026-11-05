@@ -64,7 +64,8 @@ from vb09.common import wire   # noqa: E402
 from vb09.common.wire import pack, unpack, require_msgpack, zmq, rig_to_msg   # noqa: E402
 from vb09.perception import registry   # noqa: E402
 from vb09.perception.stereo_rig import StereoRig   # noqa: E402
-# HUD / 掩膜视图 / 控制台诊断还是环专用的 (见 main 里 --target 的检查)
+# HUD / 掩膜视图 / 控制台诊断: 检测器有显示钩子 (hud_rows / ground_draw / console / mask / found / probe_dist,
+#   例: vb09/perception/reddot/plugin.py) 就用钩子; 没有 (环) → 下面这些环专用的代码, 行为和以前一样 (2026-11-05)
 from vb09.perception.ring.det2d import apply_wb, segment   # noqa: E402
 from vb09.perception.ring.geom3d import ring_tilt_deg   # noqa: E402
 
@@ -392,8 +393,9 @@ def no_target_reason(mode, fr, fst):
 # =============================================================================
 # HUD (照 gcs_aruco_det2.draw_hud 的版面; 画在 1920×1080 画布上)
 # =============================================================================
-def draw_hud(show, mode, probe, st, fc, ph, fr, fst, pose, found, t_cap, src_wh):
-    """原地修改 show。★纯显示，异常自己吃掉★"""
+def draw_hud(show, mode, probe, st, fc, ph, fr, fst, pose, found, t_cap, src_wh, rows=None, probe_d=None):
+    """原地修改 show。★纯显示，异常自己吃掉★
+    rows = 检测器 hud_rows() 给的两行 [(文字, 颜色)] (本帧检测 / 飞机融合), 替换环的 L4 / L7b; probe_d = 探针大字距离。"""
     try:
         W = show.shape[1]
         ov = show.copy()
@@ -443,7 +445,9 @@ def draw_hud(show, mode, probe, st, fc, ph, fr, fst, pose, found, t_cap, src_wh)
 
         # ---- L4 本帧检测 (校正左目相机系: x右 y下 z前) ----
         r = fr.ring if fr is not None else None
-        if r is not None and r.ok and r.c is not None:
+        if rows:
+            cv2.putText(show, rows[0][0], (8, 94), f_, 0.54, rows[0][1], 1)
+        elif r is not None and r.ok and r.c is not None:
             s = (f"ring cam({r.c[0]:+.2f},{r.c[1]:+.2f},{r.c[2]:+.2f})  "
                  f"cam dist={np.linalg.norm(r.c):.2f}m  src={r.src}")
             if r.src == "stereo" and r.plane_rms == r.plane_rms:
@@ -502,16 +506,19 @@ def draw_hud(show, mode, probe, st, fc, ph, fr, fst, pose, found, t_cap, src_wh)
 
         # ---- L7b 源图 + 像素尺寸 + 阶段 ----
         _src = f"src {src_wh[0]}x{src_wh[1]} (eye {src_wh[0] // 2}x{src_wh[1]})   " if src_wh else ""
-        _rp, _dp = ring_major_px(fr), dot_px(fr)
-        _stage = f"   stage={fr.stage}" if fr is not None else ""
-        cv2.putText(show, f"{_src}ring px={'--' if _rp is None else f'{_rp:.0f}'}   "
-                          f"dot px={'--' if _dp is None else f'{_dp:.0f}'}{_stage}",
-                    (8, 190), f_, 0.54, (200, 200, 120), 1)
+        if rows and len(rows) > 1:
+            cv2.putText(show, rows[1][0], (8, 190), f_, 0.54, rows[1][1], 1)
+        else:
+            _rp, _dp = ring_major_px(fr), dot_px(fr)
+            _stage = f"   stage={fr.stage}" if fr is not None else ""
+            cv2.putText(show, f"{_src}ring px={'--' if _rp is None else f'{_rp:.0f}'}   "
+                              f"dot px={'--' if _dp is None else f'{_dp:.0f}'}{_stage}",
+                        (8, 190), f_, 0.54, (200, 200, 120), 1)
 
         # ---- L8 两个核心数字 ----
         if probe:
             _rd = float(np.linalg.norm(r.c)) if (r is not None and r.ok and r.c is not None) else None
-            _dd = dot_dist(fr)
+            _dd = probe_d if rows else dot_dist(fr)
             _s1 = f"ring dist = {_rd:.2f} m" if _rd is not None else "ring dist = -- m"
             _s2 = f"dot dist = {_dd:.2f} m" if _dd is not None else "dot dist = -- m"
             _c1 = (0, 255, 255) if _rd is not None else GRAY
@@ -632,7 +639,7 @@ def _dpi_aware():
 # main
 # =============================================================================
 def main():
-    ap = argparse.ArgumentParser(description="地面站 格子环+红点 检测 (飞机 vision_bridge _mode:=gate_gcs)")
+    ap = argparse.ArgumentParser(description="地面站检测 (飞机 vision_bridge _mode:=gate_gcs): 格子环+红点 (--target ring) / 红点 (--target reddot)")
     # ---- 和 gcs_aruco_det2 相同的参数 ----
     ap.add_argument("--drone", help="飞机 IP (--replay 时不用)")
     ap.add_argument("--mode", type=int, default=1, choices=[0, 1, 2],
@@ -683,13 +690,15 @@ def main():
         print("[gcs_gate] ! 画面固定是校正后左目彩色图 (= 检测器看到的), --show-color/--preview-gray 忽略")
     sim = (args.mode != 2) or args.probe          # 同 gcs_aruco_det2: probe 永远 sim
 
-    if args.target != "ring":
-        # 检测 / 序列化已经按 registry 走, 但下面的 HUD、掩膜视图、控制台诊断还按环的字段写 (DEV_GUIDE §8)
-        sys.exit("[gcs_gate] --target %s: 本程序的 HUD / 掩膜视图目前只支持 ring, 先把它们挪进插件" % args.target)
     rig = StereoRig.from_file(args.calib, (1920, 1080), args.scale)
     cfg, src = registry.load_config(args.target, args.params)
     src = src or "默认参数 (没找到 %s)" % args.params
     det = registry.load(registry.DETECTORS, args.target)(rig, cfg)
+    # 2026-11-05: 检测器自带地面显示钩子 (红点) → HUD / 叠加 / 控制台 / 掩膜用钩子; 没有 → 下面的环代码
+    hooks = all(hasattr(det, k) for k in ("hud_rows", "ground_draw", "console", "mask", "found"))
+    if args.target != "ring" and not hooks:
+        sys.exit("[gcs_gate] --target %s: 检测器没有地面显示钩子 (hud_rows / ground_draw / console / mask / found), "
+                 "本程序的 HUD 只会画环" % args.target)
     codec = wire.codec(args.target)
     rig_msg = rig_to_msg(rig, cfg, args.target)
     print(f"[gcs_gate] 标定 {args.calib}: 工作分辨率 {rig.size[0]}x{rig.size[1]}/目 f={rig.f:.1f} "
@@ -856,10 +865,17 @@ def main():
                 L, R = rig.rectify(*rig.split(img))
                 fr = det.process(L, R, t_cap, None)          # 不给位姿: 只出相机系观测
                 st.note_det_ms(fr.t_ms.get("total", 0.0))
-                st.note_det(fr)
+                if hooks:
+                    st.n_det += 1
+                    st.n_dot += int(det.found(fr))
+                else:
+                    st.note_det(fr)
             elif img is not None:
                 L = rig.rectify(*rig.split(img))[0]           # mode 0: 只给人看
-            found = bool(fr is not None and (fr.ring.ok or any(d.ok for d in fr.dots)))
+            if hooks:
+                found = bool(fr is not None and det.found(fr))
+            else:
+                found = bool(fr is not None and (fr.ring.ok or any(d.ok for d in fr.dots)))
 
             if pub is not None:
                 msg = {"seq": head.get("seq", 0), "t_cap": head.get("t_cap"), "t_done": time.time(),
@@ -874,15 +890,28 @@ def main():
 
             if need_img:
                 # 检测标记画在 960×540 工作图上, 不写字 (同 gcs_aruco_det2: 网页图不画 HUD)
-                vis = det.draw(L, fr, None, text=False) if fr is not None else L.copy()
+                if hooks:
+                    vis = det.ground_draw(L, fr, fst) if fr is not None else L.copy()
+                else:
+                    vis = det.draw(L, fr, None, text=False) if fr is not None else L.copy()
                 if args.show_mask and fr is not None:
-                    m_ = segment(apply_wb(L, cfg), cfg)["sat"]
-                    vis = np.hstack([vis, cv2.cvtColor(m_, cv2.COLOR_GRAY2BGR)])
+                    if hooks:
+                        vis = np.hstack([vis, det.mask(L)])
+                    else:
+                        m_ = segment(apply_wb(L, cfg), cfg)["sat"]
+                        vis = np.hstack([vis, cv2.cvtColor(m_, cv2.COLOR_GRAY2BGR)])
                 if pv is not None:
-                    pv_publish(vis, preview_meta(args, sim, st, fr, fst, head, jpg), jpg)
+                    meta = preview_meta(args, sim, st, fr, fst, head, jpg)
+                    if hooks and fr is not None:
+                        meta.update(found=found, n_cand=len(getattr(fr, "cands", []) or []),
+                                    reason="" if found else no_target_reason(args.mode, fr, fst))
+                    pv_publish(vis, meta, jpg)
                 if not args.headless:
                     show = to_canvas(vis)
-                    draw_hud(show, args.mode, args.probe, st, fc, ph, fr, fst, pose, found, t_cap, (w, h))
+                    rows = det.hud_rows(fr, fst) if hooks else None
+                    pd = det.probe_dist(fr) if (hooks and hasattr(det, "probe_dist")) else None
+                    draw_hud(show, args.mode, args.probe, st, fc, ph, fr, fst, pose, found, t_cap, (w, h),
+                             rows=rows, probe_d=pd)
                     cv2.imshow(win, show)
                     if (cv2.waitKey(1) & 0xFF) == ord("q"):
                         break
@@ -892,6 +921,13 @@ def main():
                 up = f" 上行={w}x{h} {len(jpg) / 1024:.0f}KB/张"
                 if fr is None:
                     print(f"[gcs_gate] {st.line()}  found=False (mode 0){up}")
+                elif hooks:
+                    print(f"[gcs_gate] {st.line()}  found={found} 阶段(飞机)={(fst or {}).get('stage', '--')} "
+                          f"{det.console(fr, fst)}{up}"
+                          + (f" | 已存 {n_rec} 帧" if args.record else ""))
+                    print("           耗时 %s" % {k: round(v) for k, v in fr.t_ms.items()})
+                    if fr.diag:
+                        print("           diag " + "  ".join("%s=%s" % (k, v) for k, v in fr.diag.items()))
                 else:
                     r_, d_ = fr.ring, fr.diag
                     dd = f" d={np.linalg.norm(r_.c):.2f}m" if (r_.ok and r_.c is not None) else ""

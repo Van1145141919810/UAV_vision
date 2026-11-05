@@ -62,10 +62,19 @@ def load(table, kind):
     return getattr(m, name) if name else m
 
 
+SHARED_PARAMS = "gate_params.json"     # 桥 _gate_params / gcs_gate --params 的默认文件名 (历史上是环的)
+
+
 def load_config(kind, path):
-    """→ (配置对象, 来源说明)。path 存在就 load(path), 否则代码默认值。"""
+    """→ (配置对象, 来源说明)。path 存在就 load(path), 否则代码默认值。
+    2026-11-05: 配置类有自己的 PARAMS_FILE (红点 = reddot_params.json) 而 path 是默认的 gate_params.json 时,
+    改读同目录的 PARAMS_FILE —— gate_params.json 是环的参数, 和红点有同名字段 (dot_d 环 11 cm / 红点 15 cm,
+    red_thr, q_pos …), 读进来会把红点的尺寸门限搞错。显式给别的文件名照旧读那个。"""
     import os
     cls = load(CONFIGS, kind)
+    own = getattr(cls, "PARAMS_FILE", None)
+    if own and path and os.path.basename(path) == SHARED_PARAMS and own != SHARED_PARAMS:
+        path = os.path.join(os.path.dirname(path), own)
     if path and os.path.exists(path):
         return cls.load(path), path
     return cls(), None

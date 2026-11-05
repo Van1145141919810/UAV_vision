@@ -98,6 +98,9 @@ class DotConfig:
     normal_sig_r: float = 1.2       # (ref px) 单帧法向噪声: σ_cosθ = max(0.02, 此值/长轴), σ_θ = σ_cosθ / sinθ
     normal_floor_deg: float = 2.0   # n_sd_deg 下限 (实测一致帧与多帧法向差 1–6°)
 
+    # 默认参数文件 (registry.load_config: 桥 / gcs_gate 没显式给别的文件时读它, 不读环的 gate_params.json)
+    PARAMS_FILE = "reddot_params.json"
+
     @classmethod
     def load(cls, path):
         with open(path, "r", encoding="utf-8") as f:
