@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+rec_view/
+shot_*.png
