@@ -43,6 +43,10 @@ GATE_KNOBS = [
          help="冲刺 = 锁定后摆位冲刺穿环; 影子 = 识别 / 锁定 / 规划照做, 不摆位不冲刺, 计划发网页; "
               "停靠 = 识别后飞到目标前方 (停靠距离) 停住对正, 悬停 (停靠悬停) 记录检测, 不冲刺 —— 测检测稳定性用 "
               "(不填 = 冲刺; 旧写法 set.GATE_SHADOW = True 等同于 影子)"),
+    dict(key="target", tasks=["gate"], type="choice", unit="", label="目标类型", group="穿环",
+         choices=["环", "红点"],
+         help="飞行脚本按哪种目标判定识别结果 (→ TARGET_KIND, vb09/perception/registry.py)。"
+              "桥 (run_vision.py --target) 要用同一种, 不一致会被强制 SIM。不填 = 环"),
     dict(key="dock_dist", tasks=["gate"], type="float", unit="m", label="停靠距离", group="穿环",
          min=1.8, max=8.0,
          help="mode = 停靠: 停靠点离目标多远 (水平, 沿环法向; 没有法向沿视线)。不填 = max(3.0, 最小助跑)"),
@@ -88,6 +92,8 @@ GATE_KNOBS = [
 
 # 任务模式旋钮 → C.MISSION_MODE (vb09/flight/modes.py 的键)
 MODE_NAMES = {"冲刺": "dash", "影子": "shadow", "停靠": "dock"}
+# 目标类型旋钮 → C.TARGET_KIND (registry 的键)。2026-11-05: 以前档案里设不了 (set. 只认数值 / 开关)
+TARGET_NAMES = {"环": "ring", "红点": "reddot"}
 
 # 穿环旋钮 → 参数 (一对一)
 GATE_KNOB_PARAM = {
@@ -157,6 +163,11 @@ def _build_gate_overrides(knobs, view):
     if knobs.get("allow_slow") is not None:
         ov["GATE_SLOW_POLICY"] = {"否": 0, "确认": 1, "是": 2}[knobs["allow_slow"]]
         rep.append("场地不够时降速: %s" % knobs["allow_slow"])
+    tg = knobs.get("target")
+    if tg is not None:
+        ov["TARGET_KIND"] = TARGET_NAMES[tg]
+        rep.append("目标类型: %s (TARGET_KIND = %s; 桥要 run_vision.py --target %s)"
+                   % (tg, TARGET_NAMES[tg], TARGET_NAMES[tg]))
     # ★2026-10-30 任务模式。影子同时置 GATE_SHADOW (识别接受 sim 帧 / 摘要 / 网页开关都按它)
     md = knobs.get("mode")
     if md is not None:
