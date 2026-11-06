@@ -78,6 +78,7 @@ function drawTop(cv, o) {
       for (const q of (o.gate.plan ? o.gate.plan.pts : [])) pts.push({x: q[0], y: q[1]});
       if (o.gate.brake) pts.push({x: o.gate.brake.end[0], y: o.gate.brake.end[1]});
     }
+    for (const m of (o.marks || [])) pts.push(m);   // 2026-11-06: 任意标注点 (配置页停靠预览)
     for (const p of pts) if (p) R = Math.max(R, Math.hypot(p.x, p.y) + 0.8);
     // 穿环: 围栏比环附近的范围大很多时 (常见: 围栏 10 m, 环在 5 m 外), 只框 原点 + 飞机 + 环 + 计划 + 制动终点,
     //   不然环和计划路径挤成一团。围栏没比它大多少就照旧以原点为中心把整个围栏框进来
@@ -181,6 +182,11 @@ function drawTop(cv, o) {
     }
   }
   // 轨迹 (最近 10s)
+  for (const m of (o.marks || [])) {                // 标注点: 实心点 + 文字 (color = C 里的键)
+    ctx.fillStyle = C[m.color] || C.muted;
+    ctx.beginPath(); ctx.arc(X(m.x), Y(m.y), 4, 0, 2 * Math.PI); ctx.fill();
+    if (m.label) { ctx.font = "11px system-ui, sans-serif"; ctx.fillText(m.label, X(m.x) + 7, Y(m.y) - 6); }
+  }
   if (o.trail && o.trail.length > 1) {
     const tN = o.trail[o.trail.length - 1][0];
     ctx.lineWidth = 1.5;

@@ -19,7 +19,8 @@ SPLIT = re.compile(r"(?=\d+\.\d\d [IWEF] )")
 # 已知的不确定性 (同一份代码多跑几次也会变, 已核对): 起跑点正好在 D_RUN_MAX 边界上时 "就地起跑"/"前进到"
 #   来回跳; z 掉高事件看仿真时序; 多线程同时 print 会把两行粘在一起 (按时间戳前缀拆开)
 NOISE = [(re.compile(r"\[(就地起跑|前进到|后退到)[^\]]*\]"), "[<起跑>]")]
-SKIP = re.compile(r"^\[zdrop\]|GATE_SHADOW = True 是旧写法")   # 后者: 4.5 有意新增的提示
+# 有意新增的行: 4.5 旧写法提示; 2026-11-06 参数摘要多一行 "模式: … 目标: …"
+SKIP = re.compile(r"^\[zdrop\]|GATE_SHADOW = True 是旧写法|^  模式: \S+ —— ")
 
 
 def templates(root, sc):

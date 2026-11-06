@@ -64,40 +64,103 @@ const DEFAULT_OF = {   // 旋钮 → 从默认 dry-run 结果里取"默认值"�
   entry_ang_max: r => r.params.ENTRY_ANG_MAX, d_straight: r => r.params.D_STRAIGHT,
   run_max: r => r.params.D_RUN_MAX,
 };
-// ★2026-10-19 表单按任务显示旋钮: 旋钮表的 tasks 字段 (没有 = 两种任务都用)。
-//   任务 = 表单里选的「任务」旋钮; 没选就是飞行脚本自己的任务 (默认 dry-run 的 task)。
-//   不属于当前任务的旋钮隐藏 —— 但**填了值的不藏** (载入了别的任务的档案时要让人看见, dry-run 会报错)。
+// ---------------------------------------------------------------------------
+// ★2026-11-06 表单按"目标 + 模式"组织 (模式元数据来自 /api/schema 的 modes = vb09/flight/mode_spec.py)
+//   · 目标 / 模式: 顶部两组按钮 (背后仍是 data-k 的 <select>, readKnobs / 档案格式不变)
+//   · 旋钮的 section (区) 决定归属: 只显示当前模式用到的区; 没有 section 的 (现场 / 高度 / 水平) 总显示
+//   · 别的区里填了值的旋钮: 不显示, 值保留 (存档案照样写), 表单底部一行"另有 N 项"
+//   · 这里不写任何模式名 / 区名: 加模式只改 mode_spec.py
+// ---------------------------------------------------------------------------
 const TASK_OF = {"穿环": "gate"};
 function formTask() {
   const el = document.querySelector('[data-k="task"]');
   return (el && TASK_OF[el.value]) || (defaults && defaults.task) || "gate";
 }
+const MS = () => (SCHEMA && SCHEMA.modes) || {modes: [], sections: [], default_mode: "dash"};
+function modeSpec(key) { return MS().modes.find(m => m.key === key) || null; }
+function formMode() {
+  // 和 profile/gate.knob_activity 同一规则: set.GATE_SHADOW = True (旧写法) 优先, 再看 mode 旋钮, 再看代码默认
+  if (/^\s*GATE_SHADOW\s*=\s*(True|true|1)\s*$/m.test(($("#cfg-sets") || {}).value || "")) return "shadow";
+  const el = document.querySelector('[data-k="mode"]');
+  const m = el && el.value && MS().modes.find(x => x.label === el.value);
+  return m ? m.key : ((defaults && defaults.params && defaults.params.MISSION_MODE) || MS().default_mode);
+}
+function formTarget() {
+  const el = document.querySelector('[data-k="target"]');
+  const t = el && el.value && (SCHEMA.targets || []).find(x => x.label === el.value);
+  return t ? t.key : ((defaults && defaults.params && defaults.params.TARGET_KIND) || "ring");
+}
+const secLabel = s => ((MS().sections.find(x => x.key === s) || {}).label) || s;
 function applyTaskFilter() {
   if (!SCHEMA) return;
-  const task = formTask();
+  const task = formTask(), mode = formMode(), spec = modeSpec(mode);
+  const act = new Set(spec ? spec.sections : MS().sections.map(s => s.key));
+  const hiddenSet = [];
   for (const k of SCHEMA.knobs) {
     const f = document.querySelector(`.f[data-f="${k.key}"]`);
     if (!f) continue;
     const el = f.querySelector("[data-k]");
-    const off = Array.isArray(k.tasks) && !k.tasks.includes(task);
-    f.hidden = off && !(el && el.value !== "");
-    f.classList.toggle("other-task", off);
+    const offTask = Array.isArray(k.tasks) && !k.tasks.includes(task);
+    const offMode = !!k.section && !act.has(k.section);
+    f.hidden = (offTask && !(el && el.value !== "")) || offMode;
+    f.classList.toggle("other-task", offTask);
+    if (offMode && el && el.value !== "") hiddenSet.push(k);
   }
   for (const fs of $$("#cfg-form fieldset")) fs.hidden = ![...fs.querySelectorAll(".f")].some(f => !f.hidden);
   const adv = $("#cfg-adv");
   if (adv) {
-    adv.hidden = ![...adv.querySelectorAll(".f")].some(f => !f.hidden);
-    const n = [...adv.querySelectorAll(".f")].filter(f => !f.hidden).length;
+    const vis = [...adv.querySelectorAll(".f")].filter(f => !f.hidden);
+    adv.hidden = !vis.length;
     const sm = adv.querySelector("summary");
-    if (sm) sm.textContent = `高级：速度 / 加速度 / 冲刺（${n} 项，空着 = 按上面的旋钮推导）`;
+    if (sm) sm.textContent = `高级：${[...new Set(vis.map(f => f.closest("fieldset").dataset.legend))].join(" / ")}`
+                             + `（${vis.length} 项，空着 = 按上面的旋钮推导）`;
   }
+  // 别的模式的设置: 只报数, 不显示 (值留在表单里, 存档案照样写进去)
+  const hb = $("#cfg-hidden");
+  if (hb) {
+    hb.hidden = !hiddenSet.length;
+    hb.textContent = hiddenSet.length ? `另有 ${hiddenSet.length} 项其他模式的设置（已保留在档案里，当前模式不用）：`
+      + hiddenSet.map(k => k.label).join("、") : "";
+    hb.title = hiddenSet.map(k => `${k.label} = ${document.querySelector(`[data-k="${k.key}"]`).value}  （${secLabel(k.section)}）`).join("\n");
+  }
+  renderPickers();
   const ta = $("#cfg-sets");
-  if (ta) ta.placeholder = "GATE_SHADOW=True";
+  if (ta) ta.placeholder = "GATE_HOLD_S=2";
 }
+// ---- 目标 / 模式 按钮组 ----
+function renderPickers() {
+  const box = $("#cfg-pick");
+  if (!box || !SCHEMA) return;
+  const mode = formMode(), tgt = formTarget(), spec = modeSpec(mode);
+  const elM = document.querySelector('[data-k="mode"]'), elT = document.querySelector('[data-k="target"]');
+  const btns = (el, items, cur, isDefault) => items.map(it =>
+    `<button type="button" class="seg${it.key === cur ? " on" : ""}" data-pick="${esc(el.dataset.k)}" data-v="${esc(it.label)}"
+      title="${esc(it.desc || "")}">${esc(it.label)}${it.key === cur && isDefault ? '<em>默认</em>' : ""}</button>`).join("");
+  const sup = ((SCHEMA.target_support || {})[tgt] || {})[mode];
+  const supTxt = !SCHEMA.target_support || !SCHEMA.target_support[tgt] ? ""
+    : !sup ? `<span class="sw danger">这种目标不支持这个模式 —— 校验会拒绝</span>`
+    : sup[0] === "experimental" ? `<span class="sw warnn">实验性${sup[1] ? "：" + esc(sup[1]) : ""}</span>` : "";
+  const shadowOld = /^\s*GATE_SHADOW\s*=\s*(True|true|1)\s*$/m.test($("#cfg-sets").value || "");
+  box.innerHTML = `
+    <div class="pick-row"><span class="pick-l">目标</span><div class="segs">${btns(elT, SCHEMA.targets || [], tgt, !elT.value)}</div></div>
+    <div class="pick-row"><span class="pick-l">模式</span><div class="segs">${btns(elM, MS().modes, mode, !elM.value && !shadowOld)}</div></div>
+    <div class="pick-desc">${spec ? esc(spec.desc) : ""}
+      ${spec ? `<span class="sw ${spec.drives ? "danger" : "okk"}">${spec.drives ? "这一趟会冲刺" : "不冲刺"}</span>` : ""}
+      ${shadowOld ? `<span class="sw warnn">set.GATE_SHADOW = True（旧写法）→ 按影子飞</span>` : ""}
+      ${supTxt}</div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-pick]");
+  if (!b) return;
+  const el = document.querySelector(`[data-k="${b.dataset.pick}"]`);
+  el.value = b.dataset.v;
+  markChanged(); applyTaskFilter(); schedulePreview();
+});
 
 async function initConfig() {
   try { SCHEMA = await getJSON("/api/schema"); }
   catch (e) { $("#cfg-form").innerHTML = '<p class="bad">取不到旋钮表（flight_profile.py 不在？）</p>'; return; }
+  MODE_INFO = SCHEMA.modes || MODE_INFO;
   buildForm();
   const st = loadFormState();
   if (st) {
@@ -127,21 +190,28 @@ async function initConfig() {
   applyTaskFilter();
   schedulePreview(0);
 }
+const PICKERS = new Set(["mode", "target"]);       // 用按钮组显示的 choice 旋钮
 function buildForm() {
-  // ★2026-10-19: 旋钮表里 adv:true 的进「高级」折叠区 (速度 / 加速度 / 冲刺这类细调)。
-  //   flight_profile 还没加 adv 字段时, 这里和以前完全一样
+  // 分组: 有 section 的按区 (legend = 区名), 没有的按旋钮表的 group。adv:true 的进「高级」折叠区
+  const gkey = k => k.section ? "§" + k.section : k.group;
+  const glabel = g => g.startsWith("§") ? secLabel(g.slice(1)) : g;
   const fs = ks => {
     const groups = [];
-    for (const k of ks) { if (!groups.includes(k.group)) groups.push(k.group); }
-    return groups.map(g => `<fieldset><legend>${esc(g)}</legend>${
-      ks.filter(k => k.group === g).map(field).join("")}</fieldset>`).join("");
+    for (const k of ks) { if (!groups.includes(gkey(k))) groups.push(gkey(k)); }
+    return groups.map(g => `<fieldset data-legend="${esc(glabel(g))}"><legend>${esc(glabel(g))}</legend>${
+      ks.filter(k => gkey(k) === g).map(field).join("")}</fieldset>`).join("");
   };
-  const basic = SCHEMA.knobs.filter(k => !k.adv), adv = SCHEMA.knobs.filter(k => k.adv);
+  const ks = SCHEMA.knobs.filter(k => !PICKERS.has(k.key));
+  const basic = ks.filter(k => !k.adv), adv = ks.filter(k => k.adv);
+  const hiddenSel = SCHEMA.knobs.filter(k => PICKERS.has(k.key)).map(k =>
+    `<select data-k="${k.key}" hidden><option value=""></option>${k.choices.map(c => `<option>${esc(c)}</option>`).join("")}</select>`).join("");
   const form = $("#cfg-form");
-  form.innerHTML = fs(basic) + (adv.length ? `<details id="cfg-adv"><summary>高级：速度 / 加速度 / 冲刺（${adv.length} 项，` +
-    `空着 = 按上面的旋钮推导）</summary>${fs(adv)}</details>` : "");
+  form.innerHTML = `<div id="cfg-pick" class="pick"></div>${hiddenSel}` + fs(basic) +
+    (adv.length ? `<details id="cfg-adv"><summary>高级</summary>${fs(adv)}</details>` : "") +
+    `<div id="cfg-hidden" class="note small" hidden></div>`;
   form.addEventListener("input", () => { markChanged(); schedulePreview(); });
   form.addEventListener("change", () => { markChanged(); applyTaskFilter(); schedulePreview(); });
+  $("#cfg-sets").addEventListener("input", () => applyTaskFilter());
   applyTaskFilter();
 }
 function field(k) {
@@ -161,7 +231,7 @@ function readKnobs() {
   return out;
 }
 function setKnobs(kn) {
-  for (const el of $$("#cfg-form [data-k]")) el.value = kn[el.dataset.k] ?? "";
+  for (const el of $$("#cfg-form [data-k]")) el.value = kn[el.dataset.k] ?? "";   // 包括隐藏的 (别的模式的值保留)
   // 档案里填了高级项 → 自动展开, 免得"看不见但生效"
   const adv = $("#cfg-adv");
   if (adv && SCHEMA) adv.open = adv.open || SCHEMA.knobs.some(k => k.adv && kn[k.key] !== undefined && kn[k.key] !== "");
@@ -173,7 +243,12 @@ function markChanged() {
     const b = baseKnobs[el.dataset.k];
     const cur = el.value;
     const same = (b === undefined || b === null) ? cur === "" : String(b) === cur || (+b === +cur && cur !== "");
-    el.closest(".f").classList.toggle("chg", !same);
+    const f = el.closest(".f");
+    if (f) f.classList.toggle("chg", !same);
+    else {                                        // 目标 / 模式按钮组: 和档案不同就给按钮组描黄边
+      const b = document.querySelector(`button[data-pick="${el.dataset.k}"]`);
+      if (b) b.parentElement.classList.toggle("chg", !same);
+    }
   }
 }
 async function refreshSites() {
@@ -255,9 +330,15 @@ function renderPreview(r) {
     }
   const d = r.derived, p = r.params || {};
   const isGate = (r.task || (d && d.task)) === "gate";
-  // 开关
+  // 开关 (2026-11-06: 按模式 —— 不冲刺的模式不列冲刺开关, 也不说"锁定后会冲刺")
   const sw = d && d.switches ? d.switches : null;
-  $("#pv-sw").innerHTML = !sw ? "" : isGate ? [
+  const mi = (d && d.mode) || null;
+  const dashSec = !mi || (mi.sections || []).includes("dash");
+  $("#pv-sw").innerHTML = !sw ? "" : !isGate ? "" : !dashSec ? [
+    `<span class="sw okk">${esc(mi.label)}：不冲刺</span>`,
+    mi.support && mi.support[0] === "experimental" ? `<span class="sw warnn">目标 + 模式：实验性</span>` : "",
+    `<span class="sw ${sw.GATE_ALLOW_SIM_DRIVE ? "danger" : "okk"}">${sw.GATE_ALLOW_SIM_DRIVE ? "SIM 识别可驱动！" : "SIM 识别拦截"}</span>`,
+    `<span class="sw">${sw.GATE_REQUIRE_NORMAL ? "必须有法向 n" : "无法向按视线进入"}</span>`].join("") : [
     `<span class="sw ${sw.GATE_SHADOW ? "okk" : "danger"}">${sw.GATE_SHADOW ? "影子模式（不摆位不冲刺）" : "实飞：锁定后会冲刺"}</span>`,
     `<span class="sw ${sw.GATE_SLOW_POLICY === 2 ? "danger" : "okk"}">${
       {0: "场地不够：不降速（回手动段）", 1: "场地不够：降速要按 Y 确认", 2: "场地不够：自动降速"}[sw.GATE_SLOW_POLICY ?? 1]}</span>`,
@@ -265,19 +346,52 @@ function renderPreview(r) {
       ? `<span class="sw info">虚拟环：前移 ${fx(sw.GATE_VIRTUAL_OFFSET, 1)} m，停在纸前</span>` : "",
     `<span class="sw ${sw.GATE_CONFIRM_DASH ? "okk" : "danger"}">${sw.GATE_CONFIRM_DASH ? "冲刺前按 G" : "锁定后直接冲刺"}</span>`,
     `<span class="sw ${sw.GATE_ALLOW_SIM_DRIVE ? "danger" : "okk"}">${sw.GATE_ALLOW_SIM_DRIVE ? "SIM 识别可冲刺！" : "SIM 识别拦截"}</span>`,
-    `<span class="sw">${sw.GATE_REQUIRE_NORMAL ? "必须有法向 n" : "无法向按视线进入"}</span>`].join("") : "";
+    `<span class="sw">${sw.GATE_REQUIRE_NORMAL ? "必须有法向 n" : "无法向按视线进入"}</span>`].join("");
   if (d) {
+    const pvw = PREVIEWS[(mi && mi.preview) || "dash"] || PREVIEWS.dash;
     drawTop($("#pv-top"), {d, drone: {x: 0, y: 0, yaw: Math.PI / 2}, trail: [], mode: "fence", noLabel: true,
-                           lim: d.phase_envelope && d.phase_envelope.takeoff ? d.phase_envelope.takeoff[0] : null});
+                           lim: d.phase_envelope && d.phase_envelope.takeoff ? d.phase_envelope.takeoff[0] : null,
+                           marks: pvw.marks ? pvw.marks(d) : null});
     drawHeight($("#pv-h"), {d, z: d.takeoff_height});
     const pe = d.phase_envelope || {};
     const t = d.timeouts || {}, s = d.speeds || {}, sf = d.safety || {};
     const row = (k, val) => `<dt>${k}</dt><dd class="num">${val}</dd>`;
-    $("#pv-env").innerHTML = gateEnvRows(d, row);
+    $("#pv-env").innerHTML = pvw.rows(d, row);
   } else { $("#pv-env").innerHTML = ""; prep($("#pv-top")); prep($("#pv-h")); }
   $("#pv-applied").innerHTML = (r.applied || []).map(([k, v]) => `<div>${esc(k)} = ${esc(v)}</div>`).join("") || '<span class="muted">（无，全是代码默认值）</span>';
   $("#pv-lines").innerHTML = (r.lines || []).map(l => `<li>${esc(l)}</li>`).join("");
   if (!r.ok && r.stderr) $("#pv-err").innerHTML += `<li><pre class="small">${esc(r.stderr)}</pre></li>`;
+}
+// ★2026-11-06 右侧核对表按模式的 preview 选 (mode_spec.MODE_SPECS[..].preview)。加一种预览 = 这里加一项
+const PREVIEWS = {
+  dash: {rows: (d, row) => gateEnvRows(d, row)},
+  dock: {rows: (d, row) => dockEnvRows(d, row), marks: d => dockMarks(d)},
+};
+function dockEnvRows(d, row) {
+  const k = d.dock || {}, pe = d.phase_envelope || {}, sf = d.safety || {}, t = d.timeouts || {};
+  const fitTxt = nz(k.d) && nz(d.xy_soft)
+    ? (k.d <= d.xy_soft + 1e-9 ? `目标在起飞点前 ≤ ${fx(k.d + d.xy_soft)} m 都能停到（停靠点要在水平范围内）`
+                               : "") : "";
+  return [
+    row("瞄点高度带", `${fx(d.z_band && d.z_band[0])} ~ ${fx(d.z_band && d.z_band[1])} m · 硬顶 ${fx(d.max_height, 1)} m`),
+    row("起飞高度", `${fx(d.takeoff_height)} m`),
+    row("水平", `范围 ${fx(d.xy_soft)} · 硬围栏 ${fx(d.xy_hard)} · 起降 ${fx(d.base_drift)} m`),
+    row("停靠", `目标前 ${fx(k.d)} m${k.d_auto ? "（自动）" : ""} · 悬停 ${fx(k.hold, 0)} s`),
+    fitTxt ? row("停靠点", esc(fitTxt)) : "",
+    k.z_scan ? row("上下扫描", `高度 ${fx(k.z_scan[0])} → ${fx(k.z_scan[1])} m · 视角跨度 ` +
+        (k.span_deg < k.span_min ? `<b class="warn">${fx(k.span_deg, 1)}°</b>（要 ≥ ${fx(k.span_min, 0)}°）`
+                                 : `${fx(k.span_deg, 1)}°（要 ≥ ${fx(k.span_min, 0)}°）`))
+             : row("上下扫描", "不扫（没有法向时按视线停靠）"),
+    row("速度硬限", `gate ${fx(pe.gate && pe.gate[1])} m/s（按摆位速度）`),
+    row("时间", `起飞 ${fx(t.TAKEOFF_TIMEOUT, 0)} · 降落 ${fx(t.DESCEND_TIMEOUT, 0)} s`),
+    row("安全", `倾角停桨 ${fx(sf.MAX_TILT_DEG, 0)}° · 视觉断供 ${fx(sf.VISION_LOST_LAND_S)} s`),
+    `<dt></dt><dd class="small muted">俯视图：目标画在起飞点正前方停靠距离处（示意），此时停靠点就是起飞点</dd>`,
+  ].join("");
+}
+function dockMarks(d) {
+  const k = d.dock || {};
+  if (!nz(k.d)) return null;
+  return [{x: 0, y: k.d, label: "目标（示意）", color: "tgt"}, {x: 0, y: 0, label: "停靠点", color: "ok"}];
 }
 // ★2026-10-19 穿环 (stage12) 的包络核对表。字段见 flight_profile._derived_gate
 function gateEnvRows(d, row) {

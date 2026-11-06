@@ -14,6 +14,7 @@ import time
 import rospy
 import gate_plan as gp      # 同目录, 纯函数
 from vb09.flight import config as C
+from vb09.flight import mode_spec as _ms
 
 from vb09.flight.ctx import F
 from vb09.flight.ctx import _f, cells_from_voltage, telem_put
@@ -34,49 +35,59 @@ def print_config_summary():
     """arm 之前把生效参数念一遍。让程序自己把最终状态报出来, 比靠人读注释可靠。"""
     L = rospy.loginfo
     W = rospy.logwarn
-    pv = gp.static_preview(gp.params_from_globals(vars(C)))
+    dash = _ms.uses(C.MISSION_MODE, "dash")       # 2026-11-06: 不冲刺的模式不念冲刺参数, 也不说"会冲刺"
+    pv = gp.static_preview(gp.params_from_globals(vars(C))) if dash else {}
+    spec = _ms.MODE_SPECS.get(C.MISSION_MODE, {})
     L("=" * 64)
     L("生效参数摘要 (穿环)")
     L("-" * 64)
-    L(f"  机体: 机头 {C.L_F:.2f} 机尾 {C.L_R:.2f} 半宽 {C.W_HALF:.2f} 半高 {C.H_HALF:.2f} m  → 机体中心离环心 "
-      f"左右 ≤ {gp_r_lim(0):.2f} / 上下 ≤ {gp_r_lim(1):.2f} m")
-    if C.NEEDLE_RIGHT or C.NEEDLE_UP or C.AIM_TRIM_RIGHT or C.AIM_TRIM_UP:
-        W(f"  撞击点: 针尖在机体中心 右 {C.NEEDLE_RIGHT*100:+.0f} / 上 {C.NEEDLE_UP*100:+.0f} cm,  "
-          f"经验修正 右 {C.AIM_TRIM_RIGHT*100:+.0f} / 上 {C.AIM_TRIM_UP*100:+.0f} cm  "
-          f"→ 机体中心瞄在目标 右 {(C.AIM_TRIM_RIGHT-C.NEEDLE_RIGHT)*100:+.0f} / 上 {(C.AIM_TRIM_UP-C.NEEDLE_UP)*100:+.0f} cm")
-    else:
-        L("  撞击点: 机体中心对准目标 (NEEDLE_* / AIM_TRIM_* 都是 0)")
-    L(f"  场地: 环后 {C.D_BACK:.2f}  起飞点后方 {C.D_REAR:.2f}  两侧 {C.D_SIDE:.2f} m  "
-      f"水平范围 {C.GATE_XY_MAX:.2f} m")
-    L(f"  冲刺: ≤{C.DASH_V:.2f} m/s (最低降到 {C.DASH_V_MIN:.2f})  加 {C.DASH_ACC:.1f} / 减 {C.BRAKE_ACC:.1f} m/s²  "
-      f"T_LAG {C.T_LAG:.2f}s")
-    vp = pv.get("v_plan", C.DASH_V)
-    (W if vp < C.DASH_V - 1e-9 or pv.get("v_room") is None else L)(
-        f"  正对进入时: {vp:.2f} m/s" + ("" if vp >= C.DASH_V - 1e-9 else
-                                      f" (环后空间限速; 按 {C.DASH_V:.2f} 冲要 D_BACK ≥ {pv['d_back_need']:.2f} m)")
-        + f"  助跑 {pv['d_align']:.2f} m")
-    L(f"             过纸冲刺 {C.PASS_RUN:.2f} m (+滞后补偿 {pv.get('pass_lag', 0):.2f})  "
-      f"刹车起点 s={pv.get('s_brake', float('nan')):+.2f}  停止 s={pv['overshoot']:+.2f}  "
-      f"含超调 {pv.get('brake_over', 0):.2f} m 后机头离墙 {C.M_BACK + pv['tol']:.2f} m (要求 ≥ {C.M_BACK:.2f})")
-    L("             场地不够时: " + {0: "不降速, 规划失败回手动段", 1: "降速, 冲刺前要按 Y 确认",
-                                   2: "自动降速"}.get(int(C.GATE_SLOW_POLICY), "?"))
-    if "v_hit" in pv:
-        L(f"             撞纸 {pv['v_hit']:.2f} m/s (撕纸下限 {C.V_TEAR_MIN:.2f})  冲刺 {pv['t_dash']:.2f}s")
+    L(f"  模式: {spec.get('label', C.MISSION_MODE)} —— {spec.get('desc', '')}   目标: {C.TARGET_KIND}")
+    if dash:
+        L(f"  机体: 机头 {C.L_F:.2f} 机尾 {C.L_R:.2f} 半宽 {C.W_HALF:.2f} 半高 {C.H_HALF:.2f} m  → 机体中心离环心 "
+          f"左右 ≤ {gp_r_lim(0):.2f} / 上下 ≤ {gp_r_lim(1):.2f} m")
+        if C.NEEDLE_RIGHT or C.NEEDLE_UP or C.AIM_TRIM_RIGHT or C.AIM_TRIM_UP:
+            W(f"  撞击点: 针尖在机体中心 右 {C.NEEDLE_RIGHT*100:+.0f} / 上 {C.NEEDLE_UP*100:+.0f} cm,  "
+              f"经验修正 右 {C.AIM_TRIM_RIGHT*100:+.0f} / 上 {C.AIM_TRIM_UP*100:+.0f} cm  "
+              f"→ 机体中心瞄在目标 右 {(C.AIM_TRIM_RIGHT-C.NEEDLE_RIGHT)*100:+.0f} / 上 {(C.AIM_TRIM_UP-C.NEEDLE_UP)*100:+.0f} cm")
+        else:
+            L("  撞击点: 机体中心对准目标 (NEEDLE_* / AIM_TRIM_* 都是 0)")
+        L(f"  场地: 环后 {C.D_BACK:.2f}  起飞点后方 {C.D_REAR:.2f}  两侧 {C.D_SIDE:.2f} m  "
+          f"水平范围 {C.GATE_XY_MAX:.2f} m")
+        L(f"  冲刺: ≤{C.DASH_V:.2f} m/s (最低降到 {C.DASH_V_MIN:.2f})  加 {C.DASH_ACC:.1f} / 减 {C.BRAKE_ACC:.1f} m/s²  "
+          f"T_LAG {C.T_LAG:.2f}s")
+        vp = pv.get("v_plan", C.DASH_V)
+        (W if vp < C.DASH_V - 1e-9 or pv.get("v_room") is None else L)(
+            f"  正对进入时: {vp:.2f} m/s" + ("" if vp >= C.DASH_V - 1e-9 else
+                                          f" (环后空间限速; 按 {C.DASH_V:.2f} 冲要 D_BACK ≥ {pv['d_back_need']:.2f} m)")
+            + f"  助跑 {pv['d_align']:.2f} m")
+        L(f"             过纸冲刺 {C.PASS_RUN:.2f} m (+滞后补偿 {pv.get('pass_lag', 0):.2f})  "
+          f"刹车起点 s={pv.get('s_brake', float('nan')):+.2f}  停止 s={pv['overshoot']:+.2f}  "
+          f"含超调 {pv.get('brake_over', 0):.2f} m 后机头离墙 {C.M_BACK + pv['tol']:.2f} m (要求 ≥ {C.M_BACK:.2f})")
+        L("             场地不够时: " + {0: "不降速, 规划失败回手动段", 1: "降速, 冲刺前要按 Y 确认",
+                                       2: "自动降速"}.get(int(C.GATE_SLOW_POLICY), "?"))
+        if "v_hit" in pv:
+            L(f"             撞纸 {pv['v_hit']:.2f} m/s (撕纸下限 {C.V_TEAR_MIN:.2f})  冲刺 {pv['t_dash']:.2f}s")
+    if "dock" in _ms.sections(C.MISSION_MODE):
+        L(f"  停靠: 目标前 {C.GATE_DOCK_D:.2f} m  悬停 {C.GATE_DOCK_HOLD_S:.0f} s  水平范围 {C.GATE_XY_MAX:.2f} m"
+          + (f"  上下扫描 ±{C.GATE_VSCAN_DZ:.2f} m" if C.GATE_VSCAN_DZ > 0 and _ms.uses(C.MISSION_MODE, "scan") else ""))
     L(f"  识别: 距离 [{C.GATE_D_MIN:.1f}, {C.GATE_D_MAX:.1f}] m  单帧σ 横<{C.GATE_SD_MAX_CM:.0f}/深<{C.GATE_SD_ALONG_MAX_CM:.0f}cm (环心观测放宽到 {C.GATE_SD_ALONG_PER_M_CM:.1f}cm×距离)  "
       f"锁定σ 横<{C.GATE_LOCK_SD_LAT_CM:.0f}/深<{C.GATE_LOCK_SD_ALONG_CM:.0f}cm  "
       f"锁定离散 横<{C.GATE_ALIGN_SPREAD_CM:.0f}/深<{C.GATE_ALIGN_SPREAD_ALONG_CM:.0f}cm  "
       f"{'必须有法向' if C.GATE_REQUIRE_NORMAL else '没有法向就按视线方向进入'}")
     L("-" * 64)
-    if C.GATE_SHADOW:
-        L("  ✓ 影子 GATE_SHADOW=True —— 识别/锁定/规划照做, 不摆位、不冲刺")
+    if not spec.get("drives", True) and not C.GATE_SHADOW:
+        L(f"  ✓ {spec.get('label', C.MISSION_MODE)}模式 —— 不冲刺")
     else:
-        W("  ✗ 影子 GATE_SHADOW=False —— !!! 锁定后会摆位、冲刺 !!!")
-    if C.GATE_VIRTUAL_OFFSET > 0:
-        W(f"  ★ 虚拟环: 环平面前移 {C.GATE_VIRTUAL_OFFSET:.2f} m, 停在纸前")
-    if C.GATE_CONFIRM_DASH:
-        L("  ✓ 冲刺前要按 G 确认")
-    else:
-        W("  ✗ GATE_CONFIRM_DASH=False —— 锁定后直接冲刺, 不等确认")
+        if C.GATE_SHADOW:
+            L("  ✓ 影子 GATE_SHADOW=True —— 识别/锁定/规划照做, 不摆位、不冲刺")
+        else:
+            W("  ✗ 影子 GATE_SHADOW=False —— !!! 锁定后会摆位、冲刺 !!!")
+        if C.GATE_VIRTUAL_OFFSET > 0:
+            W(f"  ★ 虚拟环: 环平面前移 {C.GATE_VIRTUAL_OFFSET:.2f} m, 停在纸前")
+        if C.GATE_CONFIRM_DASH:
+            L("  ✓ 冲刺前要按 G 确认")
+        else:
+            W("  ✗ GATE_CONFIRM_DASH=False —— 锁定后直接冲刺, 不等确认")
     if C.GATE_ALLOW_SIM_DRIVE:
         W("  ✗ GATE_ALLOW_SIM_DRIVE=True —— !!! sim 标记的识别也能驱动冲刺 !!!")
     L("-" * 64)
@@ -172,6 +183,9 @@ def preflight_plan(st, age):
       q = 退出去改档案
     看不到环 / 识别太旧 → 跳过 (返回 True)。返回 False = 操作员选了退出。
     """
+    if not _ms.uses(C.MISSION_MODE, "dash"):
+        rospy.loginfo("    (模式 %s 不冲刺 —— 不做冲刺预规划)" % _ms.MODE_SPECS.get(C.MISSION_MODE, {}).get("label", C.MISSION_MODE))
+        return True
     try:
         rw = st.get("ring_w") or st.get("target")
         if rw is None or age > 1.0:

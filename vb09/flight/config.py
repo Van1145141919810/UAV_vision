@@ -10,6 +10,7 @@ vb09/flight/config.py —— 飞行脚本的全部参数 (原 stage12_gate.py �
 ★ 这里的值是"不给档案时"的代码默认值 (默认没有 gate_params.json / 档案时就飞这些),
   重构时整块原样搬, 不许改。派生量在 derive() 之前**不存在** (--set 不能直接改它们, 和以前一样)。
 """
+from vb09.flight import mode_spec as _ms     # 纯数据 (derive 按模式定速度包络)
 
 # =============================================================================
 # ############################   CONFIG (常改区)   ############################
@@ -99,7 +100,8 @@ MISSION_MODE         = "dash"
 TARGET_KIND          = "ring"
 GATE_ALLOW_SIM_DRIVE = False   # False = /gate/status 里 sim=true 的帧不许用来冲刺 (影子模式可以用)
 # 停靠 (2026-10-31, 档案 mode = 停靠): 识别 → 飞到目标前方停住、对正 → 悬停记录检测 → 回手动段。不冲刺
-GATE_DOCK_D_STOP     = 0.0     # m，停靠点离目标多远 (水平; 沿法向, 没有法向沿视线)。0 = 自动 max(3.0, D_ALIGN_MIN)
+GATE_DOCK_D_STOP     = 0.0     # m，停靠点离目标多远 (水平; 沿法向, 没有法向沿视线)。0 = 自动 GATE_DOCK_D_AUTO
+GATE_DOCK_D_AUTO     = 3.0     # m，停靠距离不填时用这个。2026-11-06 以前是 max(3.0, D_ALIGN_MIN) —— 借了冲刺的参数
 GATE_DOCK_HOLD_S     = 20.0    # s，在停靠点悬停多久 (期间每拍照常写 gate.csv)
 # 上下扫描 (2026-11-05, 档案 vscan): 停靠点到位后先降 dz、再升到 +dz、回停靠点 —— 只改高度, 不横移。
 #   给感知换视角: 红点的椭圆法向单个视角有两个解分不开, 视线变 ≥ 10° 才能定 (3 m 处 ±0.3 m ≈ 11°)。
@@ -273,11 +275,15 @@ def derive():
     #       冲刺前 (识别/摆位) 用 GATE_PRE_VEL_LIM 收紧 (set_phase 动态覆盖)。
     GATE_PRE_VEL_LIM     = max(1.2, VEL_ENVELOPE_RATIO * GATE_REPO_V, VEL_ENVELOPE_RATIO * TELEOP_XY_SPEED)
     TELEOP_XY_MAX        = GATE_XY_MAX            # 手动段水平软限 (相对起飞点); 硬围栏再加 ENVELOPE_MARGIN
-    GATE_DOCK_D          = GATE_DOCK_D_STOP if GATE_DOCK_D_STOP > 0 else max(3.0, D_ALIGN_MIN)   # 停靠距离 (实际用的)
+    GATE_DOCK_D          = GATE_DOCK_D_STOP if GATE_DOCK_D_STOP > 0 else GATE_DOCK_D_AUTO   # 停靠距离 (实际用的)
     TELEOP_DZ_MAX        = MAX_HEIGHT - 0.5       # 手动段高度上限
     PHASE_ENVELOPE = {
         "takeoff":       (BASE_DRIFT_LIM, 1.0),
-        "gate":          (GATE_XY_MAX + ENVELOPE_MARGIN, max(1.2, VEL_ENVELOPE_RATIO * DASH_V)),
+        # 2026-11-06: 速度硬限按**这个模式里最快的步骤**定 (mode_spec.STEP_FAST_V): 冲刺模式按 DASH_V,
+        #   影子 / 停靠只按摆位速度 —— 以前一律按 DASH_V, 停靠模式的安全包络会跟着 dash_v 变
+        "gate":          (GATE_XY_MAX + ENVELOPE_MARGIN,
+                          max([1.2, VEL_ENVELOPE_RATIO * GATE_REPO_V]
+                              + [VEL_ENVELOPE_RATIO * globals()[k] for k in _ms.fast_v_params(MISSION_MODE)])),
         "descend":       (BASE_DRIFT_LIM + 0.20, 0.8),   # 进入时会按实际位置动态放宽
         "auto_land":     (BASE_DRIFT_LIM + 0.40, 1.0),   # 同上
         "_default":      (BASE_DRIFT_LIM + 0.20, 1.0),

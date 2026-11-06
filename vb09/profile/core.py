@@ -437,7 +437,15 @@ def list_sites(sites_dir=DEFAULT_SITES_DIR):
 
 def schema_json():
     """旋钮表 + 档位表，给网页表单用。"""
+    from vb09.flight import mode_spec as _ms
+    sup = {}
+    for name, kind in _g.TARGET_NAMES.items():
+        t = _g.target_support(kind)
+        sup[kind] = {m: list(v) for m, v in t.items()} if t else None
     return {"knobs": KNOBS, "scene_table": SCENE_TABLE,
+            # 2026-11-06: 模式表 / 区表 (vb09/flight/mode_spec.py) + 目标 → 键 + 目标 × 模式支持表 (判定插件 MODES)
+            "modes": _ms.schema(), "targets": [dict(label=k, key=v) for k, v in _g.TARGET_NAMES.items()],
+            "target_support": sup,
             "safety_rules": [dict(param=p, rule=r, limit=l, kind=k, why=w)
                              for p, r, l, k, w in SAFETY_RULES]}
 
@@ -445,10 +453,13 @@ def schema_json():
 # =============================================================================
 # 旋钮级检查（只看旋钮本身，不需要飞行脚本的全局）
 # =============================================================================
-def validate_knobs(knobs):
-    """返回 (errors, warnings)。范围来自 KNOBS 表。"""
+def validate_knobs(knobs, inactive=()):
+    """返回 (errors, warnings)。范围来自 KNOBS 表。
+    inactive: 当前模式不用的旋钮 (别的区)。它们越界不算错误 —— 由 setup 降成提示并且不写进参数。"""
     errs, warns = [], []
     for k, v in knobs.items():
+        if k in inactive:
+            continue
         spec = KNOB_INDEX[k]
         if spec["type"] == "choice":
             if v not in spec["choices"]:
@@ -624,9 +635,6 @@ def setup(argv, g, default_sites_dir=None):
     report["knobs"] = knobs
     report["sets"] = list(conf_sets) + list(opts["sets"])
 
-    e1, w1 = validate_knobs(knobs)
-    report["errors"] += e1
-    report["warnings"] += w1
     task = script_task(g)
     report["task"] = task
     report["errors"] += check_knob_task(knobs, task, os.path.basename(sys.argv[0] or "飞行脚本"))
@@ -635,10 +643,20 @@ def setup(argv, g, default_sites_dir=None):
     conf_ov, e2 = parse_sets(conf_sets, g, src="档案 set.")
     cli_ov, e3 = parse_sets(opts["sets"], g, src="--set")
     report["errors"] += e2 + e3
-    if report["errors"]:
-        _die(report, g)
     sets = dict(conf_ov)
     sets.update(cli_ov)
+
+    # ★2026-11-06 按模式分区: 当前模式不用的旋钮 (别的区) 保留在档案里, 但不校验范围、越界的不写进参数
+    mode, inactive = _g.knob_activity(knobs, sets, g)
+    report["mode"] = mode
+    report["inactive"] = sorted(inactive)
+    e1, w1 = validate_knobs(knobs, inactive)
+    report["errors"] += e1
+    report["warnings"] += w1
+    if report["errors"]:
+        _die(report, g)
+    knobs, w4 = _g.drop_inactive_bad(knobs, inactive)
+    report["warnings"] += w4
 
     view = {k: g[k] for k in allowed_params(g)}
     view.update(sets)

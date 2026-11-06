@@ -131,3 +131,14 @@ function rel(x, y, z) {
   return [x - o[0], y - o[1], z - o[2]];
 }
 const relv = p => rel(p[0], p[1], p[2]);
+
+// ★2026-11-06 模式表 (/api/schema 的 modes, = vb09/flight/mode_spec.py)。页面打开时取一次 (main.js restoreRef),
+//   顶栏标签 / 配置页都用它, 网页里不写死模式名
+let MODE_INFO = null;
+const modeDrives = k => !!(((MODE_INFO && MODE_INFO.modes || []).find(m => m.key === k)) || {drives: true}).drives;
+const modeLabel = k => ((MODE_INFO && MODE_INFO.modes || []).find(m => m.key === k) || {}).label || k || "—";
+async function loadModeInfo() {
+  if (MODE_INFO) return MODE_INFO;
+  try { const sc = await getJSON("/api/schema"); MODE_INFO = sc.modes || null; } catch (e) {}
+  return MODE_INFO;
+}

@@ -109,4 +109,5 @@ initFolds();
 camInit();
 pollState(); pollEvents(); pollChecks(); pollLauncher(); linkTick();
 attLoop(); pollPaths(); pollStream();
+loadModeInfo();
 restoreRef();

@@ -66,9 +66,34 @@ def _intended(g, n):
       4.5  旧写法 GATE_SHADOW = True 多一条"等同于 mode = 影子"的警告
       4.6  包络核对表的 "任务 穿环 (stage12)" 改了措辞
       7    新参数 GATE_DOCK_* (停靠): site_config 多几行, config 的 params 多几个键
-      11-05 新参数 GATE_VSCAN_* (停靠后上下扫描): 同上"""
+      11-05 新参数 GATE_VSCAN_* (停靠后上下扫描): 同上
+      11-06 模式分区: config 的 derived 多 mode / dock; 核对表第一行 "任务 穿环" → "模式 <名> —— <说明>";
+            影子不冲刺 → gate 阶段速度硬限按摆位速度 (5.0 → 1.2 m/s, speed_chain 第 2 项跟着变)"""
+    import copy
+    import re as _re
+    g, n = copy.deepcopy(g), copy.deepcopy(n)
+    for d in (g, n):
+        for case in d.values():
+            if isinstance(case, dict) and isinstance(case.get("config_msg"), dict):
+                dv = case["config_msg"].get("derived") or {}
+                dv.pop("mode", None)
+                dv.pop("dock", None)
+    try:                                    # 影子的包络: 把新值换回旧值再比 (其余字段照常逐字比)
+        gs, ns = g["shadow"], n["shadow"]
+        ns["config_msg"]["derived"]["phase_envelope"]["gate"] = gs["config_msg"]["derived"]["phase_envelope"]["gate"]
+        ns["config_msg"]["derived"]["speed_chain"] = gs["config_msg"]["derived"]["speed_chain"]
+        ns["site_config"] = [ln.replace("gate 11.50 m / 1.20 m/s", "gate 11.50 m / 5.00 m/s") for ln in ns["site_config"]]
+        for k in ("params",):
+            pe_g = (gs["config_msg"].get(k) or {}).get("PHASE_ENVELOPE")
+            if pe_g is not None:
+                ns["config_msg"][k]["PHASE_ENVELOPE"] = pe_g
+    except (KeyError, TypeError):
+        pass
+    mode_line = _re.compile(r"^(\s*)模式          \S+ —— .*$")
+
     def fix(x):
         if isinstance(x, str):
+            x = mode_line.sub(lambda m: m.group(1) + "任务          穿环 (模式见下面 开关 / 档案 mode)", x)
             return x.replace("穿环 (stage12)", "穿环 (模式见下面 开关 / 档案 mode)")
         if isinstance(x, list):
             return [fix(v) for v in x if not (isinstance(v, str) and ("是旧写法, 现在等同于 mode = 影子" in v

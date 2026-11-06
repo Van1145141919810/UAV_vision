@@ -17,6 +17,10 @@ class RingJudge(object):
       target = 环心 c (world) / ring_w = 这一帧的环心观测 (优先) / n / aim / n_sd_deg / cov / ring_cov
       t = 拍摄时刻 t_cap, sim, pose ("ok" = 位姿插值成功), dist, sd_cm, published
     """
+    # 目标 × 模式支持表 (2026-11-06; 档案校验 profile/gate.py _check_target 读)。
+    #   ok = 正式支持; experimental = 能飞但有已知缺口 (警告); 没写的模式 = 不支持 (拒绝起飞)
+    MODES = {"dash": "ok", "shadow": "ok", "dock": "ok"}
+
     kind = "ring"
 
     def __init__(self, C):

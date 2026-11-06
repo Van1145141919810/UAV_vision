@@ -10,7 +10,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ORDER = ["dryrun_dump.py", "plan_grid.py", "det_replay.py", "onboard_replay.py", "fuse_replay.py",
-         "judge_replay.py", "sim_check.py", "runtime_dump.py"]
+         "judge_replay.py", "../mode_isolation_check.py", "sim_check.py", "runtime_dump.py"]
+# ../mode_isolation_check.py (2026-11-06): 模式分区自检 (一致性 / 静态 / dry-run 扰动)。完整跑加 --sim 另行执行
 
 
 def main():
@@ -23,7 +24,7 @@ def main():
     bad = []
     for s in ORDER:
         if s in skip:
-            print("%-14s skip" % s[:-3])
+            print("%-14s skip" % os.path.basename(s)[:-3])
             continue
         r = subprocess.run([sys.executable, os.path.join(HERE, s)])
         if r.returncode:

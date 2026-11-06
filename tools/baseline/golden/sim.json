@@ -111,7 +111,6 @@
   "rc": "0",
   "schema": "2",
   "segs": [
-   "preflight",
    "wait",
    "align",
    "hold"
@@ -231,7 +230,6 @@
   "rc": "0",
   "schema": "2",
   "segs": [
-   "preflight",
    "wait",
    "align",
    "hold"
@@ -351,7 +349,6 @@
   "rc": "0",
   "schema": "2",
   "segs": [
-   "preflight",
    "wait",
    "align",
    "hold"
@@ -477,7 +474,6 @@
   "rc": "0",
   "schema": "2",
   "segs": [
-   "preflight",
    "wait",
    "align",
    "hold"

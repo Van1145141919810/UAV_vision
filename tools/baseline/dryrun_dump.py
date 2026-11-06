@@ -32,14 +32,18 @@ EXPECT_CHANGED = {
     # 第 4.5 步 (mode 旋钮)
     "shadow": ("旧写法 set.GATE_SHADOW = True: 多一条'等同于 mode = 影子'的提示, 其余不变", 0, "旧写法, 现在等同于 mode = 影子"),
     "set_shadow_cli": ("命令行 --set GATE_SHADOW=True: 同上", 0, "旧写法, 现在等同于 mode = 影子"),
-    "mode_shadow": ("新档案: mode = 影子", 0, "任务模式: 影子"),
     "mode_dash": ("新档案: mode = 冲刺", 0, "任务模式: 冲刺"),
     "mode_conflict": ("mode = 冲刺 + set.GATE_SHADOW = True → 警告, 按影子飞", 0, "两个说法矛盾, 按 影子 飞"),
     # 第 7 步 (停靠, 新功能): 新用例, golden 里没有
-    "mode_dock": ("新档案: mode = 停靠 + 停靠距离 4 / 悬停 30", 0, "停靠模式 (mode = 停靠): 识别 → 飞到目标前 4.00 m"),
     "mode_dock_conflict": ("mode = 停靠 + set.GATE_SHADOW = True → 警告, 按影子飞", 0, "mode = 停靠, 但 set.GATE_SHADOW = True"),
     "dock_close_cli": ("--set GATE_DOCK_D_STOP=1.0 → 报错 (太近)", 1, "停靠距离 1.00 m 太近"),
     "dock_hold_zero_cli": ("--set GATE_DOCK_HOLD_S=0 → 报错 (必须是正数)", 1, "GATE_DOCK_HOLD_S=0"),
+    # 2026-11-06 模式分区: 停靠不做冲刺检查、不用的旋钮越界只提示; 影子 / 停靠的 gate 速度包络按摆位速度
+    "dock_small": ("小房间停靠: 环后空间 1 m / dash_v 越界都不拒绝", 0, "其中越界的没有写进参数"),
+    "dash_reddot": ("红点 + 冲刺: 实验性组合, 警告", 0, "目标 红点 + 模式 冲刺 是实验性的"),
+    "mode_dock": ("停靠: 不再做冲刺检查; 冲刺旋钮列为'当前模式不用'; gate 包络 1.2 m/s (以前按 DASH_V)", 0,
+                  "停靠模式 (mode = 停靠): 识别 → 飞到目标前 4.00 m"),
+    "mode_shadow": ("影子: gate 速度包络按摆位速度 (以前按 DASH_V)", 0, "任务模式: 影子"),
 }
 # 第 7 步新增的参数 (停靠): 所有用例的 params 里都多了它们 —— 比较前两边去掉
 _NEW_KEY = re.compile(r"^GATE_(DOCK|VSCAN)_")          # 新参数: 停靠 (第 7 步), 上下扫描 (2026-11-05)
@@ -104,8 +108,23 @@ def _drop_json(x):
     return x
 
 
+def _drop_mode_info(d):
+    """2026-11-06 模式分区: derived 多了 mode / dock 两个键 (网页用), 比较前去掉。"""
+    if isinstance(d, dict):
+        js = d.get("json")
+        if isinstance(js, dict) and isinstance(js.get("derived"), dict):
+            js["derived"].pop("mode", None)
+            js["derived"].pop("dock", None)
+    return d
+
+
+_MODE_LINE = re.compile(r"^(\s*)模式          \S+ —— .*$", re.M)
+
+
 def _drop_txt(s):
     s = s.replace("穿环 (stage12)", "穿环 (模式见下面 开关 / 档案 mode)")      # 4.6 改名后的措辞
+    # 2026-11-06: 核对表第一行从"任务 穿环"改成"模式 <名> —— <说明>"
+    s = _MODE_LINE.sub(lambda m: m.group(1) + "任务          穿环 (模式见下面 开关 / 档案 mode)", s)
     return "\n".join(ln for ln in s.splitlines() if "戳" not in ln and "POKE" not in ln and "GATE_DOCK_" not in ln and "GATE_VSCAN_" not in ln)
 
 
@@ -123,6 +142,9 @@ def drop(g, n):
         for suf in (".json", ".txt"):
             g.pop(k + suf, None)
             n.pop(k + suf, None)
+    for d in (g, n):
+        for v in d.values():
+            _drop_mode_info(v)
     g, n = _drop_json(g), _drop_json(n)
     for d in (g, n):
         for k, v in d.items():

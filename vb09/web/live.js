@@ -230,14 +230,16 @@ function onState() {
               past ? "warn" : t.shadow ? "info" : "ok", past ? "已过提交点" : "穿环段");
     }
     else setChip("#c-sub", isFlying(t.phase) ? "脚本/人工" : "—", "", "");
-    setChip("#c-loop", t.shadow ? "影子模式" : t.mode === "dock" ? "停靠 (实闭环)" : "实闭环", t.shadow ? "ok" : "warn");
+    setChip("#c-loop", t.shadow ? "影子模式" : (t.mode && !modeDrives(t.mode)) ? modeLabel(t.mode) + " (实闭环)" : "实闭环",
+            t.shadow ? "ok" : "warn");
     setChip("#c-sim", t.sim_drive ? "假数据可驱动!" : "假数据拦截", t.sim_drive ? "bad" : "ok");
     setChip("#c-z", "—", "", "穿环没有 z 跟踪环");
   } else {
     setChip("#c-phase", "—", "dim", ""); setChip("#c-sub", "—", "dim", "");
     const p = P();
     const shadow = p.GATE_SHADOW, simd = p.GATE_ALLOW_SIM_DRIVE;
-    setChip("#c-loop", shadow ? "影子模式" : p.MISSION_MODE === "dock" ? "停靠 (实闭环)" : "实闭环", "dim");
+    setChip("#c-loop", shadow ? "影子模式" : (p.MISSION_MODE && !modeDrives(p.MISSION_MODE))
+            ? modeLabel(p.MISSION_MODE) + " (实闭环)" : "实闭环", "dim");
     setChip("#c-sim", simd ? "假数据可驱动!" : "假数据拦截", simd ? "bad" : "dim");
     setChip("#c-z", "—", "dim");
   }

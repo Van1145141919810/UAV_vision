@@ -12,6 +12,14 @@ from vb09.common import geom
 class RedDotJudge(object):
     kind = "reddot"
     # 环的 judge 没有的拒绝原因 (flight/target_in.py 合进计数和日志说明)
+    # 目标 × 模式支持表 (2026-11-06; 档案校验读)。冲刺 / 影子的规划现在还按环的几何 (瞄点按内环半径收,
+    #   纸面 = 环平面), 红点的"可穿区域 / 法向来源"接口没做之前标实验性
+    MODES = {
+        "dock": "ok",
+        "shadow": ("experimental", "冲刺规划还按环的几何算 (瞄点限制在内环半径里、没有法向按视线), 只看计划不飞"),
+        "dash": ("experimental", "冲刺规划还按环的几何算 (瞄点限制在内环半径里、没有法向按视线进入); "
+                                 "红点的可穿区域和冲刺前扫描还没接"),
+    }
     REASONS = ("stale", "src", "score", "hits", "ambig")
     REJ_TXT = {"stale": "估计太旧", "src": "不是红点来源", "score": "分数低", "hits": "命中太少",
                "ambig": "多个红点分不清"}

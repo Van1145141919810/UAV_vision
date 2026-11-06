@@ -13,6 +13,7 @@ import math
 import rospy
 import gate_plan as gp      # 同目录, 纯函数
 from vb09.flight import config as C
+from vb09.flight import mode_spec as _ms
 
 from vb09.flight.ctx import F
 from vb09.flight.ctx import _f, check_abort, request_abort, request_land, set_phase, stop_requested, telem_put, tilt_limit
@@ -422,9 +423,12 @@ class MissionCtx:
                 self._rej_snap, rtxt = F.gate_in.rej_since(getattr(self, "_rej_snap", None))
                 if lv is not None and now - lv["recv"] < 1.0:
                     dc = math.hypot(lv["c"][0] - pn[0], lv["c"][1] - pn[1])
-                    dmin = gp.d_run_for(C.DASH_V, self.params)
-                    hint = ("就地起跑" if dmin <= dc <= max(dmin, C.D_RUN_MAX) else
-                            ("会后退到 %.1fm" % dmin) if dc < dmin else ("会前进到 %.1fm" % max(dmin, C.D_RUN_MAX)))
+                    if _ms.uses(C.MISSION_MODE, "dash"):        # 2026-11-06: 起跑提示只对冲刺类模式
+                        dmin = gp.d_run_for(C.DASH_V, self.params)
+                        hint = ("就地起跑" if dmin <= dc <= max(dmin, C.D_RUN_MAX) else
+                                ("会后退到 %.1fm" % dmin) if dc < dmin else ("会前进到 %.1fm" % max(dmin, C.D_RUN_MAX)))
+                    else:
+                        hint = "停靠点在目标前 %.1fm" % C.GATE_DOCK_D if _ms.uses(C.MISSION_MODE, "dock") else "—"
                     seen = f"看到环: 水平 {dc:.2f}m 高差 {lv['c'][2] - pn[2]:+.2f}m ({hint})"
                     seen += "  " + self.manual_precheck(pn, now)
                 else:
@@ -442,6 +446,8 @@ class MissionCtx:
         按 T 之前就知道 设定速度放不放得下 / 瞄点高度在不在带内, 不用 T 了才发现。
         → 一段日志文字; 结果放进 self.pre (遥测 gate.pre, 网页提示行显示)。
         """
+        if not _ms.uses(C.MISSION_MODE, "dash"):
+            return ""                # 2026-11-06: 不冲刺的模式 (停靠) 不按冲刺预规划
         if self.pre is not None and now - self.pre.get("_t", 0) < 2.0:
             return self.pre.get("_txt", "")
         smp = F.gate_in.valid_since(now - 1.0)
