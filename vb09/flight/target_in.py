@@ -9,6 +9,7 @@ vb09/flight/target_in.py —— /gate/status、/vision_bridge/cam 的接收 + �
 import json
 import math
 import threading
+import time
 from collections import deque
 
 import rospy
@@ -54,7 +55,10 @@ class GateInput:
         # 选点 (2026-11-08, PLAN_dot_v2 §4): 飞行脚本决定, 经 /gate/select 发给桥; 网页点选先到这里排队
         self.tracked = bool(getattr(self._judge, "TRACKED", False))
         self._sel_pub = None
-        self._sel_seq = 0
+        # seq 起点用时间 (桥跨飞行脚本重启会保留上一次的选点): 只认本次运行发过的 seq (sent_seqs)
+        self._sel_seq = int(time.time() % 1e6) * 1000
+        self.sent_seqs = set()
+        self._last_sent = None                # (seq, cmd, 发出时刻): 回显还没回来时也算"已有选点"
         self._web_sel = None
 
     # ---- 回调 ----
@@ -95,6 +99,8 @@ class GateInput:
         with self.lock:
             self._sel_seq += 1
             seq = self._sel_seq
+            self.sent_seqs.add(seq)
+            self._last_sent = (seq, dict(cmd), time.time())
         msg = dict(cmd, seq=seq)
         self._sel_pub.publish(String(data=json.dumps(msg)))
         rospy.loginfo("[gate] 选点 → 桥 seq %d: %s%s" % (seq, json.dumps(cmd, ensure_ascii=False),
@@ -115,12 +121,26 @@ class GateInput:
             rospy.logwarn("[gate] 网页选点: 当前目标类型 (%s) 不支持选点, 忽略" % C.TARGET_KIND)
             return
         self.web_select(cmd)
-        rospy.logwarn("[gate] ★ 网页选点: %s —— 找目标 (wait 段) 时生效" % json.dumps(cmd, ensure_ascii=False))
+        rospy.logwarn("[gate] ★ 网页选点: %s —— 手动段 / 找目标 (wait 段) 时生效" % json.dumps(cmd, ensure_ascii=False))
 
     def web_select(self, cmd):
         """网页点选 (flight_monitor → /flight_ctrl/cmd) 先存这里, Detect 步骤取走再发。"""
         with self.lock:
             self._web_sel = dict(cmd)
+
+    def own_selection(self):
+        """桥里现在的选点是不是本次运行发的、还挂着 (bound) 或在等 (pending / lost)。→ sel dict 或 None。"""
+        with self.lock:
+            st = self.last or {}
+            last = self._last_sent
+        sel = st.get("sel") or {}
+        if last is not None and sel.get("seq") != last[0] and time.time() - last[2] < 2.0:
+            # 刚发出、桥还没回显 (链路 0.3–0.8 s)
+            return None if last[1].get("mode") == "none" else \
+                {"seq": last[0], "state": "sent", "trk_id": last[1].get("trk_id"), "mode": last[1].get("mode")}
+        if sel.get("seq") in self.sent_seqs and sel.get("state") in ("bound", "pending", "lost"):
+            return sel
+        return None
 
     def take_web_select(self):
         with self.lock:

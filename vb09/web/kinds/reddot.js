@@ -20,7 +20,7 @@ async function dotPost(cmd) {
     const r = await getJSON("/api/select", {method: "POST", headers: {"Content-Type": "application/json"},
                                             body: JSON.stringify(cmd)});
     DOT.msg = r.ok ? `已发: ${cmd.mode === "track" ? "轨迹 " + cmd.trk_id : cmd.mode === "ray" ? "画面点选" : "取消选点"}` +
-                     " —— 找目标 (wait 段) 时生效"
+                     " —— 手动段立即生效, 否则找目标 (wait 段) 时生效"
                    : "没发出去: " + (r.error || "?");
   } catch (e) { DOT.msg = "没发出去: " + e; }
   DOT.msgT = Date.now();

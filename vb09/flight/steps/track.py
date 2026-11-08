@@ -92,6 +92,12 @@ class Detect(Step):
         my_seq = None
         t_sent = None
         ask_t = None
+        own = ctx.gate_in.own_selection()
+        if own is not None:
+            # 手动段 / 上一次已经选过 (本次运行发的, 桥还挂着或在找) → 沿用, 不再自动重选 (2026-11-08)
+            my_seq, t_sent = own["seq"], rospy.Time.now().to_sec()
+            rospy.loginfo(f"[gate] 沿用已有的选点 seq {my_seq} (轨迹 {own.get('trk_id')}, {own.get('state')}) —— "
+                          f"要换: 数字键 / 网页")
         last_why = "还没看到目标"
         dt = 0.0
         while True:
@@ -99,6 +105,7 @@ class Detect(Step):
             st, age = _status(ctx)
             fresh_st = age < C.GATE_STATUS_MAX_AGE
             cands = [c for c in (st.get("cands") or []) if c.get("aim")] if fresh_st else []
+            cands.sort(key=lambda c: -float(c.get("score") or 0.0))       # 数字键 1–5 = 分数排序 (和手动段一致)
             sel = st.get("sel") or {}
             info.update(sel=sel, cands=[{"id": c.get("id"), "score": c.get("score"), "hits": c.get("hits")}
                                         for c in cands])
@@ -165,6 +172,9 @@ class Detect(Step):
             elif not cands:
                 last_why = "没看到目标"
             # 5) 发了没回显 → 重发 (桥重启 / 丢包); 选了但挂不上 (像素选点等候选)
+            #    手动段里 / Detect 里又选了别的 (seq 更大, 也是本次发的) → 跟着换
+            if sel.get("seq") in ctx.gate_in.sent_seqs and my_seq is not None and sel.get("seq") > my_seq:
+                my_seq, t_sent = sel["seq"], now
             if my_seq is not None and sel.get("seq") != my_seq and t_sent is not None and now - t_sent > 2.0:
                 rospy.logwarn(f"[gate] 选点 seq {my_seq} 2s 没回显 (桥没收到? 版本不对?) —— 重新选")
                 my_seq = None

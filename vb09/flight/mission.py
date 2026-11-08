@@ -359,6 +359,7 @@ class MissionCtx:
         F.dash_tilt_on[0] = False
         set_phase("gate", vel=C.GATE_PRE_VEL_LIM)
         self.set_seg("manual", why or "按 T 开始找环/规划")
+        self.manual_select()                      # 没有键盘时也要把排队的网页点选发出去
         if self.keys is None:
             rospy.logwarn("[gate] 没有终端键盘 —— 跳过手动段, 直接找环")
             return
@@ -382,6 +383,7 @@ class MissionCtx:
                 break
             if self.nkeys > 0:
                 t_key = now
+            self.manual_select()
             mv = self.move
             if mv is not None:
                 vbx = vby = vz = yr = 0.0
@@ -442,6 +444,28 @@ class MissionCtx:
                               f"(无按键 {idle:.0f}s / {C.GATE_MANUAL_TIMEOUT:.0f}s)")
             dt = self.tick()
         F.setpoint.set_zhold_mode(tx, ty, tz, yaw, 0.0, 0.0)
+
+    def manual_select(self):
+        """
+        跟踪类目标 (红点): 手动段里的选点立即发给桥 (2026-11-08) —— 网页点选 / 终端数字键 1–5 (按候选分数排序)。
+        桥马上只发布选中的那条, 手动飞的视点照常进它的估计; 按 T 后 Detect 沿用这个选点 (不再自动重选)。环: 什么都不做。
+        """
+        gi = F.gate_in
+        if not gi.tracked:
+            return
+        req = gi.take_web_select()
+        if req is not None:
+            gi.send_select(req, why="网页 (手动段)")
+        pick = next((int(k) for k in self.flags if k in "12345"), None)
+        if pick is None:
+            return
+        st, age = gi.latest()
+        cands = [c for c in ((st or {}).get("cands") or []) if c.get("aim")] if age < C.GATE_STATUS_MAX_AGE else []
+        cands.sort(key=lambda c: -float(c.get("score") or 0.0))
+        if pick <= len(cands):
+            gi.send_select({"mode": "track", "trk_id": int(cands[pick - 1]["id"])}, why="终端键 %d (手动段)" % pick)
+        else:
+            rospy.logwarn(f"[gate] 键 {pick}: 现在只有 {len(cands)} 个候选")
 
     def manual_precheck(self, pn, now):
         """
