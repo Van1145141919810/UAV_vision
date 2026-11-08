@@ -67,6 +67,8 @@ def _intended(g, n):
       4.6  包络核对表的 "任务 穿环 (stage12)" 改了措辞
       7    新参数 GATE_DOCK_* (停靠): site_config 多几行, config 的 params 多几个键
       11-05 新参数 GATE_VSCAN_* (停靠后上下扫描): 同上
+      11-08 新参数 GATE_APPR_* / GATE_REFINE_* / GATE_SELECT_* / GATE_RELOCK_* / DOT_D_MAX / DOT_SD_* / DOT_SEL_*
+            (红点抵近 / 选点, PLAN_dot_v2): 同上
       11-06 模式分区: config 的 derived 多 mode / dock; 核对表第一行 "任务 穿环" → "模式 <名> —— <说明>";
             影子不冲刺 → gate 阶段速度硬限按摆位速度 (5.0 → 1.2 m/s, speed_chain 第 2 项跟着变)"""
     import copy
@@ -90,6 +92,7 @@ def _intended(g, n):
     except (KeyError, TypeError):
         pass
     mode_line = _re.compile(r"^(\s*)模式          \S+ —— .*$")
+    new_key = _re.compile(r"(GATE_(DOCK|VSCAN|APPR|REFINE|SELECT|RELOCK)_|DOT_(D_MAX|SD_|SEL_))")
 
     def fix(x):
         if isinstance(x, str):
@@ -97,9 +100,9 @@ def _intended(g, n):
             return x.replace("穿环 (stage12)", "穿环 (模式见下面 开关 / 档案 mode)")
         if isinstance(x, list):
             return [fix(v) for v in x if not (isinstance(v, str) and ("是旧写法, 现在等同于 mode = 影子" in v
-                                                                      or "GATE_DOCK_" in v or "GATE_VSCAN_" in v))]
+                                                                      or new_key.search(v)))]
         if isinstance(x, dict):
-            return {k: fix(v) for k, v in x.items() if not k.startswith(("GATE_DOCK_", "GATE_VSCAN_"))}
+            return {k: fix(v) for k, v in x.items() if not new_key.match(k)}
         return x
     return fix(g), fix(n)
 

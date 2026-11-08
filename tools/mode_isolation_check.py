@@ -82,10 +82,10 @@ def section_params():
 
 
 # ---------------------------------------------------------------- 1 一致性
-def modes_py_steps():
+def modes_py_steps(name="MODES"):
     tree = ast.parse(open(os.path.join(FLIGHT_DIR, "modes.py"), encoding="utf-8").read())
     for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "MODES" for t in node.targets):
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == name for t in node.targets):
             return {k.value: [e.func.id for e in v.elts] for k, v in zip(node.value.keys, node.value.values)}
     return {}
 
@@ -93,21 +93,33 @@ def modes_py_steps():
 def step_classes():
     """steps/*.py 里 Step 的子类 → (文件, ClassDef, 模块 AST)。"""
     out = {}
+    cls = []
     for fn in sorted(os.listdir(STEPS_DIR)):
         if not fn.endswith(".py"):
             continue
         tree = ast.parse(open(os.path.join(STEPS_DIR, fn), encoding="utf-8").read())
-        for node in tree.body:
-            if isinstance(node, ast.ClassDef) and any(isinstance(b, ast.Name) and b.id == "Step" for b in node.bases):
+        cls += [(fn, node, tree) for node in tree.body if isinstance(node, ast.ClassDef)]
+    known = {"Step"}
+    changed = True
+    while changed:                       # 步骤的子类也算步骤 (ApproachDock(Approach), CommitTrack(Commit) …)
+        changed = False
+        for fn, node, tree in cls:
+            if node.name not in known and any(isinstance(b, ast.Name) and b.id in known for b in node.bases):
+                known.add(node.name)
                 out[node.name] = (fn, node, tree)
+                changed = True
     return out
 
 
 def check_consistency():
     mp = modes_py_steps()
+    mt = modes_py_steps("MODES_TRACKED")
     for m, spec in MS.MODE_SPECS.items():
         if mp.get(m) != list(spec["steps"]):
             fail("模式 %s: modes.py %s ≠ mode_spec %s" % (m, mp.get(m), list(spec["steps"])))
+        if mt.get(m) != list(spec.get("steps_tracked", ())):
+            fail("模式 %s (跟踪类目标): modes.py MODES_TRACKED %s ≠ mode_spec steps_tracked %s"
+                 % (m, mt.get(m), list(spec.get("steps_tracked", ()))))
     for m in mp:
         if m not in MS.MODE_SPECS:
             fail("modes.py 的模式 %s 没在 mode_spec.MODE_SPECS 里" % m)

@@ -58,6 +58,7 @@ class MissionCtx:
         self.land_deferred = None
         self.outcome = ""
         self.dock = None         # 停靠: {S, d, d_in_src, err_cm, aim_sd_cm, t_end} (遥测 gate.dock)
+        self.track = None        # 跟踪类目标的步骤状态 (steps/track.py; 遥测 gate.track, 只有它们用)
         self.keys = None
         self.flags = set()
         self.move = None         # 本拍最后一个方向/悬停键 (手动段用)
@@ -299,6 +300,8 @@ class MissionCtx:
         g["mode"] = C.MISSION_MODE
         if self.dock is not None:
             g["dock"] = dict(self.dock)           # 拷贝: 遥测线程序列化时步骤还在改它
+        if self.track is not None:
+            g["track"] = dict(self.track)
         telem_put("gate", g)
 
         # ---- gate.csv
@@ -483,6 +486,7 @@ class MissionCtx:
         self.z_hold = p[2]
         self.acq = self.locked = self.plan = None
         self.dock = None
+        self.track = None
         self.lvl = 0
         self.passed = False
         self.dash_state = None
@@ -582,9 +586,13 @@ def run_mission(z_hold, steps):
 
 
 def phase_gate(z_hold):
-    """穿环: 按 C.MISSION_MODE (档案 mode; 旧写法 GATE_SHADOW = True → shadow) 选步骤列表。"""
-    from vb09.flight.modes import MODES
-    return run_mission(z_hold, MODES[C.MISSION_MODE])
+    """穿环: 按 C.MISSION_MODE (档案 mode; 旧写法 GATE_SHADOW = True → shadow) 选步骤列表。
+    2026-11-08: 判定插件声明 TRACKED (红点) → 用 MODES_TRACKED (边飞边估的步骤链, 见 modes.py)。"""
+    from vb09.flight.modes import steps_for
+    steps = steps_for(C.MISSION_MODE, F.gate_in.tracked)
+    if F.gate_in.tracked:                 # 环的日志模板不变 (log_compare)
+        rospy.loginfo("[gate] 步骤 (跟踪类目标): %s" % " → ".join(type(s).__name__ for s in steps))
+    return run_mission(z_hold, steps)
 
 
 GateRun = MissionCtx          # 老名字

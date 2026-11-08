@@ -46,7 +46,8 @@ EXPECT_CHANGED = {
     "mode_shadow": ("影子: gate 速度包络按摆位速度 (以前按 DASH_V)", 0, "任务模式: 影子"),
 }
 # 第 7 步新增的参数 (停靠): 所有用例的 params 里都多了它们 —— 比较前两边去掉
-_NEW_KEY = re.compile(r"^GATE_(DOCK|VSCAN)_")          # 新参数: 停靠 (第 7 步), 上下扫描 (2026-11-05)
+# 新参数: 停靠 (第 7 步), 上下扫描 (2026-11-05), 红点抵近 / 选点 / 换视角 / 重锁 (2026-11-08, PLAN_dot_v2)
+_NEW_KEY = re.compile(r"^(GATE_(DOCK|VSCAN|APPR|REFINE|SELECT|RELOCK)_|DOT_(D_MAX|SD_|SEL_))")
 
 
 def cases():

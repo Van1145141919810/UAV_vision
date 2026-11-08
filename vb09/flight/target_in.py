@@ -12,6 +12,7 @@ import threading
 from collections import deque
 
 import rospy
+from std_msgs.msg import String
 from vb09.flight import config as C
 
 from vb09.flight.ctx import F
@@ -50,6 +51,11 @@ class GateInput:
         extra = tuple(k for k in getattr(self._judge, "REASONS", ()) if k not in self.REASONS)
         self.rej = {k: 0 for k in self.REASONS + extra}
         self.rej_txt = dict(self.REJ_TXT, **getattr(self._judge, "REJ_TXT", {}))
+        # 选点 (2026-11-08, PLAN_dot_v2 §4): 飞行脚本决定, 经 /gate/select 发给桥; 网页点选先到这里排队
+        self.tracked = bool(getattr(self._judge, "TRACKED", False))
+        self._sel_pub = None
+        self._sel_seq = 0
+        self._web_sel = None
 
     # ---- 回调 ----
     def on_status(self, msg):
@@ -79,6 +85,31 @@ class GateInput:
             return
         with self.lock:
             self.cam, self.cam_recv = c, rospy.Time.now().to_sec()
+
+    # ---- 选点 ----
+    def send_select(self, cmd, why=""):
+        """发一条选点指令给桥 (/gate/select)。cmd: {"mode": "track", "trk_id": …} / {"mode": "ray", "xn", "yn", "t_cap"}
+        / {"mode": "none"}。→ seq (桥在 /gate/status 的 sel.seq 回显)。"""
+        if self._sel_pub is None:
+            self._sel_pub = rospy.Publisher("/gate/select", String, queue_size=10)
+        with self.lock:
+            self._sel_seq += 1
+            seq = self._sel_seq
+        msg = dict(cmd, seq=seq)
+        self._sel_pub.publish(String(data=json.dumps(msg)))
+        rospy.loginfo("[gate] 选点 → 桥 seq %d: %s%s" % (seq, json.dumps(cmd, ensure_ascii=False),
+                                                      ("  (%s)" % why) if why else ""))
+        return seq
+
+    def web_select(self, cmd):
+        """网页点选 (flight_monitor → /flight_ctrl/cmd) 先存这里, Detect 步骤取走再发。"""
+        with self.lock:
+            self._web_sel = dict(cmd)
+
+    def take_web_select(self):
+        with self.lock:
+            c, self._web_sel = self._web_sel, None
+        return c
 
     # ---- 判定 (2026-10-30: 环专用的判定搬到 vb09/perception/ring/judge.py, 经 JUDGES 调用) ----
     def judge(self, st, now, p_now):

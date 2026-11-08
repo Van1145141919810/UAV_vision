@@ -358,7 +358,7 @@ class KeyReader:
         """
         读空缓冲区。返回 (move_key, flags, eof, n_read)
           move_key: 本批里最后一个方向/悬停键，没有则 None
-          flags:    集合，含本批出现过的 'x' / 'l' / 't' / 'g' / 'm'
+          flags:    集合，含本批出现过的 'x' / 'l' / 't' / 'g' / 'm' / 'y' / '1'–'5' (选点)
           eof:      stdin 已关闭 (SSH 断连)
         """
         move = None
@@ -377,7 +377,7 @@ class KeyReader:
             k = ch.lower()
             if k in self.MOVE_KEYS:
                 move = k
-            elif k in ('x', 'l', 't', 'g', 'm', 'y'):
+            elif k in ('x', 'l', 't', 'g', 'm', 'y', '1', '2', '3', '4', '5'):    # 数字 = 选点 (2026-11-08)
                 flags.add(k)
             if n > 256:          # 极端积压，别把这一轮卡死
                 break

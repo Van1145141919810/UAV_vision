@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 stage14_mission.py (原 stage12_gate.py) 离线仿真: 桩 rospy + 一个粗糙的 PX4 位置环 + 假识别 (延迟/噪声) + 纸。
-  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring|lowbatt|dock|dock_nonormal|dock_vscan|dock_reddot  [--set K=V ...]
+  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring|lowbatt|dock|dock_nonormal|dock_vscan|dock_reddot|dash_reddot  [--set K=V ...]
+红点场景 (dock_reddot / dash_reddot, 2026-11-08): 目标在 9 m 外, 假识别模拟桥里的 Locator —— 选点回显 (/gate/select)、候选列表、
+σ 随距离变小、飞机横向 / 竖直换过 ≥ 0.4 m 视角才给法向; dash_reddot 另有一个低分干扰 (自动选点不该选它)。
 不是飞行动力学仿真 —— 只用来跑通状态机、检查时间表/停止点/遥测字段和日志。
 """
 import json
@@ -40,7 +42,8 @@ def dot(a, b):
 
 
 # ---------------- 场景 ----------------
-C = [5.0, 0.4, 1.35]                       # 环心
+RD = scenario in ("dock_reddot", "dash_reddot")      # 红点 (跟踪类目标, 飞行走 MODES_TRACKED)
+C = [9.0, 0.4, 1.35] if RD else [5.0, 0.4, 1.35]    # 环心 (红点场景: 9 m 外发现 → 抵近)
 N = unit([-1.0, -0.15, 0.0])               # 法向 (指向进近侧)
 if scenario == "oblique":
     N = unit([-1.0, -0.6, 0.0])            # 斜 31°: 进入方向会被限到 20°
@@ -52,18 +55,21 @@ AIM = [C[i] + 0.08 * RIGHT[i] - 0.05 * UP[i] for i in range(3)]
 D_BACK, L_F, L_R = 4.0, 0.30, 0.30
 V_TEAR = 0.6 if scenario != "stuck" else 99.0
 SCAN_Z = [1e9, -1e9]                       # dock_vscan: 看到目标以来飞机高度的 [最低, 最高]
+SCAN_H = [1e9, -1e9]                       # 红点: 看到目标以来飞机横向 (沿靶面 RIGHT) 的 [最低, 最高]
+SEL = {"seq": None, "mode": "none", "state": "none", "trk_id": None}     # 红点: 桥的选点状态 (模拟)
+DISTRACT = [C[0] + 0.3, C[1] - 1.2, C[2] + 0.2]                        # dash_reddot 的干扰 (分数低)
 
 sites = tempfile.mkdtemp()
 with open(os.path.join(sites, "sim.conf"), "w") as f:
-    f.write("task=穿环\nscene=室内\ntakeoff_h=1.5\nz_low=0.8\nz_high=2.2\nxy_radius=10\n"
+    f.write("task=穿环\nscene=室内\ntakeoff_h=1.5\nz_low=0.8\nz_high=2.2\nxy_radius=%d\n" % (14 if scenario == "dash_reddot" else 10) +
             "dash_v=2.5\nd_back=%.2f\nd_rear=2.0\nd_side=2.0\nl_f=%.2f\nl_r=%.2f\nw_half=0.25\n"
             % (D_BACK, L_F, L_R))
     if scenario.startswith("dock"):
         f.write("mode=停靠\ndock_hold=6\n")          # 停靠: 字符串旋钮只能写在档案里
     if scenario in ("dock_vscan", "dock_reddot"):
         f.write("vscan=0.3\n")                      # 停靠后上下扫描 (2026-11-05)
-    if scenario == "dock_reddot":
-        f.write("target=红点\n")                    # 飞行侧用红点判定 (reddot/judge.py)
+    if RD:
+        f.write("target=红点\n")                    # 飞行侧用红点判定 (reddot/judge.py) → MODES_TRACKED
 os.environ["HOME"] = tempfile.mkdtemp()
 sets = ["--set", "GATE_CONFIRM_DASH=False"]
 if scenario == "shadow":
@@ -244,6 +250,57 @@ config = []
 rospy.Subscriber("/flight_ctrl/config", None, lambda m: config.append(json.loads(m.data)))
 
 
+def _on_select(m):
+    """红点: 飞行脚本的选点 → 模拟桥的回显 (轨迹 1 = 目标, 2 = 干扰)。"""
+    c = json.loads(m.data)
+    if c.get("mode") == "none":
+        SEL.update(seq=c["seq"], mode="none", state="none", trk_id=None)
+    else:
+        SEL.update(seq=c["seq"], mode="track", state="bound" if c.get("trk_id") in (1, 2) else "lost",
+                   trk_id=c.get("trk_id"))
+
+
+rospy.Subscriber("/gate/select", None, _on_select)
+
+
+def reddot_status(st, p, dist, rel):
+    """红点的 /gate/status (模拟桥里 Locator 的后验): σ 随距离变小, 深度有偏差 (远处偏短, 越近越小)。"""
+    u = unit(rel)
+    sd_al = 0.004 * dist * dist + 0.015 * dist           # 9 m 0.46 m, 3 m 0.08 m
+    sd_lat = 0.004 * dist + 0.01
+    e_al = -0.6 * sd_al + random.gauss(0, sd_al / 4)      # 远处偏近 (立体比例 / 视差), 后验 σ 内
+    def est(P):
+        return [P[i] + e_al * u[i] + random.gauss(0, sd_lat / 3) for i in range(3)]
+    cov = [[sd_lat ** 2 * ((1.0 if i == j else 0.0) - u[i] * u[j]) + sd_al ** 2 * u[i] * u[j] for j in range(3)]
+           for i in range(3)]
+    aim = est(AIM)
+    cands = [{"id": 1, "aim": aim, "score": 0.93, "hits": 50, "D": 0.15, "D_trk": 0.15, "uv": [480, 270]}]
+    if scenario == "dash_reddot":
+        cands.append({"id": 2, "aim": est(DISTRACT), "score": 0.45, "hits": 40, "D": 0.12, "D_trk": 0.12,
+                      "uv": [300, 260]})
+    st.update(kind="reddot", src="dot_fused", n_hit=50, n_cand=len(cands), age_ms=30.0, D_est=0.15,
+              cands=cands, sel=dict(SEL), st_scale=1.02, n_bins=5, n_dir=3)
+    pick = 1 if SEL["state"] == "none" else (SEL["trk_id"] if SEL["state"] == "bound" else None)
+    if pick is None:
+        st.update(stage="lost", published=False)
+        st.pop("target", None)
+        return
+    c = cands[pick - 1]
+    st.update(target=c["aim"], aim=c["aim"], trk_id=pick, score=c["score"], cov=[x for row in cov for x in row],
+              sd_cm=[100 * math.sqrt(cov[i][i]) for i in range(3)], dist=round(dist, 3), published=True)
+    # 法向: 飞机在 4 m 内横向或竖直换过 ≥ 0.4 m 视角才有 (感知侧 normal_consensus)
+    h = dot([p[i] - C[i] for i in range(3)], RIGHT)
+    if dist < 4.0:                                       # 远处红点像素小, 出不了法向: 4 m 内的横移才算换视角
+        SCAN_H[0], SCAN_H[1] = min(SCAN_H[0], h), max(SCAN_H[1], h)
+    if dist < 4.0 and (p[2] >= 1.45 or SCAN_Z[0] < 1e8):
+        SCAN_Z[0], SCAN_Z[1] = min(SCAN_Z[0], p[2]), max(SCAN_Z[1], p[2])
+    if SCAN_H[1] - SCAN_H[0] >= 0.4 or SCAN_Z[1] - SCAN_Z[0] >= 0.4:
+        st.update(n=unit([N[i] + random.gauss(0, 0.01) for i in range(3)]), n_sd_deg=2.2, n_state="ok")
+    else:
+        st.pop("n", None)
+        st.update(n_state="few", n_why="视角桶 1 < 3 (sim)")
+
+
 def sim_loop():
     dt = 0.005
     nxt = time.time()
@@ -293,7 +350,7 @@ def sim_loop():
             rel = [C[i] - p[i] for i in range(3)]
             dist = math.sqrt(dot(rel, rel))
             brg = math.atan2(rel[1], rel[0])
-            vis = (dot([-r for r in rel], N) > 0.3 and 0.8 < dist < 9.0
+            vis = (dot([-r for r in rel], N) > 0.3 and 0.8 < dist < (12.0 if RD else 9.0)
                    and abs(math.atan2(math.sin(brg - yaw), math.cos(brg - yaw))) < math.radians(40))
             st = {"t": now, "stage": "mid" if vis else "search", "pose": "ok", "sim": False}
             if vis:
@@ -303,12 +360,9 @@ def sim_loop():
                           dist=round(dist, 3), sd_cm=[sd, sd, sd], published=True,
                           aim=[AIM[i] + random.gauss(0, sd / 200) for i in range(3)],
                           n_sd_deg=1.0)
-                if scenario == "dock_reddot":
-                    # 红点格式 (reddot/locate.py extra): 来源 dot_*, 分数 / 命中 / 轨迹号; 没有环字段
-                    st.update(kind="reddot", src="dot_fused", score=0.93, n_hit=50, trk_id=1, n_cand=1, age_ms=30.0,
-                              D_est=0.146, cov=[(sd / 100) ** 2, 0, 0, 0, (sd / 100) ** 2, 0, 0, 0, (sd / 100) ** 2])
-                    st["target"] = st["aim"]
-                if scenario in ("dock_vscan", "dock_reddot"):
+                if RD:
+                    reddot_status(st, p, dist, rel)
+                elif scenario == "dock_vscan":
                     # 红点: 单个视角法向分不开 → 飞机高度扫过 0.4 m 以上才给 n (感知侧见 reddot/locate.normal_consensus)
                     zr = SCAN_Z                       # 起飞到位 (≥ 1.45 m) 之后才算: 爬升本身不算换视角
                     if p[2] >= 1.45 or zr[0] < 1e8:
@@ -377,6 +431,14 @@ if dk:
     print("停靠: S=%s 距离 %.2fm 方向按%s  误差 中位 %s / 最大 %s cm  aim 抖动 %s  done=%s ok=%s  遥测 mode=%s"
           % (dk.get("S"), dk.get("d"), dk.get("dir_src"), dk.get("err_cm"), dk.get("err_max_cm"),
              dk.get("aim_sd_cm"), dk.get("done"), dk.get("ok"), telem[-1].get("mode")))
+tk = None
+for t in telem:
+    if (t.get("gate") or {}).get("track"):
+        tk = t["gate"]["track"]
+if tk:
+    print("跟踪类目标: 最后一步 %s  选点 %s  换视角 %s 轮  σ %s  重锁 %s  原因 %s"
+          % (tk.get("step"), (tk.get("sel") or {}).get("trk_id"), tk.get("rounds"), tk.get("sig"), tk.get("relock"),
+             tk.get("why")))
 cfg = config[-1] if config else {}
 print("config task=%s  derived.gate=%s" % (cfg.get("task"), bool((cfg.get("derived") or {}).get("gate"))))
 # 冲刺段的 20Hz

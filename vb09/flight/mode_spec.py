@@ -28,7 +28,8 @@ SECTIONS = OrderedDict([
     ("dash_site", ("冲刺场地", "环后空间、起飞点后方、两侧 —— 冲刺规划查放不放得下")),
     ("body", ("机体", "机头 / 机尾 / 半宽 —— 冲刺规划查机身穿不穿得过、离墙多远")),
     ("dock", ("停靠", "停靠距离、悬停时间")),
-    ("scan", ("上下扫描", "到位后上下换视角定法向 (红点必须)")),
+    ("scan", ("上下扫描", "到位后上下换视角定法向 (环的停靠用; 红点在抵近 / 持续估计里自己换视角)")),
+    ("track", ("抵近 / 持续估计", "红点: 边飞边估的抵近、不够准时左右 / 上下换视角、等 G 时估计变了就重锁")),
 ])
 
 # 步骤类名 → 用到的区。新步骤必须登记 (mode_isolation_check 会查 modes.py 里的每个步骤都在这里)
@@ -44,6 +45,14 @@ STEP_USES = {
     "StandOff": ("dock",),
     "VScan": ("scan",),
     "Hold": ("dock",),
+    # 跟踪类目标 (红点) 的步骤 (steps/track.py, 2026-11-08)
+    "Detect": ("track",),
+    "Approach": ("track",),            # 基类 (ApproachDock / ApproachDash 只给停靠距离)
+    "ApproachDock": ("dock", "track"),
+    "ApproachDash": ("dash", "track"),
+    "Refine": ("track",),
+    "PlanLocked": ("dash", "dash_site", "body"),
+    "CommitTrack": ("dash", "track"),
 }
 
 # 步骤类名 → 它飞行时的最快指令速度来自哪个参数 (没登记 = 只按摆位速度 GATE_REPO_V 飞)。
@@ -54,15 +63,19 @@ STEP_FAST_V = {
 
 # 模式。label 是档案 mode 旋钮的中文选项; drives = 这一趟会不会真的冲 (网页开关标签用);
 # preview = 网页右侧核对表 / 俯视图用哪种 (web/views/config.js PREVIEWS)
+# steps_tracked = 判定插件 TRACKED = True 的目标 (红点) 用的步骤链 (modes.MODES_TRACKED)
 MODE_SPECS = OrderedDict([
     ("dash", dict(label="冲刺", preview="dash", drives=True,
                   steps=("Acquire", "PlanDash", "Reposition", "Align", "Commit", "Dash"),
+                  steps_tracked=("Detect", "ApproachDash", "Refine", "PlanLocked", "CommitTrack", "Dash"),
                   desc="识别 → 锁定 → 摆位到起跑点 → 冲刺穿过目标 → 刹停")),
     ("shadow", dict(label="影子", preview="dash", drives=False,
                     steps=("Acquire", "PlanDash", "AlignHere", "Shadow"),
+                    steps_tracked=("Detect", "PlanDash", "AlignHere", "Shadow"),
                     desc="识别、锁定、冲刺规划照做, 不摆位、不冲刺, 计划发网页; 做完回手动段")),
     ("dock", dict(label="停靠", preview="dock", drives=False,
                   steps=("Acquire", "StandOff", "VScan", "Hold"),
+                  steps_tracked=("Detect", "ApproachDock", "Refine", "Hold"),
                   desc="识别 → 飞到目标前停靠距离处对正 → (上下扫描) → 悬停记录检测 → 回手动段; 不冲刺")),
 ])
 
@@ -76,7 +89,7 @@ def sections(mode):
     if spec is None:
         return set(SECTIONS)
     out = set()
-    for s in spec["steps"]:
+    for s in tuple(spec["steps"]) + tuple(spec.get("steps_tracked", ())):     # 两套步骤的并集 (保守)
         out.update(STEP_USES.get(s, SECTIONS.keys()))
     return out
 

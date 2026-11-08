@@ -60,6 +60,16 @@ GATE_KNOBS = [
          min=0.0, max=0.6,
          help="到位后先降、再升这么多、回停靠点 (只改高度, 不横移), 给识别换视角定法向 "
               "(红点必须: 单个视角法向有两个解)。3 m 处 0.3 ≈ 视角跨度 11°, 至少要 10°。不填 / 0 = 不扫"),
+    dict(key="refine_dy", tasks=["gate"], section="track", type="float", unit="m", label="换视角幅度", group="穿环",
+         min=0.15, max=0.6,
+         help="红点到停靠点 / 起跑点后还不够准 (横向 σ、深度 σ、法向) 时, 左右 (或上下) 移动的半幅 (默认 0.3)。"
+              "3 m 处 0.3 ≈ 视角跨度 11°, 法向至少要 10°"),
+    dict(key="appr_k", tasks=["gate"], section="track", adv=True, type="float", unit="σ", label="抵近留余",
+         group="穿环", min=0.0, max=4.0,
+         help="红点抵近时停在 停靠距离 + 这么多倍深度 σ 处 (默认 2): 远处深度不准时停在估计的近端, 越近越往前挪"),
+    dict(key="relock_cm", tasks=["gate"], section="track", adv=True, type="float", unit="cm", label="重锁阈值",
+         group="穿环", min=1.0, max=20.0,
+         help="红点冲刺: 按 G 时最新估计和锁定值横向差超过它 → 按最新值重锁、重规划, 再按一次 G (默认 5)"),
     dict(key="allow_slow", tasks=["gate"], section="dash", type="choice", unit="", label="场地不够时降速", group="穿环",
          choices=["否", "确认", "是"],
          help="场地放不下设定的冲刺速度时: 否 = 规划失败回手动段 (说明卡在哪、最高能冲多快); "
@@ -107,6 +117,7 @@ GATE_KNOB_PARAM = {
     "run_max": "D_RUN_MAX",
     "pass_run": "PASS_RUN", "back_margin": "M_BACK", "brake_over": "BRAKE_OVER_T",
     "dock_dist": "GATE_DOCK_D_STOP", "dock_hold": "GATE_DOCK_HOLD_S", "vscan": "GATE_VSCAN_DZ",
+    "refine_dy": "GATE_REFINE_DY", "appr_k": "GATE_APPR_K", "relock_cm": "GATE_RELOCK_CM",
 }
 
 def knob_section(k):
@@ -361,6 +372,37 @@ def _check_scan(g, E, W):
         if span < (get("GATE_VSCAN_SPAN_DEG") or 10.0):
             W.append("上下扫描视角跨度约 %.1f° < %.0f°: 法向多半定不下来 —— 加大 vscan 或缩短停靠距离"
                      % (span, get("GATE_VSCAN_SPAN_DEG") or 10.0))
+
+
+def _tracked(g):
+    """档案的目标类型是不是跟踪类 (判定插件 TRACKED = True → 飞行用 MODES_TRACKED)。"""
+    try:
+        from vb09.perception import registry
+        return bool(getattr(registry.load(registry.JUDGES, g.get("TARGET_KIND", "ring")), "TRACKED", False))
+    except Exception:
+        return False
+
+
+def _check_track(g, E, W):
+    """区 track (红点的抵近 / 持续估计): 换视角幅度在停靠 / 起跑距离处的视角跨度。只对跟踪类目标 (判定插件 TRACKED) 查。"""
+    get = g.get
+    if not _tracked(g):
+        return
+    dy = get("GATE_REFINE_DY") or 0.0
+    if not (0.15 <= dy <= 0.6):
+        E.append("换视角幅度 GATE_REFINE_DY=%.2f m 不在 [0.15, 0.6]" % dy)
+        return
+    if (get("GATE_APPR_K") or 0.0) < 0:
+        E.append("抵近留余 GATE_APPR_K=%.2f < 0" % get("GATE_APPR_K"))
+    mode = g.get("MISSION_MODE", _ms.DEFAULT_MODE)
+    d = get("GATE_DOCK_D") or 3.0
+    if _ms.uses(mode, "dash") and not _ms.uses(mode, "dock"):
+        d = max((get("DASH_V") or 2.5) ** 2 / (2.0 * (get("DASH_ACC") or 2.0)) + (get("D_STRAIGHT") or 1.5),
+                get("D_ALIGN_MIN") or 2.8)
+    span = math.degrees(2.0 * math.atan2(dy, d))
+    if span < 10.0:
+        W.append("换视角幅度 ±%.2f m 在 %.1f m 处视角跨度约 %.1f° < 10°: 红点法向多半定不下来 —— 加大 refine_dy"
+                 % (dy, d, span))
 
 
 def _check_target(g, E, W, mode):
@@ -676,6 +718,6 @@ def _site_config_text_gate(report, g, d, extra=None):
 
 
 # 区 → 校验函数 (按 mode_spec.SECTIONS 顺序执行)。dash_site / body 的检查在 _check_dash 里 (它们只给冲刺规划用)
-SECTION_CHECKS = [("dash", _check_dash), ("dock", _check_dock), ("scan", _check_scan)]
+SECTION_CHECKS = [("dash", _check_dash), ("dock", _check_dock), ("scan", _check_scan), ("track", _check_track)]
 
 from vb09.profile import core as _c  # noqa: E402  (见文件头)

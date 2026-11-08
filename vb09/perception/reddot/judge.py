@@ -11,14 +11,16 @@ from vb09.common import geom
 
 class RedDotJudge(object):
     kind = "reddot"
+    # 2026-11-08 (PLAN_dot_v2): 桥里有诚实的世界系后验 + 选点 → 飞行用 modes.MODES_TRACKED (边飞边估的步骤链)。
+    #   单帧判定只卡"能不能当样本" (发现级: 远到 DOT_D_MAX、σ 宽); 够不够准由步骤按 σ 判 (Approach / Refine)
+    TRACKED = True
     # 环的 judge 没有的拒绝原因 (flight/target_in.py 合进计数和日志说明)
     # 目标 × 模式支持表 (2026-11-06; 档案校验读)。冲刺 / 影子的规划现在还按环的几何 (瞄点按内环半径收,
     #   纸面 = 环平面), 红点的"可穿区域 / 法向来源"接口没做之前标实验性
     MODES = {
         "dock": "ok",
-        "shadow": ("experimental", "冲刺规划还按环的几何算 (瞄点限制在内环半径里、没有法向按视线), 只看计划不飞"),
-        "dash": ("experimental", "冲刺规划还按环的几何算 (瞄点限制在内环半径里、没有法向按视线进入); "
-                                 "红点的可穿区域和冲刺前扫描还没接"),
+        "shadow": ("experimental", "原地规划 (不抵近), 只看计划不飞"),
+        "dash": ("experimental", "抵近 + 持续估计 + 冲刺还没真机飞过 —— 先用停靠验证精度"),
     }
     REASONS = ("stale", "src", "score", "hits", "ambig")
     REJ_TXT = {"stale": "估计太旧", "src": "不是红点来源", "score": "分数低", "hits": "命中太少",
@@ -53,14 +55,16 @@ class RedDotJudge(object):
             dist = st.get("dist")
             if not isinstance(dist, (int, float)):
                 dist = geom.vnorm(geom.vsub(c, p_now)) if p_now else float("nan")
-            if not (C.GATE_D_MIN <= dist <= C.GATE_D_MAX):
+            if not (C.GATE_D_MIN <= dist <= self._g("DOT_D_MAX", 14.0)):     # 发现级: 远处也要 (抵近靠它)
                 return None, "dist"
             if float(st.get("score", 1.0)) < self._g("DOT_SCORE_MIN", 0.5):
                 return None, "score"
             if int(st.get("n_hit", 99)) < self._g("DOT_HITS_MIN", 3):
                 return None, "hits"
-            # 候选多且接近: 不确定是哪个 → 不当样本
-            others = [x for x in (st.get("cands") or []) if int(x.get("id", -1)) != int(st.get("trk_id", -2))]
+            # 候选多且接近: 不确定是哪个 → 不当样本。选了点 (桥只发布选中的那条) 就不再判
+            sel = st.get("sel") or {}
+            others = [] if sel.get("state") == "bound" else \
+                [x for x in (st.get("cands") or []) if int(x.get("id", -1)) != int(st.get("trk_id", -2))]
             for x in others:
                 if float(x.get("score", 0.0)) >= 0.7 * float(st.get("score", 1.0)) and x.get("aim"):
                     if geom.vnorm(geom.vsub(tuple(x["aim"][:3]), c)) > 0.5:
@@ -89,12 +93,14 @@ class RedDotJudge(object):
             if sig is None:
                 sd_max = max(float(v) for v in sd) if sd else float("nan")
                 sig = (sd_max, sd_max, sd_max)
-            if not (max(sig[0], sig[1]) <= C.GATE_SD_MAX_CM):
+            # σ 门限是发现级的 (远处深度 σ 几十 cm 也要用来抵近); 锁定线在 Refine (GATE_LOCK_SD_*)
+            if not (max(sig[0], sig[1]) <= self._g("DOT_SD_MAX_CM", 40.0)):
                 return None, "sd"
-            if not (sig[2] <= C.GATE_SD_ALONG_MAX_CM):
+            if not (sig[2] <= self._g("DOT_SD_ALONG_MAX_CM", 300.0)):
                 return None, "sd_along"
             return {"t": t_cap, "recv": now, "c": c, "aim": c, "n": n, "dist": float(dist),
                     "sd": max(sig[0], sig[1]), "sig": sig, "n_sd": st.get("n_sd_deg"),
+                    "n_state": st.get("n_state"), "n_why": st.get("n_why"), "sel": sel or None,
                     "raw": False, "src": st.get("src"), "p": p_now}, "ok"
         except Exception:
             return None, "bad"

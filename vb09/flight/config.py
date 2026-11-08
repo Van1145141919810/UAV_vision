@@ -110,6 +110,26 @@ GATE_VSCAN_DZ        = 0.0     # m，扫描半幅。0 = 不扫 (老行为)
 GATE_VSCAN_V         = 0.2     # m/s，扫描速度
 GATE_VSCAN_WAIT_S    = 2.0     # s，扫完回到停靠点后最多再等多久法向
 GATE_VSCAN_SPAN_DEG  = 10.0    # °，预计视角跨度低于它就提示 (感知 normal_view_min_deg 同值)
+# 跟踪类目标 (红点, 判定插件 TRACKED = True) 的步骤链 (2026-11-08, claude/PLAN_dot_v2.md):
+#   Detect (发现 + 选点) → Approach (边飞边估, 每拍按最新估计重算停靠点) → Refine (够准就锁, 不够就侧移 / 上下换视角)
+#   → 停靠: Hold  /  冲刺: PlanLocked → Commit (按 G 时估计变了就重锁) → Dash
+DOT_D_MAX            = 14.0    # m，红点单帧判定的最远距离 (发现级; 环用 GATE_D_MAX)
+DOT_SD_MAX_CM        = 40.0    # cm，红点单帧判定的横向 σ 上限 (发现级; 锁定线 GATE_LOCK_SD_LAT_CM 在 Refine 里判)
+DOT_SD_ALONG_MAX_CM  = 300.0   # cm，… 深度 σ 上限 (10 m 处只有立体时 σ 50–80 cm 也要能抵近)
+DOT_SEL_SCORE        = 0.5     # 自动选点: 最高分的候选至少这么高
+DOT_SEL_HITS         = 5       # … 且至少命中这么多帧
+DOT_SEL_RATIO        = 0.7     # 第二名分数 ≥ 此值 × 第一名 (且离开 > 0.5 m) → 分不清, 等人选 (终端数字键 1–5 / 网页点选)
+GATE_SELECT_TIMEOUT  = 30.0    # s，等人选点超时 → 放弃 (回手动段)
+GATE_APPR_K          = 2.0     # 抵近: 停在 停靠距离 + k·σ_深度 处 (远处深度不准时停在估计的近端; 越近 σ 越小, 停靠点跟着往前挪)
+GATE_APPR_TURN_DPS   = 8.0     # °/s，进入方向从视线转到法线的最大速率 (法向一出来停靠点不跳)
+GATE_APPR_LOST_S     = 1.0     # s，这么久没有有效估计 → 悬停等
+GATE_APPR_FAIL_S     = 5.0     # s，… 等这么久还没有 → 放弃 (回手动段)
+GATE_APPR_JUMP       = 0.5     # m，估计一拍跳这么多 → 悬停 1 s 等它收敛
+GATE_APPR_TIMEOUT    = 60.0    # s，抵近总时长上限
+GATE_REFINE_DY       = 0.3     # m，Refine 不够准时左右侧移的半幅 (3 m 处 ±0.3 m ≈ 11° 视角; ±0.25 只有 9.5°, 法向要 ≥ 10°)
+GATE_REFINE_ROUNDS   = 2       # Refine 最多换几轮视角 (侧移 / 上下), 还不够准 → 放弃 (回手动段)
+GATE_REFINE_WAIT_S   = 2.0     # s，每次到位后取样多久再判
+GATE_RELOCK_CM       = 5.0     # cm，等 G 期间最新估计和锁定值横向差超过它 → 按最新值重锁、重规划, 再等一次 G
 
 # =============================================================================
 # ========================  D. 冲刺规划 (gate_plan.py)  ========================

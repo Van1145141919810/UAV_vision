@@ -93,6 +93,11 @@ class Commit(Step):
     name = "commit"
     vel_lim = "pre"
 
+    def on_go(self, ctx):
+        """按了 G / Y (或不用确认) 之后、冲刺之前的最后检查。返回 False = 这次不算, 再等一次确认 (计划可能已经换了,
+        循环里按 ctx.plan 读)。环: 总是 True (行为不变)。跟踪类目标: track.CommitTrack 按最新估计重锁。"""
+        return True
+
     def run(self, ctx, lock):
         P = ctx.plan
         ctx.set_seg("commit", "等确认")
@@ -117,9 +122,17 @@ class Commit(Step):
         rospy.logwarn("=" * 64)
         t_end = rospy.Time.now().to_sec() + C.GATE_CONFIRM_TIMEOUT
         while C.GATE_CONFIRM_DASH or need_y:
+            P = ctx.plan
             ctx.hold(P.S)
             ctx.tick()
             if go_key in ctx.flags:
+                if not self.on_go(ctx):
+                    t_end = rospy.Time.now().to_sec() + C.GATE_CONFIRM_TIMEOUT
+                    P = ctx.plan
+                    need_y = need_y or bool(P.need_confirm)
+                    go_key = 'y' if need_y else 'g'
+                    rospy.logwarn(f"[gate] ★★ 计划已更新: {P.summary()} —— 再按 {go_key.upper()} 冲刺 | M = 回手动段")
+                    continue
                 rospy.logwarn(f"[gate] {go_key.upper()} → 冲刺 {P.v:.2f} m/s")
                 break
             if need_y and 'g' in ctx.flags:
@@ -133,6 +146,9 @@ class Commit(Step):
                 if lv is not None and ctx.locked:
                     d = gp.vnorm(gp.vsub(lv["c"], ctx.locked["c"])) * 100
                     rospy.loginfo(f"    [commit] 等 G … 最新识别和锁定值差 {d:.0f}cm")
+        if not (C.GATE_CONFIRM_DASH or need_y):
+            self.on_go(ctx)                       # 不用确认: 照样做最后检查 (跟踪类目标可能重锁), 结果不拦冲刺
+        P = ctx.plan
         # 停稳在起跑点
         t_end = rospy.Time.now().to_sec() + C.GATE_START_WAIT
         while True:
