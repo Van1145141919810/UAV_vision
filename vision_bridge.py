@@ -127,6 +127,7 @@ except ImportError as _e:
 
 import glob
 import json
+from collections import deque
 import subprocess
 import threading
 import time
@@ -487,6 +488,50 @@ def _stale(fr, reset_age):
     return tg is not None and bool(getattr(tg, "valid", False)) and float(getattr(tg, "age", 0.0)) > reset_age
 
 
+class SelectInbox(object):
+    """
+    /gate/select (飞行脚本发的选点指令, JSON) 的收件箱 (2026-11-08, PLAN_dot_v2 §4)。
+    订阅回调只入队; 真正交给估计器 (Locator.select) 在处理下一帧的那个线程里做 —— 和 update 同线程, 不加锁改轨迹。
+    按像素选点 (mode = ray) 要那一帧 (t_cap) 的相机位姿: 用桥自己的 PoseBuffer 插值。目标插件没有 select → 只打日志。
+    """
+
+    def __init__(self, tag):
+        self.tag = tag
+        self.q = deque(maxlen=16)
+        self.lock = threading.Lock()
+
+    def on_msg(self, m):
+        try:
+            cmd = json.loads(m.data)
+            if not isinstance(cmd, dict):
+                raise ValueError
+        except Exception:
+            rospy.logwarn("[%s] /gate/select 消息坏了: %r" % (self.tag, getattr(m, "data", None)))
+            return
+        with self.lock:
+            self.q.append(cmd)
+
+    def apply(self, target, poses, T_BC):
+        """target = Locator / Detector (有 select 才处理); 没有 target (还没建估计器) → 留着下次。"""
+        if target is None:
+            return
+        with self.lock:
+            cmds, self.q = list(self.q), deque(maxlen=16)
+        for cmd in cmds:
+            if not hasattr(target, "select"):
+                rospy.logwarn("[%s] 选点指令 seq=%s: 这种目标不支持选点, 忽略" % (self.tag, cmd.get("seq")))
+                continue
+            T_WC = None
+            tc = cmd.get("t_cap")
+            if isinstance(tc, (int, float)):
+                T_WB, why = poses.at(float(tc))
+                T_WC = T_WB @ T_BC if T_WB is not None else None
+            try:
+                rospy.loginfo("[%s] 选点: %s" % (self.tag, target.select(cmd, T_WC)))
+            except Exception as e:
+                rospy.logwarn("[%s] 选点出错: %r" % (self.tag, e))
+
+
 class GateWorker(object):
     """检测线程: 拿相机最新帧 → 降采样解码 → 校正 → GateDetector → 发布。只处理最新帧, 不排队。"""
 
@@ -515,6 +560,7 @@ class GateWorker(object):
         self.prev_ev = threading.Event()
         self.last_prev = 0.0
         self.out = GateOut(cfg["gate_sim"], gcfg.lost_timeout)
+        self.sel = SelectInbox("gate")
         flag = cv2.IMREAD_REDUCED_COLOR_2 if abs(cfg["det_scale"] - 0.5) < 1e-6 else \
             cv2.IMREAD_REDUCED_COLOR_4 if abs(cfg["det_scale"] - 0.25) < 1e-6 else cv2.IMREAD_COLOR
         self.dec_flag = flag
@@ -562,6 +608,7 @@ class GateWorker(object):
         t = stamp.to_sec()
         T_WB, why = self.poses.at(t)
         T_WC = T_WB @ self.T_BC if T_WB is not None else None
+        self.sel.apply(self.det, self.poses, self.T_BC)
         fr = self.det.process(L, R, t, T_WC)
         if _stale(fr, self.reset_age):
             # 估计器拿着一个 reset_age 没更新过的环 (落地后 / VINS 跳过 / 新测量一直被当野值拒绝)
@@ -606,6 +653,7 @@ class GateFuseWorker(object):
                               [cfg["cam_x"], cfg["cam_y"], cfg["cam_z"]])
         self.poses = PoseBuffer(max_gap=cfg["max_pose_gap"])
         self.out = GateOut(cfg["gate_sim"], self.gcfg.lost_timeout)
+        self.sel = SelectInbox("gate_gcs")
         self.fuser = None
         self.rig = None
         self.reset_age = _reset_age(cfg, self.gcfg)
@@ -656,6 +704,7 @@ class GateFuseWorker(object):
         fr = self.codec.frame_from_msg(g)
         T_WB, why = self.poses.at(t)
         T_WC = T_WB @ self.T_BC if T_WB is not None else None
+        self.sel.apply(self.fuser, self.poses, self.T_BC)
         self.fuser.update(fr, T_WC, t)
         if _stale(fr, self.reset_age):
             # 同 GateWorker: 旧状态 → 重建估计器, 用这一帧的观测重新初始化
@@ -740,6 +789,12 @@ class Bridge(object):
             self.gate.on_pose(m)
         if self.fuse is not None:
             self.fuse.on_pose(m)
+
+    def on_select(self, m):
+        """/gate/select → 当前的检测 / 融合工作线程 (见 SelectInbox)。"""
+        for w in (self.gate, self.fuse):
+            if w is not None:
+                w.sel.on_msg(m)
 
     def on_state(self, m):
         with self.lock:
@@ -1105,6 +1160,7 @@ def main():
     rospy.Subscriber(POSE_TOPIC, PoseStamped, br.on_pose, queue_size=1)
     rospy.Subscriber("/mavros/state", State, br.on_state, queue_size=1)
     rospy.Subscriber(cfg["status_topic"], String, br.on_phase, queue_size=1)
+    rospy.Subscriber("/gate/select", String, br.on_select, queue_size=10)     # 选点 (飞行脚本发, PLAN_dot_v2 §4)
 
     threads = [(cam.run, ()), (br.uplink_loop, (up,)),
                (br.downlink_loop, (down, pub, rtt_pub)), (br.stats_loop, (cam_pub,))]

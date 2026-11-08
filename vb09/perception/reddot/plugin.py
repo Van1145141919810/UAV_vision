@@ -28,6 +28,10 @@ class RedDotDetector(object):
             self.loc.update(fr, T_WC, t)
         return fr
 
+    def select(self, cmd, T_WC=None):
+        """选点 (机上检测模式; 桥的 SelectInbox 调用)。见 locate.DotLocator.select。"""
+        return self.loc.select(cmd, T_WC)
+
     def reset(self):
         self.det = self._cls(self.rig, self.cfg)
         old, self.loc = self.loc, DotLocator(self.cfg, self.rig.f, self.rig.R1)

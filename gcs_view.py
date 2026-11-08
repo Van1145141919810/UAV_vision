@@ -242,7 +242,7 @@ def hud_lines(head, st, link, rec_txt, gap_txt):
                       % (_vec(st["n"], "%+.3f"), _f(st.get("n_sd_deg"), "%.1f"), _f(st.get("n_span_deg"), "%.0f"),
                          st.get("n_k", "-")), GREEN if (st.get("n_sd_deg") or 99) <= 3.0 else YELLOW))
         else:
-            L.append(("normal --  %s  (bins %s)" % (why_en(st.get("n_why") or "no data"), st.get("n_bins", 0)), YELLOW))
+            L.append(("normal --  %s  (bins %s)" % (why_en(st.get("n_why") or "no data"), st.get("n_vbins", st.get("n_bins", 0))), YELLOW))
     else:
         rg = st.get("ring") or {}
         L.append(("ring %s  src %s  corners %s  n %s  aim %s"
