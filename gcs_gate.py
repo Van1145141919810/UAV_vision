@@ -905,6 +905,15 @@ def main():
                     if hooks and fr is not None:
                         meta.update(found=found, n_cand=len(getattr(fr, "cands", []) or []),
                                     reason="" if found else no_target_reason(args.mode, fr, fst))
+                    if hooks:
+                        # 网页点选 (2026-11-08): 这张图 (校正左目, 工作分辨率) 的内参 + 拍摄时刻 → 网页算视线
+                        meta["pick"] = {"f": float(rig.f), "cx": float(rig.cx), "cy": float(rig.cy),
+                                        "w": int(L.shape[1]), "h": int(L.shape[0]), "img_w": int(vis.shape[1]),
+                                        "t_cap": t_cap}
+                        if fst:
+                            meta.update(dot_sel=fst.get("sel"), dot_cands=[
+                                {"id": c.get("id"), "uv": c.get("uv"), "score": c.get("score")}
+                                for c in (fst.get("cands") or [])])
                     pv_publish(vis, meta, jpg)
                 if not args.headless:
                     show = to_canvas(vis)

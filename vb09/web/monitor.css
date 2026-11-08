@@ -373,3 +373,14 @@ kbd{font-family:var(--mono);font-size:12px;padding:1px 6px;border:1px solid var(
 .sw.warnn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
 #cfg-hidden{margin-top:8px}
 .segs.chg{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+
+/* 红点 (kinds/reddot.js, 2026-11-08) */
+#dot-box{margin-top:8px;border-top:1px solid var(--line);padding-top:6px;font-size:12px}
+#dot-box .dot-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#dot-box .dot-h .r{margin-left:auto;display:flex;gap:6px}
+#dot-box .btn.on{border-color:var(--warn);color:var(--warn)}
+#dot-box .dot-why{color:var(--warn);margin:3px 0}
+#dot-box .dot-msg{color:var(--muted)}
+#dot-box .dot-tbl{width:100%;border-collapse:collapse;margin-top:4px;font-family:var(--mono)}
+#dot-box .dot-tbl th,#dot-box .dot-tbl td{padding:2px 6px;text-align:right;border-bottom:1px solid var(--line)}
+#dot-box .dot-tbl tr.on td{color:#7ee787}

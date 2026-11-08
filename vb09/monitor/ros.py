@@ -16,6 +16,19 @@ from vb09.monitor.store import STORE
 # =============================================================================
 # ROS 侧
 # =============================================================================
+_SEL_PUB = None
+
+
+def publish_select(cmd):
+    """网页的选点请求 → /flight_ctrl/select (飞行脚本决定什么时候用; 见 vb09/flight/target_in.py web_select)。
+    → (ok, 说明)。没连 ROS (--fake) → False。"""
+    if _SEL_PUB is None:
+        return False, "没连 ROS (--fake 模式?)"
+    from std_msgs.msg import String
+    _SEL_PUB.publish(String(data=json.dumps(cmd)))
+    return True, "已发给飞行脚本"
+
+
 def start_ros(args, srv=None):
     import rospy
     import rosgraph
@@ -27,6 +40,8 @@ def start_ros(args, srv=None):
     from rosgraph_msgs.msg import Log
 
     rospy.init_node("flight_monitor", anonymous=False, disable_signals=True)
+    global _SEL_PUB
+    _SEL_PUB = rospy.Publisher("/flight_ctrl/select", String, queue_size=5)     # 网页选点 → 飞行脚本 (2026-11-08)
 
     # 本节点被关 (同名节点顶掉 / master 退出 / rosnode kill) → 网页服务也退出, 让出端口。
     # 否则会留下"网页还在、ROS 已死"的僵尸: 页面显示已连接, 数据却一直不更新。

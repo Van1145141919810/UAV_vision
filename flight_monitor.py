@@ -107,7 +107,29 @@ WEB_DIR = os.path.join(HERE, "vb09", "web")
 _JS = "application/javascript; charset=utf-8"
 WEB_FILES = {"monitor.css": "text/css; charset=utf-8", "core.js": _JS, "kinds/ring.js": _JS, "live.js": _JS,
              "views/monitor.js": _JS, "views/detail.js": _JS, "views/checks.js": _JS, "views/config.js": _JS,
-             "views/help.js": _JS, "views/cam.js": _JS, "views/replay.js": _JS, "main.js": _JS}
+             "views/help.js": _JS, "views/cam.js": _JS, "views/replay.js": _JS, "main.js": _JS,
+             "kinds/reddot.js": _JS}
+
+
+def _select_cmd(body):
+    """网页选点请求 → 校验 → /flight_ctrl/select。只认三种: 轨迹号 / 像素视线 (+ 那一帧的 t_cap) / 取消。"""
+    try:
+        mode = str(body.get("mode"))
+        if mode == "track":
+            cmd = {"mode": "track", "trk_id": int(body["trk_id"])}
+        elif mode == "ray":
+            cmd = {"mode": "ray", "xn": float(body["xn"]), "yn": float(body["yn"]), "t_cap": float(body["t_cap"])}
+            if not (abs(cmd["xn"]) < 3 and abs(cmd["yn"]) < 3):
+                raise ValueError("坐标超范围")
+        elif mode == "none":
+            cmd = {"mode": "none"}
+        else:
+            raise ValueError("mode 只能是 track / ray / none")
+    except (KeyError, TypeError, ValueError) as e:
+        return {"ok": False, "error": "选点请求不对: %s" % e}
+    from vb09.monitor import ros as _ros
+    ok, msg = _ros.publish_select(cmd)
+    return {"ok": ok, "msg" if ok else "error": msg, "cmd": cmd}
 
 
 # =============================================================================
@@ -234,6 +256,8 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         a = self.args
         try:
+            if u.path == "/api/select":                    # 网页选点 (2026-11-08, PLAN_dot_v2 §4)
+                return self._send(200, _select_cmd(self._body()))
             if fp is None:
                 return self._send(503, {"ok": False, "error": "flight_profile.py 不在"})
             body = self._body()
@@ -330,6 +354,8 @@ def main():
     ap.add_argument("--fake", action="store_true", help="不连 ROS, 用模拟数据试页面")
     ap.add_argument("--fake-task", choices=("gate",), default="gate",
                     help="--fake 时模拟哪种任务 (只剩 gate = 穿环, 带假识别画面)")
+    ap.add_argument("--fake-kind", choices=("ring", "reddot"), default="ring",
+                    help="--fake 时识别结果按哪种目标 (reddot = 加上红点的候选 / 选点 / 抵近字段, 看红点区和画面点选)")
     args = ap.parse_args()
     # 记下每个路径是怎么来的 (「机况检查 → 文件与路径」里显示)
     # ★2026-10-19 飞行脚本按任务找 (见 discover_scripts)

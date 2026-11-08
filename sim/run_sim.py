@@ -389,6 +389,11 @@ def sim_loop():
 rospy.PRINT[0] = os.environ.get("SIM_QUIET") != "1"
 import stage14_mission as S                       # noqa: E402  (档案 setup 在 import 时)
 threading.Thread(target=sim_loop, daemon=True).start()
+if os.environ.get("SIM_WEB_SEL"):                 # 手动测试: 起飞前网页选点 (轨迹号), Detect 应优先用它
+    def _web_sel():
+        time.sleep(3.0)
+        rospy._pub("/flight_ctrl/select", String(json.dumps({"mode": "track", "trk_id": int(os.environ["SIM_WEB_SEL"])})))
+    threading.Thread(target=_web_sel, daemon=True).start()
 t_start = time.time()
 rc = S.main()
 rospy.signal_shutdown("done")

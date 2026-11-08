@@ -114,7 +114,9 @@ class Detect(Step):
                 ctx.yaw_step(math.atan2(tgt[1] - p[1], tgt[0] - p[0]), dt)
             ctx.hold(hp)
             # 1) 已选上 (桥回显了我的 seq, 状态 bound) 且样本有效 → 结束
-            if my_seq is not None and sel.get("seq") == my_seq and sel.get("state") == "bound" and s_ok is not None:
+            s_sel = (s_ok or {}).get("sel") or {}
+            if my_seq is not None and sel.get("seq") == my_seq and sel.get("state") == "bound" and s_ok is not None \
+                    and s_sel.get("seq") == my_seq and s_sel.get("trk_id") == sel.get("trk_id"):   # 样本也得是选中的那条
                 ctx.acq = _lock_from(s_ok, kind)
                 d = geom.vnorm(geom.vsub(s_ok["aim"], p))
                 rospy.loginfo(f"[gate] 选定目标 轨迹 {sel.get('trk_id')}: ({s_ok['aim'][0]:+.2f},{s_ok['aim'][1]:+.2f},"

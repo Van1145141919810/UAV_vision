@@ -59,6 +59,22 @@ def cam_R_WC(yaw, pitch_down):
     return mm(mm(Rz, Ry), R0)
 
 
+def _fake_reddot(st, now):
+    """--fake-kind reddot: 在环的假 /gate/status 上加红点 (reddot/locate.py extra) 的字段。"""
+    aim = st.get("aim") or st.get("target")
+    if aim is None:
+        st.update(kind="reddot", cands=[], sel={"seq": None, "mode": "none", "state": "none", "trk_id": None},
+                  n_state="few")
+        return
+    st.update(kind="reddot", trk_id=1, n_hit=60, score=0.93, st_scale=1.024, st_scale_sd=0.012, n_bins=9, n_dir=4,
+              n_state="ok", sel={"seq": 1, "mode": "track", "state": "bound", "trk_id": 1},
+              cands=[{"id": 1, "aim": aim, "score": 0.93, "hits": 60, "D": 0.148, "D_trk": 0.149, "Z_st": st.get("dist"),
+                      "d_px": 40.0, "uv": [480.0, 270.0], "sd_cm": 2.4, "age": 0.0},
+                     {"id": 3, "aim": [aim[0] + 0.2, aim[1] - 1.1, aim[2] + 0.3], "score": 0.41, "hits": 22,
+                      "D": 0.12, "D_trk": None, "Z_st": st.get("dist"), "d_px": 31.0, "uv": [300.0, 250.0],
+                      "sd_cm": 6.0, "age": 0.3}])
+
+
 def start_fake_gate(args):
     import random
     STORE.mode = "fake"
@@ -309,6 +325,8 @@ def start_fake_gate(args):
 
             # ---- 感知 (bridge 每帧发一条 /gate/status)
             st = perceive(now, p, yaw, pitch)
+            if getattr(args, "fake_kind", "ring") == "reddot":
+                _fake_reddot(st, now)          # 2026-11-08: 红点字段 (网页红点区 / 点选冒烟测试)
             STORE.set_gate(st)
             cur["v"] = {"p": p, "yaw": yaw, "pitch": pitch, "st": st, "t": now}
             if now - last_cam >= 1.0:
@@ -365,6 +383,11 @@ def start_fake_gate(args):
                             gsec["brake"] = {"end": E, "dist": s2, "acc": a2}
                     else:
                         gsec = {"seg": seg}
+                if getattr(args, "fake_kind", "ring") == "reddot" and seg is not None:
+                    gsec["track"] = {"step": {"wait": "detect", "align": "approach"}.get(seg, "locked"),
+                                     "sig": [2.3, 2.2, 8.5], "rounds": 1 if seg != "wait" else 0,
+                                     "dist_cmd": 3.2, "dir_src": "法向", "why": None,
+                                     "sel": st.get("sel")}
                 tele = {
                     "t": now, "node": SCRIPT_NODE, "task": "gate", "schema": 2,
                     "phase": ph, "sub_mode": "", "air": p[2] - origin[2] > 0.15,

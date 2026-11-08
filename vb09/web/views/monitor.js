@@ -37,6 +37,7 @@ function renderMonitor() {
   drawHeight($("#cv-h"), {d, z: drone ? drone.z : null, spz, gate: gh});
   renderSafety(t);
   renderGate(t, G);
+  renderDot(t);                    // 红点 (kinds/reddot.js): 不是红点时隐藏
   drawCamOverlay();
 }
 

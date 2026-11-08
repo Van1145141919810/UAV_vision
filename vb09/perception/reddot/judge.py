@@ -57,13 +57,15 @@ class RedDotJudge(object):
                 dist = geom.vnorm(geom.vsub(c, p_now)) if p_now else float("nan")
             if not (C.GATE_D_MIN <= dist <= self._g("DOT_D_MAX", 14.0)):     # 发现级: 远处也要 (抵近靠它)
                 return None, "dist"
-            if float(st.get("score", 1.0)) < self._g("DOT_SCORE_MIN", 0.5):
-                return None, "score"
-            if int(st.get("n_hit", 99)) < self._g("DOT_HITS_MIN", 3):
-                return None, "hits"
-            # 候选多且接近: 不确定是哪个 → 不当样本。选了点 (桥只发布选中的那条) 就不再判
+            # 选了点 (桥只发布选中的那条): 是人 / 飞行脚本选的, 不再按分数 / 命中数 / 多候选拒绝
             sel = st.get("sel") or {}
-            others = [] if sel.get("state") == "bound" else \
+            chosen = sel.get("state") == "bound"
+            if not chosen and float(st.get("score", 1.0)) < self._g("DOT_SCORE_MIN", 0.5):
+                return None, "score"
+            if not chosen and int(st.get("n_hit", 99)) < self._g("DOT_HITS_MIN", 3):
+                return None, "hits"
+            # 候选多且接近: 不确定是哪个 → 不当样本
+            others = [] if chosen else \
                 [x for x in (st.get("cands") or []) if int(x.get("id", -1)) != int(st.get("trk_id", -2))]
             for x in others:
                 if float(x.get("score", 0.0)) >= 0.7 * float(st.get("score", 1.0)) and x.get("aim"):

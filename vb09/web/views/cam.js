@@ -105,6 +105,7 @@ function drawCamOverlay() {
   const cv = $("#cam-ov"), img = $("#cam-img");
   if (!cv) return;
   const {ctx, w, h} = prep(cv);
+  if (CAM.on && w >= 10 && S) drawDotOverlay(ctx, w, h, img);     // 红点候选序号 / 点选框 (kinds/reddot.js)
   const P = CAM.proj;
   if (!CAM.on || !CAM.ovOn || !P || !img.naturalWidth || w < 10 || !S) return;
   const G = gateNow();
@@ -310,4 +311,5 @@ function camInit() {
   $("#cam-swap").addEventListener("click", camSwap);
   $("#top-swap").addEventListener("click", camSwap);
   camSet(store("fm_cam_on") === "1");
+  dotInit();                       // 画面点选 (kinds/reddot.js)
 }

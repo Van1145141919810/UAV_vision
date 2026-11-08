@@ -101,6 +101,22 @@ class GateInput:
                                                       ("  (%s)" % why) if why else ""))
         return seq
 
+    def on_web_select(self, msg):
+        """/flight_ctrl/select (flight_monitor 转发的网页选点)。下一次找目标 (Detect) 时用, 不直接发给桥:
+        选哪个由飞行脚本决定 (冲刺中 / 锁定后不换目标)。"""
+        try:
+            cmd = json.loads(msg.data)
+            if not isinstance(cmd, dict) or cmd.get("mode") not in ("track", "ray", "none"):
+                raise ValueError
+        except Exception:
+            rospy.logwarn("[gate] 网页选点消息不对: %r" % getattr(msg, "data", None))
+            return
+        if not self.tracked:
+            rospy.logwarn("[gate] 网页选点: 当前目标类型 (%s) 不支持选点, 忽略" % C.TARGET_KIND)
+            return
+        self.web_select(cmd)
+        rospy.logwarn("[gate] ★ 网页选点: %s —— 找目标 (wait 段) 时生效" % json.dumps(cmd, ensure_ascii=False))
+
     def web_select(self, cmd):
         """网页点选 (flight_monitor → /flight_ctrl/cmd) 先存这里, Detect 步骤取走再发。"""
         with self.lock:

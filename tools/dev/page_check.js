@@ -1,5 +1,5 @@
 // 页面冒烟: 起 flight_monitor --fake, 用 Chromium 打开每个标签页, 收集 console 错误 + 截图
-//   node tools/dev/page_check.js <out_dir> [port]
+//   node tools/dev/page_check.js <out_dir> [port]        (FAKE_KIND=reddot → 红点假数据)
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -11,6 +11,7 @@ fs.mkdirSync(out, { recursive: true });
 (async () => {
   const home = fs.mkdtempSync('/tmp/pc_home_');
   const mon = spawn('python3', [path.join(ROOT, 'flight_monitor.py'), '--fake', '--fake-task', 'gate',
+    '--fake-kind', process.env.FAKE_KIND || 'ring',
     '--port', port, '--nice', '0', '--sites-dir', path.join(ROOT, 'tools/baseline/sites')],
     { cwd: ROOT, env: Object.assign({}, process.env, { HOME: home }) });
   let log = '';
