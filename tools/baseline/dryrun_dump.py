@@ -47,7 +47,7 @@ EXPECT_CHANGED = {
 }
 # 第 7 步新增的参数 (停靠): 所有用例的 params 里都多了它们 —— 比较前两边去掉
 # 新参数: 停靠 (第 7 步), 上下扫描 (2026-11-05), 红点抵近 / 选点 / 换视角 / 重锁 (2026-11-08, PLAN_dot_v2)
-_NEW_KEY = re.compile(r"^(GATE_(DOCK|VSCAN|APPR|REFINE|SELECT|RELOCK)_|DOT_(D_MAX|SD_|SEL_))")
+_NEW_KEY = re.compile(r"^(GATE_(DOCK|VSCAN|APPR|REFINE|SELECT|RELOCK)_|DOT_(D_MAX|SD_|SEL_|RIVAL_))")
 
 
 def cases():

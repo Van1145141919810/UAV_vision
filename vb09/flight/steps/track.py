@@ -92,6 +92,7 @@ class Detect(Step):
         my_seq = None
         t_sent = None
         ask_t = None
+        n_resend = 0
         own = ctx.gate_in.own_selection()
         if own is not None:
             # 手动段 / 上一次已经选过 (本次运行发的, 桥还挂着或在找) → 沿用, 不再自动重选 (2026-11-08)
@@ -147,9 +148,15 @@ class Detect(Step):
             # 4) 自动选点
             if my_seq is None and cands:
                 top = max(cands, key=lambda c: float(c.get("score") or 0.0))
+                o = ctx.origin
+                # 竞争者 (2026-11-09, flight_0051–0053 被假候选卡住): 分数接近 + 离开 > 0.5 m, 而且
+                #   有过双目测距 (只靠标称直径先验的没有可信位置)、命中 ≥ 第一名的 DOT_RIVAL_HITS_REL、在瞄点高度带内
                 rivals = [c for c in cands if c is not top
                           and float(c.get("score") or 0.0) >= C.DOT_SEL_RATIO * float(top.get("score") or 0.0)
-                          and geom.vnorm(geom.vsub(c["aim"], top["aim"])) > 0.5]
+                          and geom.vnorm(geom.vsub(c["aim"], top["aim"])) > 0.5
+                          and int(c.get("n_st", 1) or 0) > 0
+                          and int(c.get("hits") or 0) >= C.DOT_RIVAL_HITS_REL * int(top.get("hits") or 0)
+                          and C.GATE_Z_MIN_DZ <= c["aim"][2] - o[2] <= C.GATE_Z_MAX_DZ]
                 good = float(top.get("score") or 0.0) >= C.DOT_SEL_SCORE and int(top.get("hits") or 0) >= C.DOT_SEL_HITS
                 if good and not rivals:
                     my_seq = ctx.gate_in.send_select({"mode": "track", "trk_id": int(top["id"])},
@@ -175,9 +182,14 @@ class Detect(Step):
             #    手动段里 / Detect 里又选了别的 (seq 更大, 也是本次发的) → 跟着换
             if sel.get("seq") in ctx.gate_in.sent_seqs and my_seq is not None and sel.get("seq") > my_seq:
                 my_seq, t_sent = sel["seq"], now
-            if my_seq is not None and sel.get("seq") != my_seq and t_sent is not None and now - t_sent > 2.0:
-                rospy.logwarn(f"[gate] 选点 seq {my_seq} 2s 没回显 (桥没收到? 版本不对?) —— 重新选")
-                my_seq = None
+            if my_seq is not None and sel.get("seq") != my_seq and t_sent is not None and now - t_sent > 1.0:
+                n_resend += 1
+                if n_resend > 4:
+                    rospy.logwarn(f"[gate] 选点 seq {my_seq} 重发 4 次都没回显 (桥没收到? 版本不对?) —— 重新选")
+                    my_seq, n_resend = None, 0
+                else:
+                    ctx.gate_in.resend_select(my_seq)
+                    t_sent = now
             elif my_seq is not None and sel.get("seq") == my_seq and sel.get("state") in ("pending", "lost"):
                 last_why = "选点已收到, 等目标出现 (%s)" % sel.get("state")
             if now - t0 > C.GATE_ACQ_TIMEOUT and my_seq is None and ask_t is None:
@@ -246,15 +258,40 @@ class Approach(Step):
             d_goal, src = (geom.hunit(geom.vmul(n, -1.0)), "法向") if n is not None else (None, "视线")
             if d_goal is None:
                 d_goal, src = geom.hunit(geom.vsub(aim, p)) or d_cur, "视线"
-            d_cur = _turn_toward(d_cur, d_goal, math.radians(C.GATE_APPR_TURN_DPS) * max(dt, 1e-3))
             sig = s.get("sig") or (99.0, 99.0, 99.0)
             sd_al = float(sig[2]) / 100.0
             dist_cmd = D + C.GATE_APPR_K * sd_al
-            S = (aim[0] - d_cur[0] * dist_cmd, aim[1] - d_cur[1] * dist_cmd, aim[2])
-            S = (S[0], S[1], o[2] + max(C.GATE_Z_MIN_DZ, min(C.GATE_Z_MAX_DZ, S[2] - o[2])))
-            r_xy = math.hypot(S[0] - o[0], S[1] - o[1])
+
+            def stand(d):
+                q = (aim[0] - d[0] * dist_cmd, aim[1] - d[1] * dist_cmd, aim[2])
+                q = (q[0], q[1], o[2] + max(C.GATE_Z_MIN_DZ, min(C.GATE_Z_MAX_DZ, q[2] - o[2])))
+                return q, math.hypot(q[0] - o[0], q[1] - o[1])
+            # 方向往法线上转; 转过去停靠点会出水平范围 → 不转 (留在当前方向), 当前方向也出界 → 退回视线方向
+            # (2026-11-09: flight_0052 挪到法线上撞围栏; 抵近同理)。都出界才放弃
+            d_try = _turn_toward(d_cur, d_goal, math.radians(C.GATE_APPR_TURN_DPS) * max(dt, 1e-3))
+            S, r_xy = stand(d_try)
+            limited = False
+            if r_xy <= C.GATE_XY_MAX:
+                d_cur = d_try
+            else:
+                limited = True
+                # 出界 → 取刚好在水平范围边界上 (留 2 cm) 的方向, 在 d_try 那一侧 (解析解, 连续不跳):
+                #   |v − dist·u| = R, v = aim − 起飞点 (水平) → v·u = (|v|² + dist² − R²) / (2·dist)
+                vx, vy = aim[0] - o[0], aim[1] - o[1]
+                vn = math.hypot(vx, vy)
+                R = C.GATE_XY_MAX - 0.02
+                cth = (vn * vn + dist_cmd * dist_cmd - R * R) / (2.0 * dist_cmd * max(vn, 1e-6))
+                if cth <= 1.0:
+                    phi = math.atan2(vy, vx)
+                    a_try = math.atan2(d_try[1], d_try[0])
+                    sgn = 1.0 if wrap_pi(a_try - phi) >= 0 else -1.0
+                    th = phi + sgn * math.acos(max(-1.0, cth))
+                    d_cur = (math.cos(th), math.sin(th), 0.0)
+                    S, r_xy = stand(d_cur)
             if r_xy > C.GATE_XY_MAX:
                 ctx.fail(f"{self.LABEL}: 停靠点离起飞点水平 {r_xy:.2f}m > 水平范围 {C.GATE_XY_MAX:.2f}m")
+            if limited or stand(d_goal)[1] > C.GATE_XY_MAX - 0.02:
+                src += " (受水平范围限制)"
             info.update(S=_r(S), aim=_r(aim), sd_along_cm=round(sd_al * 100, 1), dist_cmd=round(dist_cmd, 2),
                         dir_src=src, dir=_r(d_cur, 4), why=None)
             # setpoint 斜坡 (同 move_to: 速度 GATE_REPO_V, 牵引绳 GATE_REPO_LEASH)
@@ -275,7 +312,8 @@ class Approach(Step):
                 ctx.setpoint.set_zhold_mode(sp[0], sp[1], sp[2], ctx.yaw_sp, vff[0], vff[1])
             # 到位: 离 (最新) S 够近、深度 σ 够小、方向已转到位
             err = geom.vnorm(geom.vsub(S, p))
-            aligned = gp.ang_deg(d_cur, d_goal) < 2.0
+            goal_out = stand(d_goal)[1] > C.GATE_XY_MAX - 0.02      # 法线方向的停靠点本身出界 → 能转到哪算哪
+            aligned = gp.ang_deg(d_cur, d_goal) < 2.0 or goal_out
             ok_sd = sd_al * 100 <= C.GATE_LOCK_SD_ALONG_CM
             # S 每拍随估计抖动 (几 mm–cm), 不能要求 setpoint 正好等于 S
             reach = reach + 1 if (err < C.GATE_REPO_TOL and aligned and ok_sd
@@ -365,6 +403,15 @@ class Refine(Step):
                 if dn is not None and gp.ang_deg(dn, d_in) > 3.0:
                     aim = s["aim"]
                     S2 = (aim[0] - dn[0] * D, aim[1] - dn[1] * D, S[2])
+                    r2 = math.hypot(S2[0] - o[0], S2[1] - o[1])
+                    if r2 > C.GATE_XY_MAX:
+                        # flight_0052: 没查范围直接挪 → 撞硬围栏降落。现在: 不挪, 按当前方向锁 (法向照样记下)
+                        rospy.logwarn(f"[gate] 法向定了, 停靠方向差 {gp.ang_deg(dn, d_in):.1f}°, 但法线上的停靠点离起飞点 "
+                                      f"{r2:.2f}m > 水平范围 {C.GATE_XY_MAX:.2f}m —— 不挪, 按当前方向锁定 "
+                                      f"(要挪到法线上: 水平范围 ≥ {r2 + 0.1:.1f}m)")
+                        moved_to_normal = True
+                        info.update(normal_skip=round(r2, 2))
+                        continue
                     rospy.loginfo(f"[gate] 法向定了, 停靠方向差 {gp.ang_deg(dn, d_in):.1f}° —— 挪到法线上 "
                                   f"({geom.vnorm(geom.vsub(S2, S)):.2f}m)")
                     move_to(ctx, S2, "ring", C.GATE_REPO_TIMEOUT, "挪到法线上", ref=(aim, dn))
@@ -402,6 +449,11 @@ class Refine(Step):
                 right = (d_in[1], -d_in[0], 0.0)
                 pts = [geom.vadd(S, geom.vmul(right, dy)), geom.vadd(S, geom.vmul(right, -dy)), S]
                 lab = "左右"
+                if any(math.hypot(q[0] - o[0], q[1] - o[1]) > C.GATE_XY_MAX + 0.05 for q in pts):
+                    z_lo = max(S[2] - dy, o[2] + C.TELEOP_DZ_MIN)        # 左右移会出水平范围 → 改上下
+                    z_hi = min(S[2] + dy, o[2] + C.TELEOP_DZ_MAX)
+                    pts = [(S[0], S[1], z_lo), (S[0], S[1], z_hi), S]
+                    lab = "上下 (左右会出水平范围)"
             span = math.degrees(2.0 * math.atan2(dy, max(D, 0.5)))
             rospy.logwarn(f"[gate] 还不够准 ({'; '.join(why)}) —— 第 {rounds} 轮: {lab}移 ±{dy:.2f}m (视角跨度 ≈ {span:.0f}°)")
             ctx.set_seg("align", f"换视角: {lab}移 ±{dy:.2f}m")

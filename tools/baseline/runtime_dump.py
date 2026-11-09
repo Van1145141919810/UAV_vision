@@ -92,7 +92,7 @@ def _intended(g, n):
     except (KeyError, TypeError):
         pass
     mode_line = _re.compile(r"^(\s*)模式          \S+ —— .*$")
-    new_key = _re.compile(r"(GATE_(DOCK|VSCAN|APPR|REFINE|SELECT|RELOCK)_|DOT_(D_MAX|SD_|SEL_))")
+    new_key = _re.compile(r"(GATE_(DOCK|VSCAN|APPR|REFINE|SELECT|RELOCK)_|DOT_(D_MAX|SD_|SEL_|RIVAL_))")
 
     def fix(x):
         if isinstance(x, str):

@@ -17,11 +17,13 @@ import _compat  # noqa: E402
 import _util  # noqa: E402
 
 SCENARIOS = ["normal", "stuck", "shadow", "virtual", "nonormal", "oblique", "noring", "lowbatt", "dock", "dock_nonormal",
-             "dock_vscan", "dock_reddot", "dash_reddot"]
+             "dock_vscan", "dock_reddot", "dash_reddot", "dock_reddot_side"]
 # dock / dock_nonormal (没有法向 → 按视线停靠): 第 7 步新功能, golden 是第 7 步当时写的 (sim_check.py --write dock), 之前的提交没有这个场景
 # dock_vscan (2026-11-05): 停靠 + 上下扫描 ±0.3 m; 假识别在飞机高度扫过 0.4 m 之前不给法向 (模拟红点单视角分不开)
 # dock_reddot / dash_reddot (2026-11-08, PLAN_dot_v2): 红点走 MODES_TRACKED (Detect → Approach → Refine …), 目标 9 m 外;
 #   dock_reddot 的 golden 是有意重写的 (以前走环的步骤链), dash_reddot 是新场景
+# dock_reddot_side (2026-11-09): 卡片斜 35°、水平范围 6.5 m —— 法线上的停靠点放不下, 抵近转到边界、Refine 不挪, 照样锁定停靠
+#   (flight_0052 撞围栏的回归); 红点场景都带假候选 (无双目、命中少、3 m 高)、上一次运行残留的选点、/gate/select 连接延迟
 EXTRA = {"virtual": ["--set", "DASH_V=1.4"]}     # 虚拟环 2.6 m 只够 1.4 m/s (否则预检要人按 c)
 TOL = {"cross_v": 0.15, "cross_h": 0.04, "cross_vv": 0.04, "max_past": 0.2, "pts": 0.2, "max_tilt": 4.0,
        "dock_err_cm": 5.0, "dock_S": 0.2, "vscan_z": 0.05, "vscan_span": 1.0}

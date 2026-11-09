@@ -59,6 +59,7 @@ class GateInput:
         self._sel_seq = int(time.time() % 1e6) * 1000
         self.sent_seqs = set()
         self._last_sent = None                # (seq, cmd, 发出时刻): 回显还没回来时也算"已有选点"
+        self._sel_msgs = {}                   # seq → 发出的消息 (没回显时原样重发)
         self._web_sel = None
 
     # ---- 回调 ----
@@ -91,6 +92,24 @@ class GateInput:
             self.cam, self.cam_recv = c, rospy.Time.now().to_sec()
 
     # ---- 选点 ----
+    def init_select(self, wait=2.0):
+        """
+        飞行脚本启动时调 (runner, 订阅之后): 建 /gate/select 发布器并等桥连上 (≤ wait 秒) —— 发布器建好马上发的
+        消息会丢 (flight_0052 / 0053: 每次运行第一次选点都没回显)。跟踪类目标再发一条 none, 清掉桥里上一次运行
+        留下的选点 (flight_0051: 旧选点挂不上 → 桥什么都不发布)。
+        """
+        if not self.tracked:
+            return                            # 环: 不用选点 (日志 / 时序不变)
+        if self._sel_pub is None:
+            self._sel_pub = rospy.Publisher("/gate/select", String, queue_size=10)
+        t_end = time.time() + wait
+        n = getattr(self._sel_pub, "get_num_connections", lambda: 1)
+        while n() == 0 and time.time() < t_end:
+            time.sleep(0.05)
+        if n() == 0:
+            rospy.logwarn("[gate] /gate/select 还没有订阅者 (桥没开?) —— 选点要等桥连上才生效")
+        self.send_select({"mode": "none"}, why="启动: 清掉桥里上一次运行的选点")
+
     def send_select(self, cmd, why=""):
         """发一条选点指令给桥 (/gate/select)。cmd: {"mode": "track", "trk_id": …} / {"mode": "ray", "xn", "yn", "t_cap"}
         / {"mode": "none"}。→ seq (桥在 /gate/status 的 sel.seq 回显)。"""
@@ -102,6 +121,7 @@ class GateInput:
             self.sent_seqs.add(seq)
             self._last_sent = (seq, dict(cmd), time.time())
         msg = dict(cmd, seq=seq)
+        self._sel_msgs[seq] = msg
         self._sel_pub.publish(String(data=json.dumps(msg)))
         rospy.loginfo("[gate] 选点 → 桥 seq %d: %s%s" % (seq, json.dumps(cmd, ensure_ascii=False),
                                                       ("  (%s)" % why) if why else ""))
@@ -127,6 +147,16 @@ class GateInput:
         """网页点选 (flight_monitor → /flight_ctrl/cmd) 先存这里, Detect 步骤取走再发。"""
         with self.lock:
             self._web_sel = dict(cmd)
+
+    def resend_select(self, seq):
+        """没回显 → 把同一条指令 (同一个 seq) 再发一次 (不重新做选点决定)。"""
+        msg = self._sel_msgs.get(seq)
+        if msg is not None and self._sel_pub is not None:
+            self._sel_pub.publish(String(data=json.dumps(msg)))
+            rospy.logwarn("[gate] 选点 seq %d 没回显 —— 原样重发" % seq)
+            with self.lock:
+                if self._last_sent is not None and self._last_sent[0] == seq:
+                    self._last_sent = (seq, self._last_sent[1], time.time())
 
     def own_selection(self):
         """桥里现在的选点是不是本次运行发的、还挂着 (bound) 或在等 (pending / lost)。→ sel dict 或 None。"""

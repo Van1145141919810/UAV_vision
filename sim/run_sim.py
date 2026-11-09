@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 stage14_mission.py (原 stage12_gate.py) 离线仿真: 桩 rospy + 一个粗糙的 PX4 位置环 + 假识别 (延迟/噪声) + 纸。
-  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring|lowbatt|dock|dock_nonormal|dock_vscan|dock_reddot|dash_reddot  [--set K=V ...]
+  python3 run_sim.py normal|stuck|shadow|virtual|nonormal|oblique|noring|lowbatt|dock|dock_nonormal|dock_vscan|dock_reddot|dash_reddot|dock_reddot_side  [--set K=V ...]
 红点场景 (dock_reddot / dash_reddot, 2026-11-08): 目标在 9 m 外, 假识别模拟桥里的 Locator —— 选点回显 (/gate/select)、候选列表、
 σ 随距离变小、飞机横向 / 竖直换过 ≥ 0.4 m 视角才给法向; dash_reddot 另有一个低分干扰 (自动选点不该选它)。
 不是飞行动力学仿真 —— 只用来跑通状态机、检查时间表/停止点/遥测字段和日志。
@@ -42,9 +42,14 @@ def dot(a, b):
 
 
 # ---------------- 场景 ----------------
-RD = scenario in ("dock_reddot", "dash_reddot")      # 红点 (跟踪类目标, 飞行走 MODES_TRACKED)
+RD = scenario in ("dock_reddot", "dash_reddot", "dock_reddot_side")      # 红点 (跟踪类目标, 飞行走 MODES_TRACKED)
 C = [9.0, 0.4, 1.35] if RD else [5.0, 0.4, 1.35]    # 环心 (红点场景: 9 m 外发现 → 抵近)
 N = unit([-1.0, -0.15, 0.0])               # 法向 (指向进近侧)
+# 红点卡片再转这么多度: dock_reddot_side 固定 35° (水平范围 6.5 m, 法线上的停靠点放不下); 手动测试用 SIM_DOT_YAW
+_yaw = os.environ.get("SIM_DOT_YAW") or ("35" if scenario == "dock_reddot_side" else None)
+if RD and _yaw:
+    _a = math.radians(float(_yaw))
+    N = unit([N[0] * math.cos(_a) - N[1] * math.sin(_a), N[0] * math.sin(_a) + N[1] * math.cos(_a), 0.0])
 if scenario == "oblique":
     N = unit([-1.0, -0.6, 0.0])            # 斜 31°: 进入方向会被限到 20°
 d_ = [-N[0], -N[1], -N[2]]                 # 靶面轴: right = normalize(d × z), up = right × d
@@ -56,12 +61,16 @@ D_BACK, L_F, L_R = 4.0, 0.30, 0.30
 V_TEAR = 0.6 if scenario != "stuck" else 99.0
 SCAN_Z = [1e9, -1e9]                       # dock_vscan: 看到目标以来飞机高度的 [最低, 最高]
 SCAN_H = [1e9, -1e9]                       # 红点: 看到目标以来飞机横向 (沿靶面 RIGHT) 的 [最低, 最高]
-SEL = {"seq": None, "mode": "none", "state": "none", "trk_id": None}     # 红点: 桥的选点状态 (模拟)
+# 红点: 桥的选点状态 (模拟)。开局 = 上一次运行留下的、已经挂不上的选点 (flight_0051): 不清掉的话桥什么都不发布
+SEL = {"seq": 5, "mode": "track", "state": "lost", "trk_id": 7}
+if RD:
+    rospy.CONNECT_DELAY["/gate/select"] = 0.5     # 真 ROS: 发布器刚建好时订阅还没连上, 消息会丢 (flight_0052 / 0053)
 DISTRACT = [C[0] + 0.3, C[1] - 1.2, C[2] + 0.2]                        # dash_reddot 的干扰 (分数低)
 
 sites = tempfile.mkdtemp()
 with open(os.path.join(sites, "sim.conf"), "w") as f:
-    f.write("task=穿环\nscene=室内\ntakeoff_h=1.5\nz_low=0.8\nz_high=2.2\nxy_radius=%d\n" % (14 if scenario == "dash_reddot" else 10) +
+    f.write("task=穿环\nscene=室内\ntakeoff_h=1.5\nz_low=0.8\nz_high=2.2\nxy_radius=%g\n"
+            % {"dash_reddot": 14, "dock_reddot_side": 6.5}.get(scenario, 10) +
             "dash_v=2.5\nd_back=%.2f\nd_rear=2.0\nd_side=2.0\nl_f=%.2f\nl_r=%.2f\nw_half=0.25\n"
             % (D_BACK, L_F, L_R))
     if scenario.startswith("dock"):
@@ -256,7 +265,7 @@ def _on_select(m):
     if c.get("mode") == "none":
         SEL.update(seq=c["seq"], mode="none", state="none", trk_id=None)
     else:
-        SEL.update(seq=c["seq"], mode="track", state="bound" if c.get("trk_id") in (1, 2) else "lost",
+        SEL.update(seq=c["seq"], mode="track", state="bound" if c.get("trk_id") in (1, 2, 3) else "lost",
                    trk_id=c.get("trk_id"))
 
 
@@ -274,18 +283,23 @@ def reddot_status(st, p, dist, rel):
     cov = [[sd_lat ** 2 * ((1.0 if i == j else 0.0) - u[i] * u[j]) + sd_al ** 2 * u[i] * u[j] for j in range(3)]
            for i in range(3)]
     aim = est(AIM)
-    cands = [{"id": 1, "aim": aim, "score": 0.93, "hits": 50, "D": 0.15, "D_trk": 0.15, "uv": [480, 270]}]
+    cands = [{"id": 1, "aim": aim, "score": 0.93, "hits": 50, "n_st": 50, "D": 0.15, "D_trk": 0.15, "uv": [480, 270]},
+             # 假候选 (flight_0051–0053 那种): 分数不低, 但没双目、命中少、在 3 m 高 —— 不该算竞争者
+             {"id": 3, "aim": [C[0] + 2.0, C[1] + 1.0, 3.0], "score": 0.84, "hits": 9, "n_st": 0, "D": 0.15,
+              "D_trk": None, "uv": [700, 60]}]
     if scenario == "dash_reddot":
-        cands.append({"id": 2, "aim": est(DISTRACT), "score": 0.45, "hits": 40, "D": 0.12, "D_trk": 0.12,
+        cands.append({"id": 2, "aim": est(DISTRACT), "score": 0.45, "hits": 40, "n_st": 40, "D": 0.12, "D_trk": 0.12,
                       "uv": [300, 260]})
     st.update(kind="reddot", src="dot_fused", n_hit=50, n_cand=len(cands), age_ms=30.0, D_est=0.15,
               cands=cands, sel=dict(SEL), st_scale=1.02, n_bins=5, n_dir=3)
     pick = 1 if SEL["state"] == "none" else (SEL["trk_id"] if SEL["state"] == "bound" else None)
+    if pick is not None and not any(c["id"] == pick for c in cands):
+        pick = None
     if pick is None:
         st.update(stage="lost", published=False)
         st.pop("target", None)
         return
-    c = cands[pick - 1]
+    c = next(c for c in cands if c["id"] == pick)
     st.update(target=c["aim"], aim=c["aim"], trk_id=pick, score=c["score"], cov=[x for row in cov for x in row],
               sd_cm=[100 * math.sqrt(cov[i][i]) for i in range(3)], dist=round(dist, 3), published=True)
     # 法向: 飞机在 4 m 内横向或竖直换过 ≥ 0.4 m 视角才有 (感知侧 normal_consensus)

@@ -1,5 +1,6 @@
 """最小 rospy 桩: 进程内话题总线 + 墙钟时间。只给 stage12 离线仿真用。"""
 import logging, threading, time as _t
+import time as _time
 _log = logging.getLogger("rosout")
 _bus = {}            # topic -> [cb]
 _services = {}       # name -> fn
@@ -62,10 +63,21 @@ def _pub(topic, msg):
         except Exception as e:
             print("[stub] callback error on", topic, repr(e))
 
+CONNECT_DELAY = {}     # 话题 → s: 发布器建好后这么久内发的消息丢掉 (模拟真 ROS 订阅还没连上; 2026-11-08 选点 bug)
+
+
 class Publisher(object):
     def __init__(self, topic, mtype=None, queue_size=1, latch=False):
         self.topic = topic
+        self._t0 = _time.time()
+    def get_num_connections(self):
+        if _time.time() - self._t0 < CONNECT_DELAY.get(self.topic, 0.0):
+            return 0
+        with _lock:
+            return len(_bus.get(self.topic, []))
     def publish(self, msg):
+        if _time.time() - self._t0 < CONNECT_DELAY.get(self.topic, 0.0):
+            return                                   # 真 ROS: 还没连上 → 丢
         _pub(self.topic, msg)
 
 class Subscriber(object):

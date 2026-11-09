@@ -74,6 +74,7 @@ def main():
                      F.tele.set_extended_state)
     rospy.Subscriber(C.GATE_STATUS_TOPIC, String, F.gate_in.on_status, queue_size=5)
     rospy.Subscriber("/flight_ctrl/select", String, F.gate_in.on_web_select, queue_size=5)   # 网页选点 (2026-11-08)
+    F.gate_in.init_select()            # /gate/select 发布器先连上; 跟踪类目标清掉桥里上一次的选点 (2026-11-09)
     rospy.Subscriber(C.CAM_STATUS_TOPIC, String, F.gate_in.on_cam, queue_size=1)
     rospy.Subscriber("/mavros/statustext/recv", StatusText, statustext_cb, queue_size=50)
 

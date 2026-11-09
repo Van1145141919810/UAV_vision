@@ -90,6 +90,7 @@ class _Track(object):
         self.n_dir = 0
         self.n_bins = 0
         self.robust_drop = 0
+        self.n_st = 0                        # 有过几帧双目 (只靠标称直径先验的轨迹没有可信位置; 飞行侧判竞争者用)
 
     def D_raw(self, cfg):
         """这条轨迹的直径 (立体单位, m) 或 None。dot_d_cal > 0 → 用它 (换回立体单位)。"""
@@ -223,6 +224,7 @@ class _Track(object):
         while len(self.bins) > cfg.max_bins:
             del self.bins[min(self.bins, key=lambda k: self.bins[k][7])]
         self.n_hit += other.n_hit
+        self.n_st += other.n_st
         self.ema = max(self.ema, other.ema)
         if other.t_upd > self.t_upd:
             self.t_upd, self.last = other.t_upd, other.last
@@ -243,6 +245,8 @@ class _Track(object):
         return float(d @ np.linalg.solve(P + R, d))
 
     def hit(self, t, info, chi2):
+        if info.get("Zst") is not None:
+            self.n_st += 1
         self.t_upd = t
         self.n_hit += 1
         self.ema = 0.4 * info["score"] + 0.6 * self.ema
@@ -697,6 +701,7 @@ class DotLocator(object):
                 m0, sm0 = self._prior()
                 o["zw"] = R_WR @ o["p"] * m0 + t_WR
                 tr = _Track(self.next_id, t, o, m0, sm0)
+                tr.n_st = int(o.get("Zst") is not None)
                 tr.D_seed = self._recall(o["zw"])               # 这里以前估过直径 → 直接用
                 self._refine(o, tr, rate, R_WR, t_WR)
                 tr.x, tr.P, tr.last = o["zw"].copy(), o["Rw"].copy(), o
@@ -827,7 +832,7 @@ class DotLocator(object):
                              "D_trk": _r4(tr.D(self.cfg)), "d_px": round(float(tr.last["d_px"]), 1),
                              "uv": [round(float(tr.last["u"]), 1), round(float(tr.last["v"]), 1)],
                              "sd_cm": round(float(np.sqrt(max(np.trace(tr.P), 0.0) / 3.0)) * 100, 1),
-                             "hits": int(tr.n_hit), "age": round(float(fr.t - tr.t_upd), 2)}
+                             "hits": int(tr.n_hit), "n_st": int(tr.n_st), "age": round(float(fr.t - tr.t_upd), 2)}
                             for tr in (info.get("tracks") or [])[:5]]
             best = info.get("best")
             if R_WR is None or best is None:
