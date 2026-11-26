@@ -233,7 +233,16 @@ def decode_sbs_mjpg(buf, scale=0.5):
     V4L2 下 cap.set(cv2.CAP_PROP_CONVERT_RGB, 0) 后 cap.read() 得到的就是 MJPG 字节。"""
     flag = {1.0: cv2.IMREAD_COLOR, 0.5: cv2.IMREAD_REDUCED_COLOR_2,
             0.25: cv2.IMREAD_REDUCED_COLOR_4, 0.125: cv2.IMREAD_REDUCED_COLOR_8}[float(scale)]
-    return cv2.imdecode(np.frombuffer(buf, np.uint8), flag)
+    img = cv2.imdecode(np.frombuffer(buf, np.uint8), flag)
+    # 2026-11-25 黄圣鑫加：这台 arm64 的 cv2 4.2.0(apt) **会静默忽略 IMREAD_REDUCED_***
+    #   （实测 REDUCED_2/4/8 全部返回原尺寸；笔记本的 cv2 5.0+libjpeg-turbo 正常）。
+    #   忽略了就会让下游按 scale 算的坐标/内参差 2~4 倍 → 这里兜底显式缩放。
+    if img is not None and abs(float(scale) - 1.0) > 1e-6:
+        tw = int(round(img.shape[1] * float(scale)))
+        th = int(round(img.shape[0] * float(scale)))
+        if img.shape[1] != tw or img.shape[0] != th:
+            img = cv2.resize(img, (tw, th), interpolation=cv2.INTER_AREA)
+    return img
 
 
 # ----------------------------------------------------------------------------

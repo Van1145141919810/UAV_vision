@@ -604,6 +604,13 @@ class GateWorker(object):
         img = cv2.imdecode(np.frombuffer(raw, np.uint8), self.dec_flag) if raw is not None else bgr
         if img is None:
             return
+        # 2026-11-25 黄圣鑫加：这台 arm64 的 cv2 4.2.0(apt) **静默忽略** IMREAD_REDUCED_*，
+        #   图不会被缩小；但 self.rig 是按 det_scale 建的内参（0.5 → 960x540）。
+        #   不缩小就按错尺度算距离（会差 2 倍）→ 这里兜底显式缩到 rig.size。
+        #   （2026-11-26 文豪已修 NewCam 那处分辨率核对；step() 这处他还没修）
+        _rw = self.rig.size[0] if hasattr(self.rig, "size") else None
+        if _rw and abs(float(self.cfg["det_scale"]) - 1.0) > 1e-6 and img.shape[1] != _rw:
+            img = cv2.resize(img, tuple(self.rig.size[:2]), interpolation=cv2.INTER_AREA)
         L, R = self.rig.rectify(*self.rig.split(img))
         t = stamp.to_sec()
         T_WB, why = self.poses.at(t)
