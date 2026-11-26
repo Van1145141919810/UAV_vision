@@ -10,7 +10,20 @@ OWL2 / VB09 自主视觉识别与飞行控制代码（PX4 v1.12.3 + ROS Noetic +
 
 ## 一、快速启动
 
-### 1. 飞控与 VIO（飞机 tmux，每次开机必做）
+### 0. 机载后台服务一键启动（推荐，`scripts/`）
+
+```bash
+# 一键在 tmux session "uav" 中创建 5 个常驻窗口（mavros / vins / main / bridge / web）
+# 交互提示直接回车采用默认值（上位机 192.168.2.67、默认项目路径、gate_gcs + reddot）
+./scripts/start_all.sh
+
+# 也可跳过询问直接用默认，或传参覆盖；也可单独启动某一个窗口：
+./scripts/start_all.sh -y
+./scripts/start_bridge.sh --gcs 192.168.2.179 --target reddot
+tmux attach -t uav   # Ctrl+b w 切窗口；窗口常驻，Ctrl+C 后 ↑ 回车即可重跑；已存在窗口自动跳过
+```
+
+### 1. 手动分步启动飞控与 VIO（飞机 tmux，每次开机必做）
 
 ```bash
 # 窗口 1：MAVROS（把 <QGC_IP> 换成地面站 IP）
