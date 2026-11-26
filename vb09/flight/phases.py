@@ -15,9 +15,64 @@ import rospy
 from vb09.flight import config as C
 
 from vb09.flight.ctx import F
-from vb09.flight.ctx import _MAV_RESULT, check_abort, fcu_texts_since, request_abort, set_phase
+from vb09.flight.ctx import _MAV_RESULT, check_abort, fcu_texts_since, request_abort, request_land, set_phase
 from vb09.flight.devices import KeyReader, _flush_stdin
 from vb09.flight.log import timing_queue, timing_queue_lock
+
+
+# =============================================================================
+# 2026-11-24 黄圣鑫加：**任何阶段**都能按 X 停桨 / L 降落
+#   原来 phase_takeoff / phase_descend / phase_auto_land 这三个循环
+#   **完全不读键盘** —— 起飞那 10 秒、缓降全程、AUTO.LAND 等待期，
+#   按 X / L 都没有任何反应（键只是堆在 tty 缓冲区里，回手动段还会被 drain 掉）。
+#   这里加一个全局读取器，任何循环里调一次 poll_safety_keys() 就行。
+#   读的是同一个 stdin，和 Mission / handover 各自的 KeyReader 前后串行使用，不并发。
+# =============================================================================
+_safety_keys = None
+_safety_tried = False
+
+
+def _safety_reader():
+    global _safety_keys, _safety_tried
+    if _safety_keys is not None or _safety_tried:
+        return _safety_keys
+    _safety_tried = True
+    if not sys.stdin.isatty():
+        return None
+    try:
+        _safety_keys = KeyReader()
+        _safety_keys.__enter__()
+    except Exception as e:
+        rospy.logwarn(f"[keys] 安全键读取器创建失败 (X/L 在这几个阶段仍不可用): {e}")
+        _safety_keys = None
+    return _safety_keys
+
+
+def poll_safety_keys(tag="phase"):
+    """在任何循环里调一次: X = 停桨, L = 降落, EOF = SSH 断连 -> 降落。
+
+    返回 True 表示"收到了 X 或 L 或 EOF"（调用方应紧跟一次 check_abort()）。
+    """
+    kr = _safety_reader()
+    if kr is None:
+        return False
+    try:
+        _, flags, eof, _ = kr.poll()
+    except Exception:
+        return False
+    if 'x' in flags:
+        rospy.logerr(f"[keys] ★ {tag} 阶段收到 X -- 立即停桨")
+        request_abort(f"{tag} X 键")
+        return True
+    if eof:
+        rospy.logerr(f"[keys] ★ {tag} 阶段 stdin EOF (SSH 断连?) -- 请求降落")
+        request_land(f"{tag} stdin EOF")
+        return True
+    if 'l' in flags:
+        rospy.logwarn(f"[keys] ★ {tag} 阶段收到 L -- 请求降落")
+        request_land(f"{tag} L 键")
+        return True
+    return False
 
 
 def force_disarm_with_timeout(cmd_long, overall_timeout=2.0):
@@ -65,6 +120,8 @@ def phase_takeoff():
 
     while rospy.Time.now() < t_end:
         check_abort()
+        if poll_safety_keys("takeoff"):
+            check_abort()
         if F.land_flag.is_set():
             rospy.logwarn("[takeoff] LAND 请求 — 停止爬升")
             return target_z
@@ -128,6 +185,14 @@ def phase_descend(z_from, yaw_hold, hold_x, hold_y):
     # 从"指令高度"和"实际高度"里取低的那个起步。LAND 路径下 z_from 可能
     # 是个很旧的值 (比如起飞阶段就触发了 LAND)，从那里往下斜坡会白等几秒。
     zf0 = F.tele.z_filtered()
+    # 2026-11-24 黄圣鑫加：已经**不高于**降落目标高度时（贴地 / 被挡住 / 桨拆了），
+    #   下面的 max(..., z_target_final) 会把设定点**往上拉**到 +0.30 m，
+    #   结果电机一直加油门想爬上去，堵转到 DESCEND_TIMEOUT（实测整整 57 秒）。
+    #   这里直接跳过缓降去 auto_land，不往上拉。
+    if zf0 is not None and zf0 <= z_target_final + C.DESCEND_REACH_TOL:
+        rospy.logwarn(f"[descend] 实际高度 {zf0:.2f} 已不高于降落目标 {z_target_final:.2f}"
+                      f" -- 直接进 auto_land（不往上拉，避免电机堵转）")
+        return
     target_z = min(z_from, zf0) if zf0 is not None else z_from
     rate = rospy.Rate(20)
     last = rospy.Time.now()
@@ -136,6 +201,8 @@ def phase_descend(z_from, yaw_hold, hold_x, hold_y):
 
     while rospy.Time.now() < t_end:
         check_abort()
+        if poll_safety_keys("descend"):
+            check_abort()
         if F.takeover[0] is not None:
             rospy.logwarn("[descend] 控制权被接管 — 停止下降, 不再切 AUTO.LAND")
             return
@@ -199,6 +266,8 @@ def phase_auto_land(set_mode):
     rospy.loginfo(f"[auto_land] 等待 PX4 落地上锁 (最长 {tmo:.0f}s)")
     t_end = rospy.Time.now() + rospy.Duration(tmo)
     while rospy.Time.now() < t_end:
+        if poll_safety_keys("auto_land"):
+            check_abort()
         if F.abort_flag.is_set():
             return False
         if F.takeover[0] is not None:
