@@ -1,0 +1,182 @@
+[
+ {
+  "S": 512,
+  "d": 6,
+  "ratio": 0.0117,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 512,
+  "d": 10,
+  "ratio": 0.0195,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 512,
+  "d": 16,
+  "ratio": 0.0312,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 512,
+  "d": 24,
+  "ratio": 0.0469,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 512,
+  "d": 40,
+  "ratio": 0.0781,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 768,
+  "d": 6,
+  "ratio": 0.0078,
+  "truth": 4,
+  "got": 2,
+  "ok": false,
+  "raw": "2"
+ },
+ {
+  "S": 768,
+  "d": 10,
+  "ratio": 0.013,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 768,
+  "d": 16,
+  "ratio": 0.0208,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 768,
+  "d": 24,
+  "ratio": 0.0312,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 768,
+  "d": 40,
+  "ratio": 0.0521,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 960,
+  "d": 6,
+  "ratio": 0.0063,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 960,
+  "d": 10,
+  "ratio": 0.0104,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 960,
+  "d": 16,
+  "ratio": 0.0167,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 960,
+  "d": 24,
+  "ratio": 0.025,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 960,
+  "d": 40,
+  "ratio": 0.0417,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 1920,
+  "d": 6,
+  "ratio": 0.0031,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 1920,
+  "d": 10,
+  "ratio": 0.0052,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 1920,
+  "d": 16,
+  "ratio": 0.0083,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 1920,
+  "d": 24,
+  "ratio": 0.0125,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ },
+ {
+  "S": 1920,
+  "d": 40,
+  "ratio": 0.0208,
+  "truth": 4,
+  "got": 3,
+  "ok": false,
+  "raw": "3"
+ }
+]

@@ -1,0 +1,49 @@
+{
+  "is_window": {
+    "n": 2,
+    "correct": 2,
+    "acc": "100.0%",
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "false_positive_rate": "n/a",
+    "false_negative_rate": "0.0%",
+    "recall": "100.0%",
+    "precision": "100.0%"
+  },
+  "window_state": {
+    "n": 1,
+    "correct": 1,
+    "acc": "100.0%"
+  },
+  "glare": {
+    "n": 2,
+    "said_A_有": 2,
+    "said_B_没有": 0,
+    "note": "无人工真值，只能看分布是否有区分度"
+  },
+  "latency_s": {
+    "n": 2,
+    "mean": 9.47,
+    "p50": 9.96,
+    "p95": 8.98,
+    "min": 8.98,
+    "max": 9.96
+  },
+  "by_scenario": {
+    "cmp_european_street": {
+      "n": 2,
+      "win_ok": 2,
+      "win_n": 2,
+      "win_acc": "100.0%",
+      "lat_mean": 9.47
+    }
+  },
+  "parse_fail": 0,
+  "total_rows": 2,
+  "model": "openbmb/minicpm-v4.7:1b",
+  "stamp": "20261105_141050",
+  "reps": 1,
+  "labels_file": "labels.csv"
+}

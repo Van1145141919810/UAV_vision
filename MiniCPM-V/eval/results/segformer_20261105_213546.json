@@ -1,0 +1,8 @@
+{
+  "model": "Xpitfire/segformer-finetuned-segments-cmp-facade",
+  "n": 20,
+  "iou": 76.8,
+  "coverage": 84.4,
+  "purity": 89.1,
+  "note": "域内验证（模型在 CMP 上训练过），不代表跨域能力"
+}

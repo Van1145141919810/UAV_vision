@@ -1,0 +1,43 @@
+{
+ "req_ts": 1795525909.1400106,
+ "state": "ok",
+ "text": "窗户 · 11 m · 约 1 楼（窗上有红点、gdino 框）",
+ "source": "dot+gdino",
+ "dist_m": 11.1,
+ "height_m": 2.34,
+ "floor": "约 1 楼",
+ "ms": {
+  "dot": 34.5,
+  "seg": 577.9,
+  "gdino": 3259.7,
+  "vlm_gate": 544.9,
+  "total": 4570.0
+ },
+ "box": [
+  0.407,
+  0.072,
+  0.7609,
+  0.6997
+ ],
+ "center": [
+  0.584,
+  0.3859
+ ],
+ "dot": [
+  0.4995,
+  0.6648
+ ],
+ "gate": {
+  "nw": 8,
+  "vlm": "A",
+  "passed": true,
+  "why": "通过"
+ },
+ "win": {
+  "src": "gdino",
+  "score": 0.356,
+  "label": "window glass window glass door",
+  "w_px": 679.6,
+  "h_px": 677.9
+ }
+}

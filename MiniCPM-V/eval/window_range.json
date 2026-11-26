@@ -1,0 +1,272 @@
+[
+ {
+  "exp": "T4",
+  "file": "win02.jpg",
+  "target_px": 300,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win02.jpg",
+  "target_px": 150,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win02.jpg",
+  "target_px": 72,
+  "sent_w": 1735,
+  "sent_h": 1301,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win02.jpg",
+  "target_px": 36,
+  "sent_w": 867,
+  "sent_h": 651,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win02.jpg",
+  "target_px": 18,
+  "sent_w": 434,
+  "sent_h": 325,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win03.jpg",
+  "target_px": 300,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win03.jpg",
+  "target_px": 150,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win03.jpg",
+  "target_px": 72,
+  "sent_w": 1489,
+  "sent_h": 1117,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win03.jpg",
+  "target_px": 36,
+  "sent_w": 745,
+  "sent_h": 559,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win03.jpg",
+  "target_px": 18,
+  "sent_w": 372,
+  "sent_h": 279,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win05.jpg",
+  "target_px": 300,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win05.jpg",
+  "target_px": 150,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win05.jpg",
+  "target_px": 72,
+  "sent_w": 1209,
+  "sent_h": 906,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win05.jpg",
+  "target_px": 36,
+  "sent_w": 604,
+  "sent_h": 453,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win05.jpg",
+  "target_px": 18,
+  "sent_w": 302,
+  "sent_h": 227,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win06.jpg",
+  "target_px": 300,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win06.jpg",
+  "target_px": 150,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win06.jpg",
+  "target_px": 72,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win06.jpg",
+  "target_px": 36,
+  "sent_w": 1152,
+  "sent_h": 864,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win06.jpg",
+  "target_px": 18,
+  "sent_w": 576,
+  "sent_h": 432,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win09.jpg",
+  "target_px": 300,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win09.jpg",
+  "target_px": 150,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win09.jpg",
+  "target_px": 72,
+  "sent_w": 1400,
+  "sent_h": 1867,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win09.jpg",
+  "target_px": 36,
+  "sent_w": 700,
+  "sent_h": 933,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win09.jpg",
+  "target_px": 18,
+  "sent_w": 350,
+  "sent_h": 467,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win10.jpg",
+  "target_px": 300,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win10.jpg",
+  "target_px": 150,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win10.jpg",
+  "target_px": 72,
+  "sent_w": 1920,
+  "sent_h": 1080,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win10.jpg",
+  "target_px": 36,
+  "sent_w": 1170,
+  "sent_h": 878,
+  "ans": "A",
+  "ok": true
+ },
+ {
+  "exp": "T4",
+  "file": "win10.jpg",
+  "target_px": 18,
+  "sent_w": 585,
+  "sent_h": 439,
+  "ans": "A",
+  "ok": true
+ }
+]

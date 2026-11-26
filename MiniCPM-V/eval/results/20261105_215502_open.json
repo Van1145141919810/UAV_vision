@@ -1,0 +1,57 @@
+{
+  "is_window": {
+    "n": 2,
+    "correct": 2,
+    "acc": "100.0%",
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "tn": 1,
+    "false_positive_rate": "0.0%",
+    "false_negative_rate": "0.0%",
+    "recall": "100.0%",
+    "precision": "100.0%"
+  },
+  "window_state": {
+    "n": 0,
+    "correct": 0,
+    "acc": "n/a"
+  },
+  "glare": {
+    "n": 0,
+    "said_A_有": 0,
+    "said_B_没有": 0,
+    "note": "无人工真值，只能看分布是否有区分度"
+  },
+  "latency_s": {
+    "n": 2,
+    "mean": 0.78,
+    "p50": 0.78,
+    "p95": 0.77,
+    "min": 0.77,
+    "max": 0.78
+  },
+  "by_scenario": {
+    "indoor": {
+      "n": 1,
+      "win_ok": 1,
+      "win_n": 1,
+      "win_acc": "100.0%",
+      "lat_mean": 0.78
+    },
+    "outdoor": {
+      "n": 1,
+      "win_ok": 1,
+      "win_n": 1,
+      "win_acc": "100.0%",
+      "lat_mean": 0.77
+    }
+  },
+  "parse_fail": 2,
+  "total_rows": 2,
+  "model": "openbmb/minicpm-v4.7:1b",
+  "stamp": "20261105_215502_open",
+  "reps": 1,
+  "mode": "open",
+  "labels_file": "labels.csv"
+}

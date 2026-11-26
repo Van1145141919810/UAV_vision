@@ -1,0 +1,161 @@
+[
+ {
+  "case": "frame_43.0m",
+  "source": "dot+gdino",
+  "ok": true,
+  "box": [
+   877.6,
+   483.6,
+   997.5,
+   637.8
+  ],
+  "center": [
+   937.5,
+   560.7
+  ],
+  "dist_m": 35.4,
+  "truth_z": 42.97880474116989,
+  "height_m": 1.05,
+  "floor": "约 1 楼",
+  "text": "窗户 · 35 m · 约 1 楼（窗上有红点、gdino 框）",
+  "ms": {
+   "dot": 58.2,
+   "seg": 416.6,
+   "gdino": 2748.7,
+   "total": 3367.5
+  },
+  "wall_ms": 3368.9,
+  "n_dot": 1,
+  "n_seg": 7,
+  "n_gd": 9,
+  "box_has_dot": true,
+  "center_err_px": 64.3,
+  "dist_err_pct": -17.6
+ },
+ {
+  "case": "frame_40.8m",
+  "source": "dot+gdino",
+  "ok": true,
+  "box": [
+   1044.5,
+   497.7,
+   1165.3,
+   651.9
+  ],
+  "center": [
+   1104.9,
+   574.8
+  ],
+  "dist_m": 31.8,
+  "truth_z": 40.77327422812211,
+  "height_m": 0.82,
+  "floor": "约 1 楼",
+  "text": "窗户 · 32 m · 约 1 楼（窗上有红点、gdino 框）",
+  "ms": {
+   "dot": 28.1,
+   "seg": 430.5,
+   "gdino": 2768.1,
+   "total": 3326.3
+  },
+  "wall_ms": 3327.3,
+  "n_dot": 1,
+  "n_seg": 7,
+  "n_gd": 10,
+  "box_has_dot": true,
+  "center_err_px": 62.3,
+  "dist_err_pct": -22.0
+ },
+ {
+  "case": "frame_21.7m",
+  "source": "dot+gdino",
+  "ok": true,
+  "box": [
+   983.8,
+   399.2,
+   1316.9,
+   762.5
+  ],
+  "center": [
+   1150.3,
+   580.9
+  ],
+  "dist_m": 21.4,
+  "truth_z": 21.73222818399846,
+  "height_m": 0.96,
+  "floor": "约 1 楼",
+  "text": "窗户 · 21 m · 约 1 楼（窗上有红点、gdino 框）",
+  "ms": {
+   "dot": 34.0,
+   "seg": 417.4,
+   "gdino": 2733.3,
+   "total": 3307.5
+  },
+  "wall_ms": 3309.5,
+  "n_dot": 1,
+  "n_seg": 6,
+  "n_gd": 20,
+  "box_has_dot": true,
+  "center_err_px": 179.2,
+  "dist_err_pct": -1.5
+ },
+ {
+  "case": "photo_win06_72px",
+  "source": "dot+seg",
+  "ok": true,
+  "box": [
+   846.0,
+   270.0,
+   1007.0,
+   453.0
+  ],
+  "center": [
+   926.5,
+   361.5
+  ],
+  "dist_m": 33.5,
+  "truth_z": null,
+  "height_m": 5.18,
+  "floor": "约 2 楼",
+  "text": "窗户 · 34 m · 约 2 楼（窗上有红点、seg 框）",
+  "ms": {
+   "dot": 38.6,
+   "seg": 431.8,
+   "gdino": 2734.1,
+   "total": 3336.9
+  },
+  "wall_ms": 3337.9,
+  "n_dot": 5,
+  "n_seg": 15,
+  "n_gd": 16
+ },
+ {
+  "case": "photo_win09_72px",
+  "source": "gdino",
+  "ok": true,
+  "box": [
+   705.7,
+   845.8,
+   774.2,
+   933.7
+  ],
+  "center": [
+   740.0,
+   889.8
+  ],
+  "dist_m": 35.6,
+  "truth_z": null,
+  "height_m": 2.46,
+  "floor": "约 1 楼",
+  "text": "窗户 · 36 m · 约 1 楼（gdino 框） ⚠ 只见窗户，未见红点",
+  "ms": {
+   "dot": 27.5,
+   "seg": 472.1,
+   "gdino": 2278.5,
+   "total": 2905.0
+  },
+  "wall_ms": 2906.0,
+  "n_dot": 0,
+  "n_seg": 32,
+  "n_gd": 7
+ }
+]

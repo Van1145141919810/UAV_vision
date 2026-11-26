@@ -1,0 +1,33 @@
+{
+  "is_window": {
+    "n": 0,
+    "correct": 0,
+    "acc": "n/a",
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0,
+    "false_positive_rate": "n/a",
+    "false_negative_rate": "n/a",
+    "recall": "n/a",
+    "precision": "n/a"
+  },
+  "window_state": {
+    "n": 0,
+    "correct": 0,
+    "acc": "n/a"
+  },
+  "glare": {
+    "n": 0,
+    "said_A_有": 0,
+    "said_B_没有": 0,
+    "note": "无人工真值，只能看分布是否有区分度"
+  },
+  "by_scenario": {},
+  "parse_fail": 0,
+  "total_rows": 0,
+  "model": "openbmb/minicpm-v4.7:1b",
+  "stamp": "20261105_140903",
+  "reps": 1,
+  "labels_file": "labels.csv"
+}

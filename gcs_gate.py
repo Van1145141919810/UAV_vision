@@ -71,6 +71,31 @@ from vb09.perception.ring.geom3d import ring_tilt_deg   # noqa: E402
 
 require_msgpack("必须安装 msgpack: pip install msgpack")       # zmq 可以没有 (--replay 离线回放)
 
+# =============================================================================
+# 2026-11-24 黄圣鑫新增：网页「识别画面」上叠加三路融合建议
+#   · 只加这一小段，检测 / 推流 / 状态机一行没动
+#   · 开关 _ADVICE_ON 关掉就完全恢复原样（那段调用自动跳过）
+#   · 真正的画图在 MiniCPM-V/scripts/advice_overlay.py（读 %TEMP%\cpmv_advice.json）
+#   · 找文件的顺序：环境变量 CPMV_ADV_DIR → 仓库内 MiniCPM-V/scripts → 本地开发布局
+#     三种都找不到 → 自动关闭，网页画面和以前**完全一样**（不报错、不影响检测）
+# =============================================================================
+_ADVICE_ON = True
+_draw_advice = None
+try:
+    _adv_cands = []
+    if os.environ.get("CPMV_ADV_DIR"):
+        _adv_cands.append(os.environ["CPMV_ADV_DIR"])
+    _adv_cands.append(os.path.join(HERE, "MiniCPM-V", "scripts"))                              # 本仓库布局
+    _adv_cands.append(os.path.normpath(os.path.join(HERE, "..", "..", "MiniCPM-V", "scripts")))  # 本地开发布局
+    _ADV_DIR = next((d for d in _adv_cands if d and os.path.isdir(d)), None)
+    if _ADV_DIR and _ADV_DIR not in sys.path:
+        sys.path.insert(0, _ADV_DIR)
+    from advice_overlay import draw_advice as _draw_advice   # noqa: E402
+    print("[gcs_gate] 建议叠加已启用: %s" % os.path.join(_ADV_DIR or "", "advice_overlay.py"))
+except Exception as _e:
+    _ADVICE_ON = False
+    print("[gcs_gate] 建议叠加未启用(%s: %s) —— 网页画面和以前一样" % (type(_e).__name__, _e))
+
 UP_PORT, DOWN_PORT = 5555, 5556
 MODE_NAMES = {0: "OFF", 1: "GATE-SIM", 2: "GATE-REAL"}
 
@@ -901,6 +926,18 @@ def main():
                         m_ = segment(apply_wb(L, cfg), cfg)["sat"]
                         vis = np.hstack([vis, cv2.cvtColor(m_, cv2.COLOR_GRAY2BGR)])
                 if pv is not None:
+                    # ── 2026-11-24 黄圣鑫新增：把三路融合建议画进网页那张图 ──────────
+                    #   纯显示：读 %TEMP%\cpmv_advice.json，读不到就画 "VLM --"；
+                    #   内部全 try/except，画挂了也不影响检测主循环。
+                    #   要关掉：把下面 _ADVICE_ON 改成 False（或者删掉这一小段）。
+                    if _ADVICE_ON:
+                        try:
+                            vis = _draw_advice(vis)
+                        except Exception as _e:
+                            if str(_e) != globals().get("_adv_err"):
+                                globals()["_adv_err"] = str(_e)
+                                print("[gcs_gate] ⚠ 建议叠加异常(忽略): %s" % _e)
+                    # ────────────────────────────────────────────────────────────────
                     meta = preview_meta(args, sim, st, fr, fst, head, jpg)
                     if hooks and fr is not None:
                         meta.update(found=found, n_cand=len(getattr(fr, "cands", []) or []),

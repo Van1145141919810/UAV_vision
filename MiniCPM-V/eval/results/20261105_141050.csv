@@ -1,0 +1,3 @@
+﻿image_id,crop,source,kind,box,scenario,gt_is_window,gt_window_state,gt_glare,note,rep,model,ts,ans_gate,ans_open,ans_glare,pred_is_window,pred_window_state,pred_glare,latency_s,latency_gate,tokens_prompt,tokens_gen
+cmp_b0004,crops_cmp/cmp_cmp_b0004_win.jpg,cmp_b0004.jpg,cmp_window,"211,299",cmp_european_street,1,closed,unknown,CMP自带分割标注：窗户,0,openbmb/minicpm-v4.7:1b,2026-11-05T14:10:50,A,C,A,1,C,A,8.98,2.31,366,6
+cmp_b0010,crops_cmp/cmp_cmp_b0010_win.jpg,cmp_b0010.jpg,cmp_window,"275,719",cmp_european_street,1,closed,unknown,CMP自带分割标注：窗户,0,openbmb/minicpm-v4.7:1b,2026-11-05T14:10:59,A,B,A,1,B,A,9.96,3.3,366,6

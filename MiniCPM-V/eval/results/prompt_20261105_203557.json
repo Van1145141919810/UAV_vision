@@ -1,0 +1,1095 @@
+{
+  "model": "openbmb/minicpm-v4.7:1b",
+  "summary": [
+    {
+      "variant": "v1_AB",
+      "acc": 71.1,
+      "n": 38,
+      "chose_A": 24
+    },
+    {
+      "variant": "v2_BA",
+      "acc": 36.8,
+      "n": 38,
+      "chose_A": 1
+    },
+    {
+      "variant": "v3_yesno",
+      "acc": 76.3,
+      "n": 38,
+      "chose_A": 0
+    },
+    {
+      "variant": "v4_open",
+      "acc": 0,
+      "n": 0,
+      "chose_A": 0
+    }
+  ],
+  "detail": [
+    {
+      "image": "neg1",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A. 不是窗户。",
+      "pred": "1"
+    },
+    {
+      "image": "neg1",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "neg1",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "neg1",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "空白墙面。",
+      "pred": "0"
+    },
+    {
+      "image": "neg2",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "neg2",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "neg2",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "neg2",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "电脑显示器。",
+      "pred": "0"
+    },
+    {
+      "image": "neg2",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "neg2",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "neg2",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "neg2",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "浅紫色键盘正中心。",
+      "pred": "0"
+    },
+    {
+      "image": "neg3",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "neg3",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "neg3",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "neg3",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "白色建筑墙面。",
+      "pred": "0"
+    },
+    {
+      "image": "neg3",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "neg3",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "neg3",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "neg3",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "斑驳墙面上植物覆盖。",
+      "pred": "0"
+    },
+    {
+      "image": "neg4",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "neg4",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "neg4",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "neg4",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "米色台阶中心。",
+      "pred": "0"
+    },
+    {
+      "image": "neg4",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "neg4",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "neg4",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "neg4",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "白色台阶中心。",
+      "pred": "0"
+    },
+    {
+      "image": "neg5",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "neg5",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "neg5",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "neg5",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "白色平面，无物。",
+      "pred": "0"
+    },
+    {
+      "image": "test1",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "test1",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "test1",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "test1",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "层叠岩石结构。",
+      "pred": "0"
+    },
+    {
+      "image": "test1",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "test1",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "test1",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "test1",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "绿色叶片密集。",
+      "pred": "0"
+    },
+    {
+      "image": "test2",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "test2",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "A",
+      "pred": "0"
+    },
+    {
+      "image": "test2",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "test2",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "门框与门。",
+      "pred": "0"
+    },
+    {
+      "image": "test2",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "test2",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "test2",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "test2",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "笔记本电脑打开。",
+      "pred": "0"
+    },
+    {
+      "image": "test3",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "test3",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "test3",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "test3",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "蓝白格子布",
+      "pred": "0"
+    },
+    {
+      "image": "test3",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "test3",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "test3",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "test3",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "红色圆形图案。",
+      "pred": "0"
+    },
+    {
+      "image": "win01",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "win01",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win01",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "win01",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "绿树成荫的柱子。",
+      "pred": "0"
+    },
+    {
+      "image": "win01",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "win01",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win01",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "win01",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "绿色自行车停于旁。",
+      "pred": "0"
+    },
+    {
+      "image": "win02",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win02",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win02",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win02",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "现代建筑墙面。",
+      "pred": "0"
+    },
+    {
+      "image": "win02",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win02",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win02",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win02",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "现代建筑窗户。",
+      "pred": "1"
+    },
+    {
+      "image": "win03",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win03",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win03",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win03",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "多层建筑窗户。",
+      "pred": "1"
+    },
+    {
+      "image": "win03",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win03",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win03",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win03",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "现代建筑窗户。",
+      "pred": "1"
+    },
+    {
+      "image": "win04",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win04",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win04",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win04",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "窗上装有空调。",
+      "pred": "1"
+    },
+    {
+      "image": "win04",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win04",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win04",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win04",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "窗户带有金属框架。",
+      "pred": "1"
+    },
+    {
+      "image": "win05",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win05",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win05",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win05",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "窗上安装监控摄像头。",
+      "pred": "1"
+    },
+    {
+      "image": "win05",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win05",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win05",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win05",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "窗户装有空调。",
+      "pred": "1"
+    },
+    {
+      "image": "win06",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "win06",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win06",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "win06",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "绿树支撑建筑。",
+      "pred": "0"
+    },
+    {
+      "image": "win06",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win06",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win06",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win06",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "窗台上有盆栽。",
+      "pred": "1"
+    },
+    {
+      "image": "win07",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win07",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win07",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win07",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "窗台摆放盆栽。",
+      "pred": "1"
+    },
+    {
+      "image": "win07",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win07",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win07",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win07",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "建筑窗户与阳台。",
+      "pred": "1"
+    },
+    {
+      "image": "win08",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win08",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win08",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win08",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "窗台摆放的陶器。",
+      "pred": "1"
+    },
+    {
+      "image": "win08",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win08",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win08",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win08",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "窗框与玻璃。",
+      "pred": "1"
+    },
+    {
+      "image": "win09",
+      "gt": "1",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win09",
+      "gt": "1",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win09",
+      "gt": "1",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win09",
+      "gt": "1",
+      "variant": "v4_open",
+      "answer": "多层建筑窗户。",
+      "pred": "1"
+    },
+    {
+      "image": "win09",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "B",
+      "pred": "0"
+    },
+    {
+      "image": "win09",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win09",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "不是",
+      "pred": "0"
+    },
+    {
+      "image": "win09",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "多辆停放的摩托车。",
+      "pred": "0"
+    },
+    {
+      "image": "win10",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win10",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win10",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win10",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "多层建筑窗户。",
+      "pred": "1"
+    },
+    {
+      "image": "win10",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win10",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win10",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win10",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "白色墙面窗户。",
+      "pred": "1"
+    },
+    {
+      "image": "win11",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win11",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win11",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win11",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "白色墙面，窗户。",
+      "pred": "1"
+    },
+    {
+      "image": "win11",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win11",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win11",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win11",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "多层建筑窗户。",
+      "pred": "1"
+    },
+    {
+      "image": "win12",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win12",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win12",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win12",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "白色墙面，无具体物体。",
+      "pred": "0"
+    },
+    {
+      "image": "win12",
+      "gt": "0",
+      "variant": "v1_AB",
+      "answer": "A",
+      "pred": "1"
+    },
+    {
+      "image": "win12",
+      "gt": "0",
+      "variant": "v2_BA",
+      "answer": "B",
+      "pred": "1"
+    },
+    {
+      "image": "win12",
+      "gt": "0",
+      "variant": "v3_yesno",
+      "answer": "是",
+      "pred": "1"
+    },
+    {
+      "image": "win12",
+      "gt": "0",
+      "variant": "v4_open",
+      "answer": "混凝土墙面与窗。",
+      "pred": "1"
+    }
+  ]
+}

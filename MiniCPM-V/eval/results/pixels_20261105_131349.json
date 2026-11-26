@@ -1,0 +1,1055 @@
+{
+  "model": "openbmb/minicpm-v4.7:1b",
+  "note": "合成降采样；正负配对测区分能力",
+  "window_w_m": 2.0,
+  "f_px": 1566.0,
+  "curve": [
+    {
+      "side_px": 384,
+      "dist_m": 8.2,
+      "recall_正例答A": 100.0,
+      "specificity_负例答B": 70.0,
+      "acc": 81.8,
+      "tp": 13,
+      "fn": 0,
+      "tn": 14,
+      "fp": 6
+    },
+    {
+      "side_px": 96,
+      "dist_m": 32.6,
+      "recall_正例答A": 100.0,
+      "specificity_负例答B": 60.0,
+      "acc": 75.8,
+      "tp": 13,
+      "fn": 0,
+      "tn": 12,
+      "fp": 8
+    },
+    {
+      "side_px": 48,
+      "dist_m": 65.2,
+      "recall_正例答A": 100.0,
+      "specificity_负例答B": 65.0,
+      "acc": 78.8,
+      "tp": 13,
+      "fn": 0,
+      "tn": 13,
+      "fp": 7
+    },
+    {
+      "side_px": 24,
+      "dist_m": 130.5,
+      "recall_正例答A": 100.0,
+      "specificity_负例答B": 45.0,
+      "acc": 66.7,
+      "tp": 13,
+      "fn": 0,
+      "tn": 9,
+      "fp": 11
+    },
+    {
+      "side_px": 12,
+      "dist_m": 261.0,
+      "recall_正例答A": 84.6,
+      "specificity_负例答B": 45.0,
+      "acc": 60.6,
+      "tp": 11,
+      "fn": 2,
+      "tn": 9,
+      "fp": 11
+    }
+  ],
+  "detail": [
+    {
+      "image": "neg3",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "neg3",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "neg3",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "neg3",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "neg3",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win02",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win02",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win02",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win02",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win02",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "win03",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win03",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win03",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win03",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win03",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win04",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win05",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win06",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win06",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win06",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win06",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win06",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win07",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win08",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win09",
+      "is_window": 1,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win09",
+      "is_window": 1,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win09",
+      "is_window": 1,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win09",
+      "is_window": 1,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win09",
+      "is_window": 1,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "neg1",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "neg1",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "neg1",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "neg1",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "neg1",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "neg2",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "neg3",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "neg3",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "neg3",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "neg3",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 0
+    },
+    {
+      "image": "neg3",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 0
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "neg4",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "neg5",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "neg5",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "neg5",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "neg5",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "neg5",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 0
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 0
+    },
+    {
+      "image": "test1",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 0
+    },
+    {
+      "image": "test2",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 0
+    },
+    {
+      "image": "test3",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 0
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 0
+    },
+    {
+      "image": "win01",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "win02",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win02",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win02",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win02",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win02",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win03",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win03",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win03",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win03",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win03",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    },
+    {
+      "image": "win06",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "win06",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win06",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win06",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 0
+    },
+    {
+      "image": "win06",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "win09",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 0
+    },
+    {
+      "image": "win09",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 0
+    },
+    {
+      "image": "win09",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 0
+    },
+    {
+      "image": "win09",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win09",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 0
+    },
+    {
+      "image": "win10",
+      "is_window": 0,
+      "side": 384,
+      "said_A": 1
+    },
+    {
+      "image": "win10",
+      "is_window": 0,
+      "side": 96,
+      "said_A": 1
+    },
+    {
+      "image": "win10",
+      "is_window": 0,
+      "side": 48,
+      "said_A": 1
+    },
+    {
+      "image": "win10",
+      "is_window": 0,
+      "side": 24,
+      "said_A": 1
+    },
+    {
+      "image": "win10",
+      "is_window": 0,
+      "side": 12,
+      "said_A": 1
+    }
+  ]
+}

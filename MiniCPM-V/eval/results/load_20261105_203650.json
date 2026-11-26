@@ -1,0 +1,19 @@
+{
+  "model": "openbmb/minicpm-v4.7:1b",
+  "cold_start_s": 5.04,
+  "warm_s": {
+    "mean": 0.08,
+    "min": 0.07,
+    "max": 0.09
+  },
+  "memory_mb_before": 86.0,
+  "memory_mb_after": 88.0,
+  "determinism": [
+    "A",
+    "A",
+    "A"
+  ],
+  "deterministic": true,
+  "answer_cold": "A",
+  "stamp": "20261105_203650"
+}

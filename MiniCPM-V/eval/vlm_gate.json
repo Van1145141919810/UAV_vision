@@ -1,0 +1,230 @@
+[
+ {
+  "q": "Q2_纸上标记",
+  "pos_ok": 3,
+  "pos_n": 3,
+  "neg_ok": 5,
+  "neg_n": 12,
+  "detail": [
+   {
+    "desc": "录像帧254 40m 点12px",
+    "want": "A",
+    "got": "A",
+    "ok": true,
+    "raw": "A. 有"
+   },
+   {
+    "desc": "录像帧303 22m 点18px",
+    "want": "A",
+    "got": "A",
+    "ok": true,
+    "raw": "A. 有"
+   },
+   {
+    "desc": "录像帧412 11m 点34px",
+    "want": "A",
+    "got": "A",
+    "ok": true,
+    "raw": "A. 有"
+   },
+   {
+    "desc": "win06 误报#1 点16px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A. 没有"
+   },
+   {
+    "desc": "win06 误报#2 点11px",
+    "want": "B",
+    "got": "B",
+    "ok": true,
+    "raw": "B"
+   },
+   {
+    "desc": "win07 误报#1 点24px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A. 没有"
+   },
+   {
+    "desc": "win07 误报#2 点18px",
+    "want": "B",
+    "got": "B",
+    "ok": true,
+    "raw": "B"
+   },
+   {
+    "desc": "win08 误报#1 点41px",
+    "want": "B",
+    "got": "B",
+    "ok": true,
+    "raw": "B"
+   },
+   {
+    "desc": "test1 误报#1 点11px",
+    "want": "B",
+    "got": "B",
+    "ok": true,
+    "raw": "B"
+   },
+   {
+    "desc": "test1 误报#2 点11px",
+    "want": "B",
+    "got": "B",
+    "ok": true,
+    "raw": "B"
+   },
+   {
+    "desc": "test2 误报#1 点19px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A. 有"
+   },
+   {
+    "desc": "test2 误报#2 点11px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A. 没有"
+   },
+   {
+    "desc": "test3 误报#1 点59px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A. 有"
+   },
+   {
+    "desc": "test3 误报#2 点25px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A. 有"
+   },
+   {
+    "desc": "neg3 误报#1 点17px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A. 没有"
+   }
+  ]
+ },
+ {
+  "q": "Q3_圆点还是杂物",
+  "pos_ok": 3,
+  "pos_n": 3,
+  "neg_ok": 4,
+  "neg_n": 12,
+  "detail": [
+   {
+    "desc": "录像帧254 40m 点12px",
+    "want": "A",
+    "got": "A",
+    "ok": true,
+    "raw": "A"
+   },
+   {
+    "desc": "录像帧303 22m 点18px",
+    "want": "A",
+    "got": "A",
+    "ok": true,
+    "raw": "A"
+   },
+   {
+    "desc": "录像帧412 11m 点34px",
+    "want": "A",
+    "got": "A",
+    "ok": true,
+    "raw": "A"
+   },
+   {
+    "desc": "win06 误报#1 点16px",
+    "want": "B",
+    "got": "B",
+    "ok": true,
+    "raw": "B"
+   },
+   {
+    "desc": "win06 误报#2 点11px",
+    "want": "B",
+    "got": "B",
+    "ok": true,
+    "raw": "B"
+   },
+   {
+    "desc": "win07 误报#1 点24px",
+    "want": "B",
+    "got": "B",
+    "ok": true,
+    "raw": "B"
+   },
+   {
+    "desc": "win07 误报#2 点18px",
+    "want": "B",
+    "got": "B",
+    "ok": true,
+    "raw": "B"
+   },
+   {
+    "desc": "win08 误报#1 点41px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A"
+   },
+   {
+    "desc": "test1 误报#1 点11px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A"
+   },
+   {
+    "desc": "test1 误报#2 点11px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A"
+   },
+   {
+    "desc": "test2 误报#1 点19px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A"
+   },
+   {
+    "desc": "test2 误报#2 点11px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A"
+   },
+   {
+    "desc": "test3 误报#1 点59px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A"
+   },
+   {
+    "desc": "test3 误报#2 点25px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A"
+   },
+   {
+    "desc": "neg3 误报#1 点17px",
+    "want": "B",
+    "got": "A",
+    "ok": false,
+    "raw": "A"
+   }
+  ]
+ }
+]

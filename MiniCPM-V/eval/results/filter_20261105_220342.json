@@ -1,0 +1,1073 @@
+{
+  "seg": "Xpitfire/segformer-finetuned-segments-cmp-facade",
+  "vlm": "openbmb/minicpm-v4.7:1b",
+  "boxes": 75,
+  "valid": 59,
+  "false_boxes": 0,
+  "A_seg_only": {
+    "precision": 100.0,
+    "recall": 100.0,
+    "tp": 59,
+    "fp": 0,
+    "fn": 0
+  },
+  "B_seg_plus_vlm": {
+    "precision": 100.0,
+    "recall": 91.5,
+    "tp": 54,
+    "fp": 0,
+    "fn": 5
+  },
+  "records": [
+    {
+      "image": "cmp_b0001",
+      "box": [
+        353,
+        789,
+        55,
+        38
+      ],
+      "win_frac": 0.771,
+      "gt": "1",
+      "desc": "窗框内深色格子。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0001_b0.jpg"
+    },
+    {
+      "image": "cmp_b0001",
+      "box": [
+        250,
+        790,
+        54,
+        37
+      ],
+      "win_frac": 0.75,
+      "gt": "1",
+      "desc": "窗框内深色窗格。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0001_b1.jpg"
+    },
+    {
+      "image": "cmp_b0001",
+      "box": [
+        144,
+        793,
+        53,
+        38
+      ],
+      "win_frac": 0.729,
+      "gt": "1",
+      "desc": "窗框内玻璃窗。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0001_b2.jpg"
+    },
+    {
+      "image": "cmp_b0001",
+      "box": [
+        249,
+        712,
+        52,
+        35
+      ],
+      "win_frac": 0.667,
+      "gt": "1",
+      "desc": "窗框内窗户，有窗棂和玻璃。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0001_b3.jpg"
+    },
+    {
+      "image": "cmp_b0001",
+      "box": [
+        355,
+        711,
+        54,
+        31
+      ],
+      "win_frac": 0.625,
+      "gt": "1",
+      "desc": "窗框内带栏杆的窗户。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0001_b4.jpg"
+    },
+    {
+      "image": "cmp_b0002",
+      "box": [
+        283,
+        721,
+        48,
+        94
+      ],
+      "win_frac": 0.671,
+      "gt": "1",
+      "desc": "窗框内深色窗。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0002_b0.jpg"
+    },
+    {
+      "image": "cmp_b0002",
+      "box": [
+        170,
+        721,
+        47,
+        93
+      ],
+      "win_frac": 0.681,
+      "gt": "1",
+      "desc": "窗框内深色窗。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0002_b1.jpg"
+    },
+    {
+      "image": "cmp_b0002",
+      "box": [
+        56,
+        721,
+        48,
+        93
+      ],
+      "win_frac": 0.681,
+      "gt": "1",
+      "desc": "窗框内玻璃反射。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0002_b2.jpg"
+    },
+    {
+      "image": "cmp_b0002",
+      "box": [
+        61,
+        588,
+        39,
+        59
+      ],
+      "win_frac": 0.833,
+      "gt": "1",
+      "desc": "灰色门框与窗。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0002_b3.jpg"
+    },
+    {
+      "image": "cmp_b0002",
+      "box": [
+        174,
+        587,
+        29,
+        62
+      ],
+      "win_frac": 0.521,
+      "gt": "?",
+      "desc": "门框与窗，模糊建筑中心。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0002_b4.jpg"
+    },
+    {
+      "image": "cmp_b0003",
+      "box": [
+        502,
+        132,
+        75,
+        50
+      ],
+      "win_frac": 0.726,
+      "gt": "1",
+      "desc": "蓝色旗帜悬挂于窗前。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0003_b0.jpg"
+    },
+    {
+      "image": "cmp_b0003",
+      "box": [
+        639,
+        339,
+        50,
+        67
+      ],
+      "win_frac": 0.88,
+      "gt": "1",
+      "desc": "窗框内装有金属栏杆。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0003_b1.jpg"
+    },
+    {
+      "image": "cmp_b0003",
+      "box": [
+        397,
+        341,
+        46,
+        67
+      ],
+      "win_frac": 0.9,
+      "gt": "1",
+      "desc": "窗框与格栅结构。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0003_b2.jpg"
+    },
+    {
+      "image": "cmp_b0003",
+      "box": [
+        517,
+        224,
+        46,
+        55
+      ],
+      "win_frac": 0.899,
+      "gt": "1",
+      "desc": "窗框与玻璃。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0003_b3.jpg"
+    },
+    {
+      "image": "cmp_b0003",
+      "box": [
+        385,
+        69,
+        67,
+        37
+      ],
+      "win_frac": 0.476,
+      "gt": "?",
+      "desc": "石窗与装饰。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0003_b4.jpg"
+    },
+    {
+      "image": "cmp_b0004",
+      "box": [
+        282,
+        235,
+        77,
+        130
+      ],
+      "win_frac": 0.701,
+      "gt": "1",
+      "desc": "拱形窗，有格子。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0004_b0.jpg"
+    },
+    {
+      "image": "cmp_b0004",
+      "box": [
+        653,
+        235,
+        74,
+        125
+      ],
+      "win_frac": 0.742,
+      "gt": "1",
+      "desc": "拱形窗，有格子。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0004_b1.jpg"
+    },
+    {
+      "image": "cmp_b0004",
+      "box": [
+        177,
+        234,
+        72,
+        124
+      ],
+      "win_frac": 0.742,
+      "gt": "1",
+      "desc": "拱形窗，有格子。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0004_b2.jpg"
+    },
+    {
+      "image": "cmp_b0004",
+      "box": [
+        67,
+        234,
+        71,
+        123
+      ],
+      "win_frac": 0.739,
+      "gt": "1",
+      "desc": "拱形窗，有格子。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0004_b3.jpg"
+    },
+    {
+      "image": "cmp_b0004",
+      "box": [
+        762,
+        238,
+        72,
+        120
+      ],
+      "win_frac": 0.756,
+      "gt": "1",
+      "desc": "拱形窗，有格子。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0004_b4.jpg"
+    },
+    {
+      "image": "cmp_b0005",
+      "box": [
+        514,
+        724,
+        90,
+        93
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "窗格上有绿树。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0005_b0.jpg"
+    },
+    {
+      "image": "cmp_b0005",
+      "box": [
+        76,
+        724,
+        88,
+        92
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "美国国旗悬挂于窗旁。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0005_b1.jpg"
+    },
+    {
+      "image": "cmp_b0005",
+      "box": [
+        295,
+        725,
+        91,
+        99
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "石窗框内反射建筑。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0005_b2.jpg"
+    },
+    {
+      "image": "cmp_b0005",
+      "box": [
+        526,
+        569,
+        73,
+        60
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "双窗门框，有阳台。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0005_b3.jpg"
+    },
+    {
+      "image": "cmp_b0005",
+      "box": [
+        303,
+        569,
+        73,
+        60
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "双窗，白色窗帘，窗框。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0005_b4.jpg"
+    },
+    {
+      "image": "cmp_b0006",
+      "box": [
+        221,
+        175,
+        136,
+        44
+      ],
+      "win_frac": 0.373,
+      "gt": "?",
+      "desc": "窗户带铁栏，居中。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0006_b0.jpg"
+    },
+    {
+      "image": "cmp_b0006",
+      "box": [
+        222,
+        56,
+        136,
+        34
+      ],
+      "win_frac": 0.294,
+      "gt": "?",
+      "desc": "黑色铁栏杆阳台。",
+      "vlm_says_win": 0,
+      "crop": "cmp_b0006_b1.jpg"
+    },
+    {
+      "image": "cmp_b0006",
+      "box": [
+        453,
+        707,
+        56,
+        85
+      ],
+      "win_frac": 0.698,
+      "gt": "1",
+      "desc": "窗子，有绿色百叶。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0006_b2.jpg"
+    },
+    {
+      "image": "cmp_b0006",
+      "box": [
+        257,
+        706,
+        56,
+        78
+      ],
+      "win_frac": 0.897,
+      "gt": "1",
+      "desc": "双门深色，有窗。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0006_b3.jpg"
+    },
+    {
+      "image": "cmp_b0006",
+      "box": [
+        67,
+        706,
+        54,
+        85
+      ],
+      "win_frac": 0.683,
+      "gt": "1",
+      "desc": "绿色窗扇，半开半合。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0006_b4.jpg"
+    },
+    {
+      "image": "cmp_b0007",
+      "box": [
+        204,
+        558,
+        65,
+        116
+      ],
+      "win_frac": 0.701,
+      "gt": "1",
+      "desc": "白色窗栏，有装饰。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0007_b0.jpg"
+    },
+    {
+      "image": "cmp_b0007",
+      "box": [
+        372,
+        557,
+        64,
+        113
+      ],
+      "win_frac": 0.714,
+      "gt": "1",
+      "desc": "白色窗框阳台，有装饰性栏杆。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0007_b1.jpg"
+    },
+    {
+      "image": "cmp_b0007",
+      "box": [
+        190,
+        707,
+        82,
+        97
+      ],
+      "win_frac": 0.75,
+      "gt": "1",
+      "desc": "窗框结构，玻璃与金属。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0007_b2.jpg"
+    },
+    {
+      "image": "cmp_b0007",
+      "box": [
+        504,
+        535,
+        83,
+        100
+      ],
+      "win_frac": 0.667,
+      "gt": "1",
+      "desc": "木门与窗框，建筑入口。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0007_b3.jpg"
+    },
+    {
+      "image": "cmp_b0007",
+      "box": [
+        67,
+        387,
+        56,
+        84
+      ],
+      "win_frac": 0.905,
+      "gt": "1",
+      "desc": "窗框结构，有装饰性花纹。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0007_b4.jpg"
+    },
+    {
+      "image": "cmp_b0008",
+      "box": [
+        349,
+        542,
+        34,
+        51
+      ],
+      "win_frac": 0.605,
+      "gt": "1",
+      "desc": "拱形窗，有格子。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0008_b0.jpg"
+    },
+    {
+      "image": "cmp_b0008",
+      "box": [
+        281,
+        282,
+        26,
+        66
+      ],
+      "win_frac": 0.469,
+      "gt": "?",
+      "desc": "石窗框内装饰物。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0008_b1.jpg"
+    },
+    {
+      "image": "cmp_b0008",
+      "box": [
+        281,
+        547,
+        23,
+        67
+      ],
+      "win_frac": 0.46,
+      "gt": "?",
+      "desc": "石窗带门，对称结构。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0008_b2.jpg"
+    },
+    {
+      "image": "cmp_b0008",
+      "box": [
+        348,
+        279,
+        38,
+        40
+      ],
+      "win_frac": 0.565,
+      "gt": "?",
+      "desc": "窗框内深色门或窗。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0008_b3.jpg"
+    },
+    {
+      "image": "cmp_b0008",
+      "box": [
+        18,
+        457,
+        36,
+        49
+      ],
+      "win_frac": 0.399,
+      "gt": "?",
+      "desc": "金属门或窗，有装饰。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0008_b4.jpg"
+    },
+    {
+      "image": "cmp_b0009",
+      "box": [
+        32,
+        301,
+        53,
+        189
+      ],
+      "win_frac": 0.327,
+      "gt": "?",
+      "desc": "石柱支撑建筑立面。",
+      "vlm_says_win": 0,
+      "crop": "cmp_b0009_b0.jpg"
+    },
+    {
+      "image": "cmp_b0009",
+      "box": [
+        300,
+        300,
+        52,
+        87
+      ],
+      "win_frac": 0.769,
+      "gt": "1",
+      "desc": "窗框内嵌玻璃窗。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0009_b1.jpg"
+    },
+    {
+      "image": "cmp_b0009",
+      "box": [
+        166,
+        302,
+        52,
+        92
+      ],
+      "win_frac": 0.714,
+      "gt": "1",
+      "desc": "长方形窗户，嵌于石柱之间。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0009_b2.jpg"
+    },
+    {
+      "image": "cmp_b0009",
+      "box": [
+        300,
+        405,
+        51,
+        86
+      ],
+      "win_frac": 0.781,
+      "gt": "1",
+      "desc": "窗框内可见窗户。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0009_b3.jpg"
+    },
+    {
+      "image": "cmp_b0009",
+      "box": [
+        299,
+        502,
+        52,
+        86
+      ],
+      "win_frac": 0.757,
+      "gt": "1",
+      "desc": "窗框内带格子。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0009_b4.jpg"
+    },
+    {
+      "image": "cmp_b0010",
+      "box": [
+        231,
+        657,
+        85,
+        122
+      ],
+      "win_frac": 0.934,
+      "gt": "1",
+      "desc": "绿色窗框建筑，有几何图案。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0010_b0.jpg"
+    },
+    {
+      "image": "cmp_b0010",
+      "box": [
+        235,
+        480,
+        84,
+        111
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "窗格结构，装饰性设计。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0010_b1.jpg"
+    },
+    {
+      "image": "cmp_b0010",
+      "box": [
+        232,
+        321,
+        90,
+        96
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "垂直条纹装饰面板。",
+      "vlm_says_win": 0,
+      "crop": "cmp_b0010_b2.jpg"
+    },
+    {
+      "image": "cmp_b0010",
+      "box": [
+        164,
+        658,
+        62,
+        117
+      ],
+      "win_frac": 0.667,
+      "gt": "1",
+      "desc": "绿色窗框，白色百叶。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0010_b3.jpg"
+    },
+    {
+      "image": "cmp_b0010",
+      "box": [
+        330,
+        655,
+        60,
+        120
+      ],
+      "win_frac": 0.611,
+      "gt": "1",
+      "desc": "绿色窗框装饰建筑。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0010_b4.jpg"
+    },
+    {
+      "image": "cmp_b0011",
+      "box": [
+        166,
+        65,
+        48,
+        135
+      ],
+      "win_frac": 0.578,
+      "gt": "?",
+      "desc": "三窗建筑，中间蓝色布。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0011_b0.jpg"
+    },
+    {
+      "image": "cmp_b0011",
+      "box": [
+        102,
+        64,
+        48,
+        133
+      ],
+      "win_frac": 0.497,
+      "gt": "?",
+      "desc": "石窗与柱，建筑中心。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0011_b1.jpg"
+    },
+    {
+      "image": "cmp_b0011",
+      "box": [
+        230,
+        65,
+        48,
+        128
+      ],
+      "win_frac": 0.496,
+      "gt": "?",
+      "desc": "石窗与柱，建筑中心。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0011_b2.jpg"
+    },
+    {
+      "image": "cmp_b0011",
+      "box": [
+        20,
+        108,
+        44,
+        92
+      ],
+      "win_frac": 0.41,
+      "gt": "?",
+      "desc": "石质建筑，有窗与墙面。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0011_b3.jpg"
+    },
+    {
+      "image": "cmp_b0011",
+      "box": [
+        315,
+        112,
+        35,
+        93
+      ],
+      "win_frac": 0.41,
+      "gt": "?",
+      "desc": "石质建筑，有窗和阳台。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0011_b4.jpg"
+    },
+    {
+      "image": "cmp_b0012",
+      "box": [
+        240,
+        687,
+        61,
+        77
+      ],
+      "win_frac": 0.895,
+      "gt": "1",
+      "desc": "金属双门，关闭。",
+      "vlm_says_win": 0,
+      "crop": "cmp_b0012_b0.jpg"
+    },
+    {
+      "image": "cmp_b0012",
+      "box": [
+        412,
+        685,
+        61,
+        79
+      ],
+      "win_frac": 0.915,
+      "gt": "1",
+      "desc": "双门紧闭，金属质感。",
+      "vlm_says_win": 0,
+      "crop": "cmp_b0012_b1.jpg"
+    },
+    {
+      "image": "cmp_b0012",
+      "box": [
+        588,
+        686,
+        53,
+        79
+      ],
+      "win_frac": 0.915,
+      "gt": "1",
+      "desc": "双门紧闭，灰色金属。",
+      "vlm_says_win": 0,
+      "crop": "cmp_b0012_b2.jpg"
+    },
+    {
+      "image": "cmp_b0012",
+      "box": [
+        241,
+        239,
+        55,
+        52
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "绿色木门，带窗框。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0012_b3.jpg"
+    },
+    {
+      "image": "cmp_b0012",
+      "box": [
+        587,
+        239,
+        57,
+        51
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "双扇窗，带窗框。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0012_b4.jpg"
+    },
+    {
+      "image": "cmp_b0013",
+      "box": [
+        832,
+        721,
+        67,
+        63
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "绿色窗框与门。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0013_b0.jpg"
+    },
+    {
+      "image": "cmp_b0013",
+      "box": [
+        828,
+        257,
+        71,
+        52
+      ],
+      "win_frac": 0.868,
+      "gt": "1",
+      "desc": "绿色百叶窗，打开。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0013_b1.jpg"
+    },
+    {
+      "image": "cmp_b0013",
+      "box": [
+        247,
+        405,
+        73,
+        58
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "双门窗，有装饰。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0013_b2.jpg"
+    },
+    {
+      "image": "cmp_b0013",
+      "box": [
+        677,
+        406,
+        66,
+        52
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "双窗门框，对称结构。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0013_b3.jpg"
+    },
+    {
+      "image": "cmp_b0013",
+      "box": [
+        461,
+        406,
+        71,
+        54
+      ],
+      "win_frac": 0.906,
+      "gt": "1",
+      "desc": "窗框与玻璃。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0013_b4.jpg"
+    },
+    {
+      "image": "cmp_b0014",
+      "box": [
+        552,
+        704,
+        62,
+        86
+      ],
+      "win_frac": 0.859,
+      "gt": "1",
+      "desc": "深色门框与窗。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0014_b0.jpg"
+    },
+    {
+      "image": "cmp_b0014",
+      "box": [
+        285,
+        537,
+        64,
+        75
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "深色门，有窗框和植物。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0014_b1.jpg"
+    },
+    {
+      "image": "cmp_b0014",
+      "box": [
+        399,
+        539,
+        62,
+        74
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "深色窗门，带铁栏。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0014_b2.jpg"
+    },
+    {
+      "image": "cmp_b0014",
+      "box": [
+        553,
+        387,
+        72,
+        61
+      ],
+      "win_frac": 0.944,
+      "gt": "1",
+      "desc": "双开木门，带窗格。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0014_b3.jpg"
+    },
+    {
+      "image": "cmp_b0014",
+      "box": [
+        401,
+        383,
+        59,
+        63
+      ],
+      "win_frac": 1.0,
+      "gt": "1",
+      "desc": "双扇玻璃门，居中。",
+      "vlm_says_win": 0,
+      "crop": "cmp_b0014_b4.jpg"
+    },
+    {
+      "image": "cmp_b0015",
+      "box": [
+        138,
+        787,
+        54,
+        106
+      ],
+      "win_frac": 0.51,
+      "gt": "?",
+      "desc": "窗框内展示商品。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0015_b0.jpg"
+    },
+    {
+      "image": "cmp_b0015",
+      "box": [
+        533,
+        612,
+        56,
+        81
+      ],
+      "win_frac": 0.967,
+      "gt": "1",
+      "desc": "木门与窗格。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0015_b1.jpg"
+    },
+    {
+      "image": "cmp_b0015",
+      "box": [
+        43,
+        783,
+        49,
+        112
+      ],
+      "win_frac": 0.481,
+      "gt": "?",
+      "desc": "窗户上挂有蓝色文字装饰。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0015_b2.jpg"
+    },
+    {
+      "image": "cmp_b0015",
+      "box": [
+        486,
+        130,
+        48,
+        89
+      ],
+      "win_frac": 0.712,
+      "gt": "1",
+      "desc": "白色窗门，有铁栏。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0015_b3.jpg"
+    },
+    {
+      "image": "cmp_b0015",
+      "box": [
+        581,
+        131,
+        46,
+        80
+      ],
+      "win_frac": 0.783,
+      "gt": "1",
+      "desc": "白色窗框，居中，简洁。",
+      "vlm_says_win": 1,
+      "crop": "cmp_b0015_b4.jpg"
+    }
+  ]
+}

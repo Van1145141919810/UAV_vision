@@ -1,0 +1,70 @@
+{
+  "is_window": {
+    "n": 38,
+    "correct": 27,
+    "acc": "71.1%",
+    "tp": 13,
+    "fp": 11,
+    "fn": 0,
+    "tn": 14,
+    "false_positive_rate": "44.0%",
+    "false_negative_rate": "0.0%",
+    "recall": "100.0%",
+    "precision": "54.2%"
+  },
+  "window_state": {
+    "n": 12,
+    "correct": 12,
+    "acc": "100.0%"
+  },
+  "glare": {
+    "n": 58,
+    "said_A_有": 43,
+    "said_B_没有": 15,
+    "note": "无人工真值，只能看分布是否有区分度"
+  },
+  "latency_s": {
+    "n": 58,
+    "mean": 9.31,
+    "p50": 3.22,
+    "p95": 22.74,
+    "min": 2.28,
+    "max": 26.73
+  },
+  "by_scenario": {
+    "indoor": {
+      "n": 10,
+      "win_ok": 8,
+      "win_n": 10,
+      "win_acc": "80.0%",
+      "lat_mean": 3.6
+    },
+    "full_image": {
+      "n": 20,
+      "win_ok": 0,
+      "win_n": 0,
+      "win_acc": "n/a",
+      "lat_mean": 21.37
+    },
+    "outdoor_night": {
+      "n": 4,
+      "win_ok": 3,
+      "win_n": 4,
+      "win_acc": "75.0%",
+      "lat_mean": 2.99
+    },
+    "outdoor": {
+      "n": 24,
+      "win_ok": 16,
+      "win_n": 24,
+      "win_acc": "66.7%",
+      "lat_mean": 2.7
+    }
+  },
+  "parse_fail": 0,
+  "total_rows": 58,
+  "model": "openbmb/minicpm-v4.7:1b",
+  "stamp": "20261105_125915",
+  "reps": 1,
+  "labels_file": "labels.csv"
+}

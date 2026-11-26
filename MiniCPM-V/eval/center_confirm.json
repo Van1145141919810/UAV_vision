@@ -1,0 +1,62 @@
+[
+ {
+  "file": "win06.jpg",
+  "kind": "pos",
+  "cx": 942.0,
+  "cy": 608.0,
+  "want": "A",
+  "got": "A",
+  "ok": true,
+  "raw": "A"
+ },
+ {
+  "file": "win06.jpg",
+  "kind": "neg",
+  "cx": 805.2,
+  "cy": 937.3,
+  "want": "B",
+  "got": "A",
+  "ok": false,
+  "raw": "A"
+ },
+ {
+  "file": "win06.jpg",
+  "kind": "neg",
+  "cx": 1531.9,
+  "cy": 428.2,
+  "want": "B",
+  "got": "A",
+  "ok": false,
+  "raw": "A"
+ },
+ {
+  "file": "win03.jpg",
+  "kind": "pos",
+  "cx": 393.5,
+  "cy": 499.0,
+  "want": "A",
+  "got": "A",
+  "ok": true,
+  "raw": "A"
+ },
+ {
+  "file": "win03.jpg",
+  "kind": "neg",
+  "cx": 904.4,
+  "cy": 81.9,
+  "want": "B",
+  "got": "A",
+  "ok": false,
+  "raw": "A"
+ },
+ {
+  "file": "win03.jpg",
+  "kind": "neg",
+  "cx": 1304.0,
+  "cy": 483.8,
+  "want": "B",
+  "got": "A",
+  "ok": false,
+  "raw": "A"
+ }
+]

@@ -1,0 +1,21 @@
+{
+  "model": "Xpitfire/segformer-finetuned-segments-cmp-facade",
+  "results": [
+    {
+      "tag": "CMP 客观真值（SegFormer 域内）",
+      "n": 200,
+      "best_threshold": 0.1,
+      "acc": 79.0,
+      "recall": 74.0,
+      "fpr": 16.0
+    },
+    {
+      "tag": "本项目自有（SegFormer 域外）",
+      "n": 38,
+      "best_threshold": 0.05,
+      "acc": 86.8,
+      "recall": 92.3,
+      "fpr": 16.0
+    }
+  ]
+}
