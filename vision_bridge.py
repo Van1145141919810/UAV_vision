@@ -331,8 +331,8 @@ class NewCam(object):
                 if bgr is not None:
                     self.actual_wh = (bgr.shape[1], bgr.shape[0])
                 else:
-                    g = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_REDUCED_GRAYSCALE_4)
-                    self.actual_wh = (g.shape[1] * 4, g.shape[0] * 4) if g is not None else (0, 0)
+                    g = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_GRAYSCALE)
+                    self.actual_wh = (g.shape[1], g.shape[0]) if g is not None else (0, 0)
                 if self.actual_wh != (self.w, self.h):
                     rospy.logerr("[cam] ★ 实际分辨率 %dx%d ≠ 请求/标定的 %dx%d —— 内参会对不上, 测距错! "
                                  "v4l2-ctl -d %s --list-formats-ext"

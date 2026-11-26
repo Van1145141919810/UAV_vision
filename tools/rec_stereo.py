@@ -248,13 +248,14 @@ class Monitor(object):
       check(fn, jpg, mot) 刚存的一张: 终端报告码看没看到、在哪一格
     """
 
-    def __init__(self, aruco_id, aruco_dict, marker_mm, fx_full, preview):
+    def __init__(self, aruco_id, aruco_dict, marker_mm, fx_full, preview, eye_w=1920):
         self.id = aruco_id
         self.detect = make_aruco(aruco_dict) if aruco_id is not None else None
         if aruco_id is not None and self.detect is None:
             print("[rec] ★ 这台机器的 OpenCV 没有 aruco 模块 —— 不提示码的位置, 只给画面 (离线照样能标)")
         self.marker_m = marker_mm / 1000.0
         self.fx = fx_full
+        self.eye_w = int(eye_w) or 1920
         self.pv = preview
         self.cover = np.zeros((3, 3), int)
         self.n_saved = 0
@@ -305,7 +306,8 @@ class Monitor(object):
             if c is not None:
                 cx, cy = c.mean(0)
                 info["cell"] = (min(2, int(3 * cy / L.shape[0])), min(2, int(3 * cx / L.shape[1])))
-                side = np.mean([np.linalg.norm(c[k] - c[(k + 1) % 4]) for k in range(4)]) * 2   # 全分辨率像素
+                scale = float(self.eye_w) / max(L.shape[1], 1)
+                side = np.mean([np.linalg.norm(c[k] - c[(k + 1) % 4]) for k in range(4)]) * scale  # 全分辨率像素
                 info["dist"] = self.fx * self.marker_m / max(side, 1e-3)
         return info
 
@@ -509,8 +511,8 @@ def main():
     if first is None:
         cap.release()
         sys.exit("[rec] 拿不到原始 MJPG (驱动不支持 CONVERT_RGB=0?) —— 不存, 免得存成重编码的")
-    g = cv2.imdecode(np.frombuffer(first, np.uint8), cv2.IMREAD_REDUCED_GRAYSCALE_4)
-    wh = (g.shape[1] * 4, g.shape[0] * 4) if g is not None else (0, 0)
+    g = cv2.imdecode(np.frombuffer(first, np.uint8), cv2.IMREAD_GRAYSCALE)
+    wh = (g.shape[1], g.shape[0]) if g is not None else (0, 0)
     if wh != (args.w, args.h):
         print("[rec] ★ 实际分辨率 %dx%d ≠ 请求 %dx%d —— 和标定对不上, 测距会错" % (wh + (args.w, args.h)))
 
@@ -531,7 +533,7 @@ def main():
         json.dump(meta, fh, ensure_ascii=False, indent=1)
 
     pv = None if args.no_preview else start_preview(args.preview_port, args.preview_host)
-    mon = Monitor(args.aruco, args.aruco_dict, args.marker_mm, calib_fx(args.calib), pv)
+    mon = Monitor(args.aruco, args.aruco_dict, args.marker_mm, calib_fx(args.calib), pv, eye_w=wh[0] // 2)
     t_pv = 0.0
 
     lq = queue.Queue()
