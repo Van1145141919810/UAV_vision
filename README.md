@@ -3,6 +3,8 @@
 OWL2 / VB09 自主视觉识别与飞行控制代码（PX4 v1.12.3 + ROS Noetic + 双目视觉，支持 `ring` 穿环与 `reddot` 无环红点，任务模式 `冲刺 / 影子 / 停靠`）。
 
 > 机载环境为 Python 3.8（Khadas `visbot`，`192.168.2.20`），地面站 Python ≥ 3.8（标定工具需 OpenCV ≥ 4.7）。**飞机与地面站的 `vb09/` 和 `stereo_calib.yaml` 必须同步更新**，否则版本检查会强制进入 SIM 模式。
+>
+> **详细开发文档**：项目结构、调用链与接入指南见 [`docs/DEV_GUIDE.md`](./docs/DEV_GUIDE.md)；ROS 话题、ZMQ 协议、`/gate/status` 与 HTTP API 契约见 [`docs/INTERFACE.md`](./docs/INTERFACE.md)。
 
 ---
 
